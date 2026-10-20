@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Utsav (उत्सव) — Celebrations, Composed.</title>
+  <meta name="description" content="Intelligent, culture-native GenAI event orchestration platform for Indian celebrations. Weddings, Pujas, and Community Festivals composed with zero chaos.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&family=Inter:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,600;1,400&family=Rozha+One&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            marigold: '#E67E22',
+            kumkum: '#8B1E28',
+            haldi: '#F4B41A',
+            chandan: '#FAF7F2',
+            chandanDark: '#0C0F14',
+            surfaceDark: '#141820',
+            borderDark: '#242C3A'
+          },
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            serif: ['Playfair Display', 'serif'],
+            devanagari: ['Rozha One', 'serif'],
+            cinzel: ['Cinzel', 'serif']
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    .glass-card {
+      background: rgba(255, 255, 255, 0.85);
+      backdrop-filter: blur(16px);
+      border: 1px solid rgba(226, 218, 205, 0.6);
+    }
+    .dark .glass-card {
+      background: rgba(20, 24, 32, 0.85);
+      backdrop-filter: blur(16px);
+      border: 1px solid rgba(36, 44, 58, 0.6);
+    }
+    .glow-gold {
+      box-shadow: 0 0 35px -5px rgba(244, 180, 26, 0.25);
+    }
+    .text-gradient {
+      background: linear-gradient(135deg, #8B1E28 0%, #E67E22 50%, #C69214 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .dark .text-gradient {
+      background: linear-gradient(135deg, #F4B41A 0%, #E67E22 60%, #FAF7F2 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+  </style>
+</head>
+<body class="bg-chandan text-stone-800 dark:bg-chandanDark dark:text-stone-100 transition-colors duration-300 font-sans antialiased selection:bg-haldi/20 selection:text-kumkum">
+
+  <!-- Navigation Bar -->
+  <header class="fixed top-0 left-0 right-0 z-50 glass-card transition-all duration-300 border-b border-stone-200/60 dark:border-stone-800">
+    <div class="max-w-7xl mx-auto px-6 h-18 flex items-center justify-between">
+      <div class="flex items-center space-x-3">
+        <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-kumkum via-marigold to-haldi flex items-center justify-center text-white font-devanagari text-xl shadow-md">
+          उ
+        </div>
+        <div>
+          <span class="text-xl font-cinzel font-bold tracking-wider text-stone-900 dark:text-white">UTSAV</span>
+          <span class="text-xs ml-1 text-marigold font-medium tracking-widest uppercase">उत्सव AI</span>
+        </div>
+      </div>
+      <nav class="hidden md:flex items-center space-x-8 text-sm font-medium text-stone-600 dark:text-stone-300">
+        <a href="#problem" class="hover:text-kumkum dark:hover:text-haldi transition-colors">The Dilemma</a>
+        <a href="#solution" class="hover:text-kumkum dark:hover:text-haldi transition-colors">The Utsav Way</a>
+        <a href="#features" class="hover:text-kumkum dark:hover:text-haldi transition-colors">Capabilities</a>
+        <a href="#calculator" class="hover:text-kumkum dark:hover:text-haldi transition-colors">Budget Simulator</a>
+      </nav>
+      <div class="flex items-center space-x-4">
+        <button id="themeToggle" class="p-2 rounded-lg text-stone-500 hover:text-stone-900 dark:text-stone-400 dark:hover:text-white transition-colors" title="Toggle theme">
+          <svg id="themeIcon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path></svg>
+        </button>
+        <a href="#calculator" class="px-5 py-2.5 rounded-full text-xs font-semibold tracking-wider uppercase bg-stone-900 text-white dark:bg-haldi dark:text-stone-950 hover:opacity-90 transition-all shadow-sm">
+          Compose Plan
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <!-- Hero Section -->
+  <section class="relative pt-36 pb-20 md:pt-48 md:pb-32 overflow-hidden">
+    <div class="absolute inset-0 -z-10 flex items-center justify-center opacity-30 dark:opacity-20 pointer-events-none">
+      <div class="w-[640px] h-[640px] rounded-full bg-gradient-to-tr from-marigold/40 via-haldi/20 to-kumkum/30 blur-3xl"></div>
+    </div>
+
+    <div class="max-w-5xl mx-auto px-6 text-center">
+      <div class="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-amber-100/70 dark:bg-amber-950/40 border border-amber-300/60 dark:border-amber-800 text-amber-900 dark:text-amber-300 text-xs font-semibold mb-8">
+        <span class="inline-block w-2 h-2 rounded-full bg-marigold animate-pulse"></span>
+        <span>The GenAI Operating System for Indian Celebrations</span>
+      </div>
+
+      <h1 class="text-4xl md:text-6xl lg:text-7xl font-serif font-semibold tracking-tight leading-tight md:leading-[1.1] mb-6">
+        Celebrations, <br class="hidden sm:inline" />
+        <span class="text-gradient">Composed.</span>
+      </h1>
+
+      <p class="max-w-2xl mx-auto text-lg md:text-xl text-stone-600 dark:text-stone-300 font-light mb-10 leading-relaxed">
+        Say goodbye to 15 fragmented WhatsApp groups, surprise 25% vendor markups, and forgotten ritual samagri. Utsav is your 24/7 autonomous celebration director.
+      </p>
+
+      <div class="flex flex-col sm:flex-row items-center justify-center gap-4">
+        <a href="#calculator" class="w-full sm:w-auto px-8 py-3.5 rounded-full bg-kumkum text-white hover:bg-stone-900 dark:hover:bg-haldi dark:hover:text-stone-950 font-medium text-sm tracking-wide transition-all shadow-lg hover:shadow-xl">
+          Simulate Your Celebration Free
+        </a>
+        <a href="#solution" class="w-full sm:w-auto px-8 py-3.5 rounded-full border border-stone-300 dark:border-stone-700 hover:border-stone-400 font-medium text-sm tracking-wide transition-all">
+          Explore the Architecture
+        </a>
+      </div>
+
+      <!-- Trust Elder Badge -->
+      <div class="mt-14 inline-flex items-center space-x-3 px-4 py-2 rounded-xl bg-stone-100/80 dark:bg-stone-900/60 border border-stone-200 dark:border-stone-800 text-xs text-stone-500 dark:text-stone-400">
+        <svg class="w-4 h-4 text-marigold flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path d="M10 2a1 1 0 011 1v1.323l3.954 1.582 1.599-.8a1 1 0 011.342 1.342l-.8 1.599L18.677 11H20a1 1 0 110 2h-1.323l-1.582 3.954.8 1.599a1 1 0 01-1.342 1.342l-1.599-.8L11 18.677V20a1 1 0 11-2 0v-1.323l-3.954-1.582-1.599.8a1 1 0 01-1.342-1.342l.8-1.599L1.323 13H0a1 1 0 110-2h1.323l1.582-3.954-.8-1.599a1 1 0 011.342-1.342l1.599.8L9 4.323V3a1 1 0 011-1z"></path></svg>
+        <span>Deterministic Panchang calculations verified with regional ephemeris. Elder verification by design.</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- Section: The Problem (The Indian Event Chaos) -->
+  <section id="problem" class="py-24 border-t border-stone-200 dark:border-stone-800">
+    <div class="max-w-6xl mx-auto px-6">
+      <div class="text-center max-w-2xl mx-auto mb-16">
+        <h2 class="text-xs font-semibold tracking-widest uppercase text-marigold mb-3">The Status Quo</h2>
+        <h3 class="text-3xl md:text-4xl font-serif font-semibold">The Anatomy of Event Chaos</h3>
+        <p class="text-stone-600 dark:text-stone-400 mt-4 text-sm md:text-base">
+          Indian celebrations are emotionally magnificent, yet logistically brutal. Here is where traditional planning collapses.
+        </p>
+      </div>
+
+      <div class="grid md:grid-cols-3 gap-8">
+        <div class="p-8 rounded-2xl glass-card relative overflow-hidden">
+          <div class="text-red-500 font-mono text-xs mb-3 font-semibold">FAILURE MODE 01</div>
+          <h4 class="text-xl font-semibold mb-2">WhatsApp Black Hole</h4>
+          <p class="text-stone-600 dark:text-stone-400 text-sm leading-relaxed">
+            18 groups across maternal aunts, caterers, college friends, and photographers. Key arrival dates, dietary needs, and decisions get buried under 4,000 good-morning memes.
+          </p>
+          <div class="mt-6 p-3 rounded-lg bg-red-50/70 dark:bg-red-950/30 border border-red-200 dark:border-red-900/50 text-xs text-red-700 dark:text-red-400">
+            Result: 45 missed airport pickups and guest confusion on Day 1.
+          </div>
+        </div>
+
+        <div class="p-8 rounded-2xl glass-card relative overflow-hidden">
+          <div class="text-red-500 font-mono text-xs mb-3 font-semibold">FAILURE MODE 02</div>
+          <h4 class="text-xl font-semibold mb-2">Hidden Vendor Traps</h4>
+          <p class="text-stone-600 dark:text-stone-400 text-sm leading-relaxed">
+            Initial quote: ₹12 Lakhs. Final bill: ₹16.4 Lakhs. Unmentioned generator diesel, midnight overtime rates, service tax surprises, and breakage penalties emerge 48 hours before.
+          </p>
+          <div class="mt-6 p-3 rounded-lg bg-red-50/70 dark:bg-red-950/30 border border-red-200 dark:border-red-900/50 text-xs text-red-700 dark:text-red-400">
+            Result: Average 28% unbudgeted cost overrun per celebration.
+          </div>
+        </div>
+
+        <div class="p-8 rounded-2xl glass-card relative overflow-hidden">
+          <div class="text-red-500 font-mono text-xs mb-3 font-semibold">FAILURE MODE 03</div>
+          <h4 class="text-xl font-semibold mb-2">Fragile Schedules ("No Plan B")</h4>
+          <p class="text-stone-600 dark:text-stone-400 text-sm leading-relaxed">
+            A sudden unseasonal rain downpour hits the Sangeet lawn. The baraat runs 90 minutes late. Downstream catering and religious muhurats collapse with zero coordinated contingency.
+          </p>
+          <div class="mt-6 p-3 rounded-lg bg-red-50/70 dark:bg-red-950/30 border border-red-200 dark:border-red-900/50 text-xs text-red-700 dark:text-red-400">
+            Result: Host spends the entire evening screaming at vendors instead of enjoying.
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Section: The Solution (Old Way vs Utsav) -->
+  <section id="solution" class="py-24 bg-stone-100/70 dark:bg-stone-900/50">
+    <div class="max-w-6xl mx-auto px-6">
+      <div class="text-center max-w-2xl mx-auto mb-16">
+        <h2 class="text-xs font-semibold tracking-widest uppercase text-marigold mb-3">The Paradigm Shift</h2>
+        <h3 class="text-3xl md:text-4xl font-serif font-semibold">The Old Way vs. The Utsav Way</h3>
+      </div>
+
+      <div class="grid md:grid-cols-2 gap-8">
+        <!-- Old Way -->
+        <div class="p-8 rounded-2xl bg-white/60 dark:bg-stone-900/80 border border-stone-200 dark:border-stone-800">
+          <div class="flex items-center space-x-3 mb-6">
+            <span class="w-3 h-3 rounded-full bg-red-500"></span>
+            <h4 class="text-lg font-semibold text-stone-500 dark:text-stone-400">The Fragmented Chaos</h4>
+          </div>
+          <ul class="space-y-4 text-sm text-stone-600 dark:text-stone-400">
+            <li class="flex items-start"><span class="text-red-500 mr-2 font-bold">✕</span> Cluttered Excel sheets updated by 6 family members with conflicting versions.</li>
+            <li class="flex items-start"><span class="text-red-500 mr-2 font-bold">✕</span> Blind price haggling with vendors without line-item market benchmarks.</li>
+            <li class="flex items-start"><span class="text-red-500 mr-2 font-bold">✕</span> Forgetting crucial sacred samagri (akshata, yellow thread, betel nuts) on the morning of puja.</li>
+            <li class="flex items-start"><span class="text-red-500 mr-2 font-bold">✕</span> 200 phone calls to guests asking "Did you board the train? Which hotel are you at?"</li>
+          </ul>
+        </div>
+
+        <!-- Utsav Way -->
+        <div class="p-8 rounded-2xl glass-card border-2 border-haldi/60 glow-gold relative">
+          <div class="flex items-center justify-between mb-6">
+            <div class="flex items-center space-x-3">
+              <span class="w-3 h-3 rounded-full bg-emerald-500 animate-pulse"></span>
+              <h4 class="text-lg font-semibold text-stone-900 dark:text-white">The Utsav Orchestration</h4>
+            </div>
+            <span class="text-xs px-2.5 py-1 rounded-full bg-haldi/20 text-marigold font-bold uppercase tracking-wider">AI Directed</span>
+          </div>
+          <ul class="space-y-4 text-sm text-stone-700 dark:text-stone-300">
+            <li class="flex items-start"><span class="text-emerald-500 mr-2 font-bold">✓</span> One-touch Plan B generator shifts tasks and alerts vendors in under 3.5 seconds.</li>
+            <li class="flex items-start"><span class="text-emerald-500 mr-2 font-bold">✓</span> Automated OCR quote audit flags hidden taxes, diesel fees, and drafting polite counter-offers.</li>
+            <li class="flex items-start"><span class="text-emerald-500 mr-2 font-bold">✓</span> Ritual intelligence across 12 Indian traditions with verified astronomical panchang.</li>
+            <li class="flex items-start"><span class="text-emerald-500 mr-2 font-bold">✓</span> Zero-download WhatsApp concierge handling RSVPs, directions, and live schedule updates.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Section: Core Capabilities Grid -->
+  <section id="features" class="py-24 border-t border-stone-200 dark:border-stone-800">
+    <div class="max-w-6xl mx-auto px-6">
+      <div class="text-center max-w-2xl mx-auto mb-16">
+        <h2 class="text-xs font-semibold tracking-widest uppercase text-marigold mb-3">Architectural Pillars</h2>
+        <h3 class="text-3xl md:text-4xl font-serif font-semibold">Engineered for Indian Reality</h3>
+      </div>
+
+      <div class="grid md:grid-cols-3 gap-8">
+        <!-- Feature 1 -->
+        <div class="p-6 rounded-2xl glass-card">
+          <div class="w-12 h-12 rounded-xl bg-marigold/10 text-marigold flex items-center justify-center font-bold text-xl mb-6">
+            F1
+          </div>
+          <h4 class="text-lg font-semibold mb-2">Live Plan B Replanner</h4>
+          <p class="text-stone-600 dark:text-stone-400 text-sm leading-relaxed mb-4">
+            Rain or Pandit delay? Our Google OR-Tools constraint solver locks the religious Muhurat while automatically shifting tasks, relocating stages, and broadcasting vendor notices.
+          </p>
+          <span class="text-xs font-mono text-stone-400">Latency &lt; 3.5s | Zero Muhurat Violations</span>
+        </div>
+
+        <!-- Feature 2 -->
+        <div class="p-6 rounded-2xl glass-card">
+          <div class="w-12 h-12 rounded-xl bg-kumkum/10 text-kumkum dark:text-rose-400 flex items-center justify-center font-bold text-xl mb-6">
+            F2
+          </div>
+          <h4 class="text-lg font-semibold mb-2">Cultural & Ritual Intelligence</h4>
+          <p class="text-stone-600 dark:text-stone-400 text-sm leading-relaxed mb-4">
+            Pre-configured ritual graphs for Maharashtrian, Gujarati, Vedic, South Indian, and Marwari ceremonies with exact samagri checklists and elder verification notices.
+          </p>
+          <span class="text-xs font-mono text-stone-400">12+ Traditions | Astronomical Ephemeris</span>
+        </div>
+
+        <!-- Feature 3 -->
+        <div class="p-6 rounded-2xl glass-card">
+          <div class="w-12 h-12 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-bold text-xl mb-6">
+            F3
+          </div>
+          <h4 class="text-lg font-semibold mb-2">WhatsApp-Native Concierge</h4>
+          <p class="text-stone-600 dark:text-stone-400 text-sm leading-relaxed mb-4">
+            Guests download nothing. Interactive invitations, one-tap RSVP buttons, dietary note extraction, dress-code FAQs, and live venue map directions in Hindi, Marathi, and English.
+          </p>
+          <span class="text-xs font-mono text-stone-400">Meta Cloud API | 94% Auto Resolution</span>
+        </div>
+
+        <!-- Feature 4 -->
+        <div class="p-6 rounded-2xl glass-card">
+          <div class="w-12 h-12 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center font-bold text-xl mb-6">
+            F4
+          </div>
+          <h4 class="text-lg font-semibold mb-2">Vibe-to-Plan Multimodal Studio</h4>
+          <p class="text-stone-600 dark:text-stone-400 text-sm leading-relaxed mb-4">
+            Upload Pinterest pins or Instagram reel screenshots. Our vision agent extracts 6-point color hex codes, floral species, and structural fabrication costs.
+          </p>
+          <span class="text-xs font-mono text-stone-400">Perceptual Hashing | Color Palette Hex</span>
+        </div>
+
+        <!-- Feature 5 -->
+        <div class="p-6 rounded-2xl glass-card">
+          <div class="w-12 h-12 rounded-xl bg-purple-500/10 text-purple-600 dark:text-purple-400 flex items-center justify-center font-bold text-xl mb-6">
+            F5
+          </div>
+          <h4 class="text-lg font-semibold mb-2">Hidden-Cost Quote Auditor</h4>
+          <p class="text-stone-600 dark:text-stone-400 text-sm leading-relaxed mb-4">
+            Upload messy PDFs or photos of handwritten vendor estimates. Instantly unmask unmentioned GST, overtime penalties, and draft respectful counter-offers.
+          </p>
+          <span class="text-xs font-mono text-stone-400">OCR Extraction | Polite Negotiation AI</span>
+        </div>
+
+        <!-- Feature 6 -->
+        <div class="p-6 rounded-2xl glass-card">
+          <div class="w-12 h-12 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center font-bold text-xl mb-6">
+            F7
+          </div>
+          <h4 class="text-lg font-semibold mb-2">Day-of Command Mode</h4>
+          <p class="text-stone-600 dark:text-stone-400 text-sm leading-relaxed mb-4">
+            High-contrast, battery-efficient mobile cockpit for coordinators. Minute-by-minute countdowns, "+15m" delay sliders, and one-tap speed dial for vendors.
+          </p>
+          <span class="text-xs font-mono text-stone-400">100% Offline PWA | IndexedDB Cache</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Interactive Budget Simulator -->
+  <section id="calculator" class="py-24 bg-stone-100/70 dark:bg-stone-900/60">
+    <div class="max-w-4xl mx-auto px-6">
+      <div class="text-center max-w-xl mx-auto mb-12">
+        <h2 class="text-xs font-semibold tracking-widest uppercase text-marigold mb-3">Live Simulation</h2>
+        <h3 class="text-3xl font-serif font-semibold">Interactive Budget & Timeline Scaler</h3>
+        <p class="text-stone-600 dark:text-stone-400 text-sm mt-2">
+          Experience our deterministic budget scaling engine. No LLM hallucinations—pure calibrated mathematics.
+        </p>
+      </div>
+
+      <div class="p-8 rounded-3xl glass-card shadow-xl border border-stone-200 dark:border-stone-800">
+        <div class="grid sm:grid-cols-3 gap-6 mb-8">
+          <div>
+            <label class="block text-xs font-semibold uppercase tracking-wider text-stone-500 mb-2">Celebration Type</label>
+            <select id="simType" class="w-full px-4 py-3 rounded-xl bg-white dark:bg-stone-900 border border-stone-300 dark:border-stone-700 text-sm focus:outline-none focus:ring-2 focus:ring-marigold">
+              <option value="wedding">Vedic Hindu Wedding</option>
+              <option value="puja">Griha Pravesh & Puja</option>
+              <option value="community">Sarvajanik Festival (10 Days)</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold uppercase tracking-wider text-stone-500 mb-2">City Tier</label>
+            <select id="simCity" class="w-full px-4 py-3 rounded-xl bg-white dark:bg-stone-900 border border-stone-300 dark:border-stone-700 text-sm focus:outline-none focus:ring-2 focus:ring-marigold">
+              <option value="1.0">Tier 1 (Mumbai, Pune, Bengaluru)</option>
+              <option value="0.68">Tier 2 (Jaipur, Lucknow, Ahmedabad)</option>
+              <option value="0.45">Tier 3 (Regional / Suburban)</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold uppercase tracking-wider text-stone-500 mb-2">Guest Headcount</label>
+            <input type="number" id="simGuests" value="350" min="50" max="2500" step="50" class="w-full px-4 py-3 rounded-xl bg-white dark:bg-stone-900 border border-stone-300 dark:border-stone-700 text-sm focus:outline-none focus:ring-2 focus:ring-marigold">
+          </div>
+        </div>
+
+        <div class="mb-8">
+          <div class="flex justify-between items-center mb-2">
+            <span class="text-xs font-semibold uppercase tracking-wider text-stone-500">Target Budget Envelope</span>
+            <span id="budgetDisplay" class="text-xl font-bold font-mono text-kumkum dark:text-haldi">₹35,00,000</span>
+          </div>
+          <input type="range" id="simRange" min="500000" max="15000000" step="250000" value="3500000" class="w-full accent-kumkum dark:accent-haldi cursor-pointer">
+        </div>
+
+        <div class="border-t border-stone-200 dark:border-stone-800 pt-6">
+          <div class="text-xs font-semibold uppercase tracking-wider text-stone-500 mb-4">Computed Category Allocations (Zero Hallucination)</div>
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            <div class="p-4 rounded-xl bg-stone-50 dark:bg-stone-950/60 border border-stone-200 dark:border-stone-800">
+              <div class="text-xs text-stone-500">Catering (28%)</div>
+              <div id="allocCatering" class="text-base font-bold font-mono text-stone-900 dark:text-white mt-1">₹9,80,000</div>
+            </div>
+            <div class="p-4 rounded-xl bg-stone-50 dark:bg-stone-950/60 border border-stone-200 dark:border-stone-800">
+              <div class="text-xs text-stone-500">Venue & Lawns (22%)</div>
+              <div id="allocVenue" class="text-base font-bold font-mono text-stone-900 dark:text-white mt-1">₹7,70,000</div>
+            </div>
+            <div class="p-4 rounded-xl bg-stone-50 dark:bg-stone-950/60 border border-stone-200 dark:border-stone-800">
+              <div class="text-xs text-stone-500">Decor & Florals (16%)</div>
+              <div id="allocDecor" class="text-base font-bold font-mono text-stone-900 dark:text-white mt-1">₹5,60,000</div>
+            </div>
+            <div class="p-4 rounded-xl bg-stone-50 dark:bg-stone-950/60 border border-stone-200 dark:border-stone-800">
+              <div class="text-xs text-stone-500">Contingency (4%)</div>
+              <div id="allocContingency" class="text-base font-bold font-mono text-stone-900 dark:text-white mt-1">₹1,40,000</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer & Elder Disclaimer -->
+  <footer class="py-16 border-t border-stone-200 dark:border-stone-800 bg-white/40 dark:bg-stone-950">
+    <div class="max-w-7xl mx-auto px-6">
+      <div class="flex flex-col md:flex-row items-center justify-between gap-6 pb-12 border-b border-stone-200 dark:border-stone-800">
+        <div class="flex items-center space-x-3">
+          <div class="w-8 h-8 rounded-lg bg-gradient-to-tr from-kumkum to-haldi flex items-center justify-center text-white font-devanagari text-lg">
+            उ
+          </div>
+          <span class="text-lg font-cinzel font-bold">UTSAV</span>
+          <span class="text-xs text-stone-400">© 2027 Utsav Technologies Pvt. Ltd.</span>
+        </div>
+        <div class="text-xs text-stone-500 dark:text-stone-400 flex items-center space-x-6">
+          <a href="./docs/UTSAV_MASTER_DOC.md" class="hover:text-stone-900 dark:hover:text-white underline">Master Documentation</a>
+          <a href="https://github.com/DeveshK1256/utsav-ai" class="hover:text-stone-900 dark:hover:text-white underline">GitHub Repository</a>
+          <span>Privacy Policy</span>
+          <span>WhatsApp Opt-Out</span>
+        </div>
+      </div>
+
+      <!-- Mandatory Cultural Banner -->
+      <div class="mt-8 text-center text-xs text-stone-500 dark:text-stone-400 max-w-2xl mx-auto">
+        <span class="inline-block mr-1 text-marigold">🪔</span>
+        <strong>Cultural Trust Mandate:</strong> Auspicious timings, ritual sequencing, and samagri requirements are algorithmic estimates computed via astronomical ephemeris models. Always verify with your family Guruji or elders prior to locking ceremony muhurats.
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    // Theme toggle
+    const themeToggle = document.getElementById('themeToggle');
+    themeToggle.addEventListener('click', () => {
+      document.documentElement.classList.toggle('dark');
+    });
+
+    // Budget Calculator
+    const simRange = document.getElementById('simRange');
+    const simCity = document.getElementById('simCity');
+    const budgetDisplay = document.getElementById('budgetDisplay');
+    const allocCatering = document.getElementById('allocCatering');
+    const allocVenue = document.getElementById('allocVenue');
+    const allocDecor = document.getElementById('allocDecor');
+    const allocContingency = document.getElementById('allocContingency');
+
+    function formatINR(val) {
+      return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(val);
+    }
+
+    function updateAllocations() {
+      const envelope = parseFloat(simRange.value);
+      const mult = parseFloat(simCity.value);
+      const effective = envelope * mult;
+
+      budgetDisplay.textContent = formatINR(effective);
+      allocCatering.textContent = formatINR(effective * 0.28);
+      allocVenue.textContent = formatINR(effective * 0.22);
+      allocDecor.textContent = formatINR(effective * 0.16);
+      allocContingency.textContent = formatINR(effective * 0.04);
+    }
+
+    simRange.addEventListener('input', updateAllocations);
+    simCity.addEventListener('change', updateAllocations);
+    updateAllocations();
+  </script>
+</body>
+</html>
