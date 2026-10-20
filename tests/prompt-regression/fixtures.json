@@ -1,0 +1,27 @@
+[
+  {
+    "agent_name": "Quote Extraction & Negotiation Agent",
+    "prompt_id": "PR-F5-01",
+    "test_input": "Catering quote for 250 plates at Rs 1200 per plate. Generator fuel and GST extra. Overtime Rs 3000/hr after midnight.",
+    "expected_keys": ["vendor_name", "category", "base_quote", "normalized_total_cost", "detected_hidden_costs"],
+    "expected_hidden_cost_categories": ["MISSING_GST", "GENERATOR_FUEL", "OVERTIME_SURCHARGE"]
+  },
+  {
+    "agent_name": "Replanning Agent",
+    "prompt_id": "PR-F1-01",
+    "test_input": "Outdoor lawn flooded at 4:30 PM. Sangeet scheduled at 7:00 PM. Indoor hall available. 200 guests.",
+    "expected_keys": ["scenario_name", "solver_status", "shifted_milestones", "cost_impact", "vendor_broadcast_drafts"],
+    "expected_solver_status": "FEASIBLE"
+  },
+  {
+    "agent_name": "WhatsApp NLU Agent",
+    "prompt_id": "PR-F3-01",
+    "test_input": "Haan hum 3 log aa rahe hain subah 10 baje train se, Jain khana chahiye.",
+    "expected_keys": ["intent", "rsvp_status", "headcount", "arrival_notes", "dietary_preference"],
+    "expected_values": {
+      "rsvp_status": "confirmed",
+      "headcount": 3,
+      "dietary_preference": "jain"
+    }
+  }
+]
