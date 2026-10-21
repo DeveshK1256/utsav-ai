@@ -217,6 +217,7 @@ Organizing a multi-day celebration in India is plagued by four structural failur
 | **DEC-012** | **Map Provider** | **Leaflet.js + OpenStreetMap tiles** for the MVP discovery map, abstracted behind a `MapProvider` interface | Zero per-load billing at pre-revenue stage; OSM tile coverage for Indian metros and Tier-2 cities is sufficient for venue/vendor pins. Abstraction layer allows swapping to Mapbox or Google Maps Platform later without touching business logic. | **Medium** | Need for rich place data (photos, live business hours, Street View) or usage volume makes a managed provider cost-justified. |
 | **DEC-013** | **Rating Cold-Start** | New/unreviewed vendors are shown in a distinct **"New / Unrated"** tier, never assigned a synthetic or inferred star rating | Ratings only exist after F12 (Post-Event Wrap-Up) collects real reviews. Fabricating a score to fill the gap would violate the "no invented facts" rule in Section 0 and DEC-002. | **Critical / Absolute** | Never — same standard as panchang/pricing data. |
 | **DEC-014** | **Discovery Cost Estimates** | Per-pin cost estimates are the **median normalized effective total cost** from F5 `QuoteAuditPayload` records for that category + city tier, always labeled `"estimate"`, never a vendor's self-reported headline price | Keeps the map consistent with the Section 0 rule that prices never come from LLM memory or vendor marketing copy; reuses F5's existing hidden-cost-normalized figures instead of a third pricing source. | **High** | Sample size per category/city falls below statistical usefulness (see F15 empty/limited-data states below). |
+| **DEC-015** | **Hosting & Managed Database Architecture** | **Netlify (Frontend Static/Edge) + Render (FastAPI Web Service + Managed PostgreSQL)** | Eliminates ephemeral tunnels (`localtunnel`), provides persistent HTTPS endpoints, native PostgreSQL JSONB support, and zero server maintenance at pre-revenue stage. Free/Hobby tier is sufficient for alpha validation. | **High** | Sustained traffic exceeds free-tier memory/concurrency limits or cold-start latency impacts SLA (revisit trigger: >50 concurrent active events or commercial launch). |
 
 
 ## 4. Functional Requirements
@@ -906,7 +907,7 @@ frontend/
 └── types/ (schema types, api response types)
 ```
 
-### 8.3 Backend Architecture
+### 8.3 Backend Architecture (FastAPI & Node Hybrid Services + Queue)
 - **Microservice Division:**
   - **Core Realtime Service (Node 24 / TypeScript):** Manages webhook ingress from Meta WhatsApp Cloud API, session auth, WebSocket channels for live event sync, and BullMQ queue dispatch.
   - **AI & Optimization Service (FastAPI / Python 3.14):** Houses Google OR-Tools CP-SAT engine, Swiss Ephemeris astronomical calculations, LangChain/LlamaIndex agent orchestration, and document OCR/vision pipelines.
@@ -914,7 +915,7 @@ frontend/
   - Enforces strict Pydantic JSON schema decoding with retry policy: $	ext{Retry} \le 2$ with error feedback prompt injection. If schema validation fails after 2 retries, fallback gracefully to a deterministic safe rule-based template.
   - LLM temperature locked to $0.0$ for all analytical and extraction tasks; $0.4$ for localized negotiation and invitation drafting.
 
-### 8.4 Specialized AI Agent Registry (10 Discrete Autonomous Workers)
+### 8.4 Specialized AI Agent Registry (11 Discrete Autonomous Workers)
 
 #### 1. Plan Generator Agent
 - **Trigger:** Submission of Onboarding Intake Wizard.
@@ -1007,10 +1008,10 @@ frontend/
 > **Note:** This agent is optional in practice — F15 is fully functional as a pure deterministic ranking/filtering service with zero LLM involvement. It exists only to generate the short explanatory caption; cost and rating math must never depend on it.
 
 ### 8.5 Infrastructure, Environments & CI/CD Pipelines
-- **Hosting Architecture:**
-  - Frontend: Vercel or Netlify Edge for global SSR and fast static asset caching.
-  - Backend Services: Containerized Docker workloads running on AWS ECS (Fargate) or GCP Cloud Run with auto-scaling.
-  - Database: AWS Aurora PostgreSQL Multi-AZ with read replicas.
+- **Hosting Architecture (Production & Staging):**
+  - Frontend: Netlify Edge (`https://utsav-ai.netlify.app`), auto-deployed on commit to `main`, proxies `/api/*` to Render backend with edge caching.
+  - Backend Services: Render Web Service (`https://utsav-ai-ycg2.onrender.com`), running Python 3.12 / FastAPI / Uvicorn with zero-downtime healthcheck `/health`.
+  - Database: Render Managed PostgreSQL (`utsav_db_nrue` in Frankfurt), running Alembic migrations for deterministic schema versioning.
   - Caching & Queues: Redis Cloud / AWS ElastiCache.
 - **Environments:** Development (`dev`), Staging (`staging`), Production (`prod`).
 - **Secrets Management:** AWS Secrets Manager or HashiCorp Vault. Zero secrets committed to git.
@@ -1836,7 +1837,7 @@ Utsav is designed to be fully usable by family elders with aging eyesight and co
 In strict accordance with the core system priorities, Utsav follows the phased build order:
 $$	ext{Foundation (M0)} \longrightarrow 	ext{F5 Quote Audit (M1)} \longrightarrow 	ext{F1 Plan B (M2)} \longrightarrow 	ext{F4 Vibe Vision (M3)} \longrightarrow 	ext{F3 WhatsApp Engine (M4)} \longrightarrow 	ext{F2 Cultural Engine (M5)} \longrightarrow 	ext{Phase 2 (M6)} \longrightarrow 	ext{Phase 3 & GA (M7-M8)}$$
 
-### 17.2 Milestones M0 through M8 with Strict Exit Gates
+### 17.2 Milestones M0 through M9 with Strict Exit Gates
 
 ```mermaid
 flowchart LR
