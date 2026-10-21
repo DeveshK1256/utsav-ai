@@ -1,4 +1,5 @@
 from pydantic_settings import BaseSettings
+from pydantic import field_validator
 from typing import Optional
 
 
@@ -9,6 +10,13 @@ class Settings(BaseSettings):
     
     DATABASE_URL: str = "sqlite:///./utsav_dev.db"  # Defaults to SQLite for local development/testing, overridden by env for PostgreSQL
     
+    @field_validator("DATABASE_URL", mode="after")
+    @classmethod
+    def assemble_db_connection(cls, v: str) -> str:
+        if v.startswith("postgres://"):
+            return v.replace("postgres://", "postgresql://", 1)
+        return v
+
     class Config:
         case_sensitive = True
         env_file = ".env"
