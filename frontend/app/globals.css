@@ -1,0 +1,48 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg-app: #FAF7F2;
+  --bg-surface: #FFFFFF;
+  --bg-surface-elevated: #F3EEE6;
+  --border-subtle: #E8E2D8;
+  --border-strong: #D4CBBC;
+  --text-primary: #1C1917;
+  --text-secondary: #57534E;
+  --text-muted: #8F887D;
+  --accent-gold: #C69214;
+  --accent-maroon: #8B1E28;
+}
+
+.dark {
+  --bg-app: #0C0F14;
+  --bg-surface: #141820;
+  --bg-surface-elevated: #1B212C;
+  --border-subtle: #242C3A;
+  --border-strong: #364154;
+  --text-primary: #F8FAFC;
+  --text-secondary: #94A3B8;
+  --text-muted: #64748B;
+  --accent-gold: #F4B41A;
+  --accent-maroon: #E05263;
+}
+
+body {
+  background-color: var(--bg-app);
+  color: var(--text-primary);
+  font-family: 'Inter', sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+.glass-card {
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(16px);
+  border: 1px solid var(--border-subtle);
+}
+
+.dark .glass-card {
+  background: rgba(20, 24, 32, 0.9);
+  backdrop-filter: blur(16px);
+  border: 1px solid var(--border-subtle);
+}

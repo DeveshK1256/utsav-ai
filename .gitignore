@@ -64,3 +64,6 @@ coverage/
 # Doc generator scratch
 doc_parts/
 build_master_doc.py
+
+*.db
+*.sqlite3
