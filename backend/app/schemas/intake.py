@@ -3,6 +3,31 @@ from typing import List, Optional, Dict, Any
 from pydantic import BaseModel, Field, field_validator
 
 
+class BudgetCalculationRequestSchema(BaseModel):
+    total_budget: float = Field(..., gt=0, description="Target Budget Envelope in INR")
+    event_type: str = Field(default="wedding", description="Celebration Type")
+    city: str = Field(default="Pune", description="City for cost tier calibration")
+    guest_count: int = Field(default=350, gt=0, description="Estimated Headcount")
+
+
+class BudgetItemCalculationSchema(BaseModel):
+    category: str
+    percentage: float
+    planned_amount: float
+    city_tier: str
+    city_tier_multiplier: float
+    reasoning_spec: Dict[str, Any]
+
+
+class BudgetCalculationResponseSchema(BaseModel):
+    city: str
+    city_tier: str
+    city_tier_multiplier: float
+    total_budget: float
+    scaled_envelope: float
+    items: List[BudgetItemCalculationSchema]
+
+
 class IntakeRequestSchema(BaseModel):
     name: str = Field(..., min_length=2, max_length=255, description="Celebration Name")
     host_name: str = Field(..., min_length=2, max_length=150, description="Primary Host / Couple Name")

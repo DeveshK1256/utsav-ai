@@ -1,0 +1,34 @@
+{
+  "multipliers": {
+    "tier_1": 1.00,
+    "tier_2": 0.68,
+    "tier_3": 0.45
+  },
+  "city_to_tier": {
+    "mumbai": "tier_1",
+    "delhi": "tier_1",
+    "delhi ncr": "tier_1",
+    "bengaluru": "tier_1",
+    "bangalore": "tier_1",
+    "pune": "tier_1",
+    "hyderabad": "tier_1",
+    "chennai": "tier_1",
+    "kolkata": "tier_1",
+    "ahmedabad": "tier_2",
+    "jaipur": "tier_2",
+    "lucknow": "tier_2",
+    "indore": "tier_2",
+    "chandigarh": "tier_2",
+    "kochi": "tier_2",
+    "surat": "tier_2",
+    "nagpur": "tier_2",
+    "bhopal": "tier_2",
+    "patna": "tier_2",
+    "vadodara": "tier_2",
+    "nashik": "tier_3",
+    "udaipur": "tier_3",
+    "varanasi": "tier_3",
+    "rural": "tier_3",
+    "default": "tier_2"
+  }
+}

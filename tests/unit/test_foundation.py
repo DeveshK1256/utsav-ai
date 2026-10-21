@@ -8,46 +8,12 @@ import pytest
 from typing import List, Dict, Any
 
 
+from backend.app.services.budget_engine import BudgetScalingEngine, load_city_tiers_config
+
 # --- 1. Deterministic Budget Scaling Engine ---
-CITY_TIER_MULTIPLIERS = {
-    "tier_1": 1.00,  # Mumbai, Delhi NCR, Bengaluru, Pune, Hyderabad
-    "tier_2": 0.68,  # Ahmedabad, Jaipur, Lucknow, Indore, Chandigarh
-    "tier_3": 0.45   # Smaller municipal centers & rural hubs
-}
-
-STANDARD_WEDDING_ALLOCATION = {
-    "venue": 0.22,
-    "catering": 0.28,
-    "decor": 0.16,
-    "photography": 0.09,
-    "entertainment": 0.07,
-    "rituals": 0.04,
-    "wardrobe": 0.06,
-    "logistics": 0.04,
-    "contingency": 0.04
-}
-
 def compute_budget_breakdown(envelope: float, city_tier: str = "tier_1") -> Dict[str, float]:
-    if envelope <= 0:
-        raise ValueError("Budget envelope must be strictly positive")
-    if city_tier not in CITY_TIER_MULTIPLIERS:
-        raise ValueError(f"Unknown city tier: {city_tier}")
-
-    multiplier = CITY_TIER_MULTIPLIERS[city_tier]
-    scaled_envelope = envelope * multiplier
-
-    breakdown = {}
-    running_total = 0.0
-    keys = list(STANDARD_WEDDING_ALLOCATION.keys())
-
-    for key in keys[:-1]:
-        share = round(scaled_envelope * STANDARD_WEDDING_ALLOCATION[key], 2)
-        breakdown[key] = share
-        running_total += share
-
-    # Allocate remainder to contingency to ensure exact mathematical balance down to 2 decimal places
-    breakdown[keys[-1]] = round(scaled_envelope - running_total, 2)
-    return breakdown
+    items = BudgetScalingEngine.compute_budget_allocation(envelope, "wedding", "mumbai" if city_tier == "tier_1" else ("jaipur" if city_tier == "tier_2" else "rural"), 350)
+    return {item["category"]: item["planned_amount"] for item in items}
 
 
 def test_budget_scaling_allocation_sums_to_total():
@@ -61,13 +27,20 @@ def test_budget_scaling_allocation_sums_to_total():
 
 def test_budget_scaling_tier_multipliers():
     envelope = 1000000.0  # ₹10 Lakhs
+    cfg = load_city_tiers_config()
+    m = cfg["multipliers"]
+    
+    t1_expected = envelope * m["tier_1"]
+    t2_expected = envelope * m["tier_2"]
+    t3_expected = envelope * m["tier_3"]
+
     t1 = sum(compute_budget_breakdown(envelope, "tier_1").values())
     t2 = sum(compute_budget_breakdown(envelope, "tier_2").values())
     t3 = sum(compute_budget_breakdown(envelope, "tier_3").values())
 
-    assert abs(t1 - 1000000.0) < 0.01
-    assert abs(t2 - 680000.0) < 0.01
-    assert abs(t3 - 450000.0) < 0.01
+    assert abs(t1 - t1_expected) < 0.01
+    assert abs(t2 - t2_expected) < 0.01
+    assert abs(t3 - t3_expected) < 0.01
 
 
 # --- 2. Phone Number E.164 Normalization ---

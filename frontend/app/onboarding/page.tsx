@@ -1,39 +1,78 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { ElderDisclaimerBanner } from '@/components/ui/ElderDisclaimerBanner';
 
-interface SubEventPlan {
+interface BudgetItemCalculation {
+  category: string;
+  percentage: number;
+  planned_amount: number;
+  city_tier: string;
+  city_tier_multiplier: number;
+  reasoning_spec: {
+    formula: string;
+    city_tier: string;
+    guest_count: number;
+    benchmark_basis: string;
+  };
+}
+
+interface BudgetCalculationResponse {
+  city: string;
+  city_tier: string;
+  city_tier_multiplier: number;
+  total_budget: number;
+  scaled_envelope: number;
+  items: BudgetItemCalculation[];
+}
+
+interface SubEventResponse {
+  id: string;
   name: string;
-  duration: string;
-  venue: string;
+  start_time: string;
+  end_time: string;
+  venue_name: string;
   is_outdoor: boolean;
   is_muhurat_locked: boolean;
   muhurat_notes?: string;
+  sort_order: number;
 }
 
-interface BudgetItemPlan {
+interface BudgetItemResponse {
+  id: string;
   category: string;
-  amount: number;
+  name: string;
+  planned_amount: number;
+  actual_amount: number;
   percentage: number;
+  reasoning_spec?: any;
 }
 
-interface TaskPlan {
+interface TaskResponse {
+  id: string;
   title: string;
-  role: string;
-  timeline: string;
+  status: string;
+  scheduled_start?: string;
+  scheduled_end?: string;
+  duration_minutes?: number;
+  assigned_role?: string;
 }
 
-interface GeneratedPlan {
+interface MasterPlanResponse {
   event_id: string;
   name: string;
+  owner_name: string;
+  status: string;
   city_tier: string;
   total_budget: number;
   guest_count: number;
-  sub_events: SubEventPlan[];
-  budget_breakdown: BudgetItemPlan[];
-  tasks: TaskPlan[];
+  tradition_code: string;
+  elder_verification_disclaimer: string;
+  sub_events: SubEventResponse[];
+  budget_breakdown: BudgetItemResponse[];
+  tasks: TaskResponse[];
+  created_at: string;
 }
 
 const TRADITIONS = [
@@ -75,23 +114,14 @@ const TRADITIONS = [
   }
 ];
 
-const CITY_TIERS: Record<string, string> = {
-  'mumbai': 'Tier 1 (1.0x)',
-  'pune': 'Tier 1 (1.0x)',
-  'bengaluru': 'Tier 1 (1.0x)',
-  'delhi': 'Tier 1 (1.0x)',
-  'hyderabad': 'Tier 1 (1.0x)',
-  'jaipur': 'Tier 2 (0.68x)',
-  'ahmedabad': 'Tier 2 (0.68x)',
-  'lucknow': 'Tier 2 (0.68x)',
-  'indore': 'Tier 2 (0.68x)',
-  'chandigarh': 'Tier 2 (0.68x)'
-};
+// Single source of API endpoint configuration
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'https://utsav-api-engine.loca.lt/api/v1';
 
 export default function OnboardingPage() {
   const [step, setStep] = useState<number>(1);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
-  const [generatedPlan, setGeneratedPlan] = useState<GeneratedPlan | null>(null);
+  const [isLoadingBudget, setIsLoadingBudget] = useState<boolean>(false);
+  const [apiError, setApiError] = useState<string | null>(null);
 
   // Form State
   const [formData, setFormData] = useState({
@@ -108,74 +138,91 @@ export default function OnboardingPage() {
     budget: 3500000
   });
 
-  const cityLower = formData.city.toLowerCase().trim();
-  const tierLabel = CITY_TIERS[cityLower] || 'Tier 2 (0.68x)';
-  const multiplier = cityLower.includes('mumbai') || cityLower.includes('pune') || cityLower.includes('bengaluru') || cityLower.includes('delhi') ? 1.0 : 0.68;
-  const effectiveBudget = formData.budget * multiplier;
+  // State populated STRICTLY by the backend API
+  const [budgetCalc, setBudgetCalc] = useState<BudgetCalculationResponse | null>(null);
+  const [masterPlan, setMasterPlan] = useState<MasterPlanResponse | null>(null);
 
-  const handleSynthesize = () => {
+  // Fetch backend budget calculation (Zero client-side math)
+  const fetchBackendBudget = useCallback(async () => {
+    setIsLoadingBudget(true);
+    setApiError(null);
+    try {
+      const res = await fetch(`${API_BASE_URL}/intake/calculate-budget`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Bypass-Tunnel-Reminder': 'true'
+        },
+        body: JSON.stringify({
+          total_budget: formData.budget,
+          event_type: formData.eventType,
+          city: formData.city,
+          guest_count: formData.guestCount
+        })
+      });
+
+      if (!res.ok) {
+        throw new Error(`Backend error (${res.status}): ${res.statusText}`);
+      }
+
+      const data: BudgetCalculationResponse = await res.json();
+      setBudgetCalc(data);
+    } catch (err: any) {
+      console.error('Failed to load budget from backend:', err);
+      setApiError('Live calculation engine unavailable. Ensure backend server is reachable.');
+    } finally {
+      setIsLoadingBudget(false);
+    }
+  }, [formData.budget, formData.eventType, formData.city, formData.guestCount]);
+
+  // Debounced effect for live calculation from backend
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      fetchBackendBudget();
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [fetchBackendBudget]);
+
+  // Synthesize master plan strictly via backend API
+  const handleSynthesize = async () => {
     setIsSubmitting(true);
-    // Simulate deterministic engine call or real API
-    setTimeout(() => {
-      const syntheticPlan: GeneratedPlan = {
-        event_id: 'utsav_' + Math.random().toString(36).substring(2, 9),
-        name: formData.name,
-        city_tier: tierLabel,
-        total_budget: effectiveBudget,
-        guest_count: formData.guestCount,
-        sub_events: [
-          {
-            name: 'Haldi & Floral Mehndi Gathering',
-            duration: 'Day 1 • 4:00 PM - 8:00 PM',
-            venue: 'Lotus Courtyard',
-            is_outdoor: true,
-            is_muhurat_locked: false
-          },
-          {
-            name: 'Sangeet & Cultural Night',
-            duration: 'Day 1 • 8:30 PM - 12:30 AM',
-            venue: 'Grand Heritage Ballroom',
-            is_outdoor: false,
-            is_muhurat_locked: false
-          },
-          {
-            name: 'Vedic Vivah & Saptapadi',
-            duration: 'Day 2 • 10:30 AM - 1:30 PM',
-            venue: 'Mandap Sanctum Hall',
-            is_outdoor: false,
-            is_muhurat_locked: true,
-            muhurat_notes: 'Calculated auspicious window: 10:42 AM - 12:15 PM'
-          },
-          {
-            name: 'Celebratory Gala Reception',
-            duration: 'Day 2 • 7:30 PM - 11:30 PM',
-            venue: 'Palace Royal Lawn',
-            is_outdoor: true,
-            is_muhurat_locked: false
-          }
-        ],
-        budget_breakdown: [
-          { category: 'Catering & Hospitality', amount: effectiveBudget * 0.28, percentage: 28 },
-          { category: 'Venue & Banquets', amount: effectiveBudget * 0.22, percentage: 22 },
-          { category: 'Floral & Mandap Decor', amount: effectiveBudget * 0.16, percentage: 16 },
-          { category: 'Cinematic Photography', amount: effectiveBudget * 0.09, percentage: 9 },
-          { category: 'Music & Entertainment', amount: effectiveBudget * 0.07, percentage: 7 },
-          { category: 'Ritual Supplies & Panditji', amount: effectiveBudget * 0.04, percentage: 4 },
-          { category: 'Contingency & Fuel Buffer', amount: effectiveBudget * 0.04, percentage: 4 }
-        ],
-        tasks: [
-          { title: 'Lock Venue & Access Hours Contract', role: 'Host', timeline: 'T-60 Days' },
-          { title: 'Finalize Per-Plate Menu & Tandoor Terms', role: 'F&B Coordinator', timeline: 'T-45 Days' },
-          { title: 'Source 27 Vedic Samagri Items', role: 'Elder Lead', timeline: 'T-21 Days' },
-          { title: 'Dispatch WhatsApp Concierge Invites', role: 'Guest Lead', timeline: 'T-21 Days' },
-          { title: 'Solve 2D Table Seating Constraints', role: 'Host', timeline: 'T-7 Days' },
-          { title: 'Issue Day-of Vendor Call-Sheets', role: 'Day-of Director', timeline: 'T-2 Days' }
-        ]
-      };
-      setGeneratedPlan(syntheticPlan);
+    setApiError(null);
+    try {
+      const res = await fetch(`${API_BASE_URL}/intake/generate`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Bypass-Tunnel-Reminder': 'true'
+        },
+        body: JSON.stringify({
+          name: formData.name,
+          host_name: formData.hostName,
+          phone_number: formData.phone,
+          event_type: formData.eventType,
+          tradition_code: formData.traditionCode,
+          guest_count: formData.guestCount,
+          total_budget: formData.budget,
+          city: formData.city,
+          pincode: formData.pincode,
+          start_date: formData.startDate,
+          end_date: formData.endDate
+        })
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.detail || `Synthesis failed with status ${res.status}`);
+      }
+
+      const planData: MasterPlanResponse = await res.json();
+      setMasterPlan(planData);
+      setStep(5);
+    } catch (err: any) {
+      console.error('Synthesis error:', err);
+      setApiError(err.message || 'Failed to synthesize master plan from backend.');
+    } finally {
       setIsSubmitting(false);
-      setStep(5); // Result view
-    }, 1800);
+    }
   };
 
   const formatINR = (val: number) => {
@@ -202,6 +249,19 @@ export default function OnboardingPage() {
             {step <= 4 ? `Step ${step} of 4` : 'Plan Composed'}
           </div>
         </div>
+
+        {/* Global Error Banner */}
+        {apiError && (
+          <div className="mb-6 p-4 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-300 dark:border-rose-800 text-rose-800 dark:text-rose-200 text-xs flex items-center justify-between">
+            <span>⚠️ {apiError}</span>
+            <button
+              onClick={fetchBackendBudget}
+              className="ml-3 px-3 py-1 rounded bg-rose-600 text-white font-semibold hover:bg-rose-700"
+            >
+              Retry Connection
+            </button>
+          </div>
+        )}
 
         {/* Step Indicator */}
         {step <= 4 && (
@@ -281,9 +341,11 @@ export default function OnboardingPage() {
                     onChange={(e) => setFormData({ ...formData, city: e.target.value })}
                     className="w-full px-4 py-3 rounded-xl bg-white dark:bg-stone-900 border border-stone-300 dark:border-stone-700 text-sm focus:outline-none focus:ring-2 focus:ring-marigold"
                   />
-                  <span className="absolute right-3 top-3 text-xs px-2 py-0.5 rounded-md bg-stone-100 dark:bg-stone-800 text-stone-500">
-                    {tierLabel}
-                  </span>
+                  {budgetCalc && (
+                    <span className="absolute right-3 top-3 text-xs px-2 py-0.5 rounded-md bg-stone-100 dark:bg-stone-800 text-stone-600 dark:text-stone-300 font-mono">
+                      {budgetCalc.city_tier} ({budgetCalc.city_tier_multiplier}x)
+                    </span>
+                  )}
                 </div>
               </div>
 
@@ -389,13 +451,13 @@ export default function OnboardingPage() {
           </div>
         )}
 
-        {/* STEP 3: Scale & Budget Envelope */}
+        {/* STEP 3: Scale & Budget Envelope (All math from FastAPI Backend) */}
         {step === 3 && (
           <div className="p-8 rounded-3xl glass-card shadow-xl space-y-6">
             <div>
               <h2 className="text-2xl font-serif font-semibold mb-1">Scale & Budget Envelope</h2>
               <p className="text-stone-500 text-sm">
-                Calibrated against {formData.city} ({tierLabel}). Zero guesswork or arbitrary pricing.
+                Calibrated in real time via FastAPI backend ({budgetCalc?.city_tier || 'tier_1'} • {budgetCalc?.city_tier_multiplier || 1.0}x). Zero client-side guesswork.
               </p>
             </div>
 
@@ -441,29 +503,29 @@ export default function OnboardingPage() {
               />
             </div>
 
-            {/* Live Computed Previews */}
+            {/* Live Backend Allocation Cards */}
             <div className="p-5 rounded-2xl bg-stone-100/70 dark:bg-stone-900/60 border border-stone-200 dark:border-stone-800">
-              <div className="text-xs font-semibold uppercase tracking-wider text-stone-500 mb-3">
-                Computed Baseline Allocation for {formData.city}
+              <div className="flex items-center justify-between mb-3">
+                <div className="text-xs font-semibold uppercase tracking-wider text-stone-500">
+                  Authoritative Backend Allocation (FastAPI Compute Engine)
+                </div>
+                {isLoadingBudget && (
+                  <span className="text-xs text-amber-600 animate-pulse font-mono">Computing in backend...</span>
+                )}
               </div>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                <div className="p-3 rounded-xl bg-white dark:bg-stone-950 border border-stone-200 dark:border-stone-800">
-                  <div className="text-xs text-stone-400">Catering (28%)</div>
-                  <div className="font-bold text-sm mt-1">{formatINR(effectiveBudget * 0.28)}</div>
+
+              {budgetCalc ? (
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  {budgetCalc.items.slice(0, 4).map((item, idx) => (
+                    <div key={idx} className="p-3 rounded-xl bg-white dark:bg-stone-950 border border-stone-200 dark:border-stone-800">
+                      <div className="text-xs text-stone-400 capitalize">{item.category} ({item.percentage}%)</div>
+                      <div className="font-bold text-sm mt-1">{formatINR(item.planned_amount)}</div>
+                    </div>
+                  ))}
                 </div>
-                <div className="p-3 rounded-xl bg-white dark:bg-stone-950 border border-stone-200 dark:border-stone-800">
-                  <div className="text-xs text-stone-400">Venue (22%)</div>
-                  <div className="font-bold text-sm mt-1">{formatINR(effectiveBudget * 0.22)}</div>
-                </div>
-                <div className="p-3 rounded-xl bg-white dark:bg-stone-950 border border-stone-200 dark:border-stone-800">
-                  <div className="text-xs text-stone-400">Decor (16%)</div>
-                  <div className="font-bold text-sm mt-1">{formatINR(effectiveBudget * 0.16)}</div>
-                </div>
-                <div className="p-3 rounded-xl bg-white dark:bg-stone-950 border border-stone-200 dark:border-stone-800">
-                  <div className="text-xs text-stone-400">Contingency (4%)</div>
-                  <div className="font-bold text-sm mt-1">{formatINR(effectiveBudget * 0.04)}</div>
-                </div>
-              </div>
+              ) : (
+                <div className="p-4 text-center text-xs text-stone-400">Loading allocation breakdown from backend...</div>
+              )}
             </div>
 
             <div className="pt-4 flex justify-between">
@@ -483,13 +545,13 @@ export default function OnboardingPage() {
           </div>
         )}
 
-        {/* STEP 4: Review & Final Synthesis */}
+        {/* STEP 4: Review & Synthesis Submission */}
         {step === 4 && (
           <div className="p-8 rounded-3xl glass-card shadow-xl space-y-6">
             <div>
               <h2 className="text-2xl font-serif font-semibold mb-1">Review Celebration Blueprint</h2>
               <p className="text-stone-500 text-sm">
-                Confirm your parameters before our deterministic engines assemble the master itinerary.
+                Confirm your parameters before our backend engines assemble the master itinerary.
               </p>
             </div>
 
@@ -505,7 +567,9 @@ export default function OnboardingPage() {
                 </div>
                 <div>
                   <span className="text-stone-400 block text-xs">Location & Tier:</span>
-                  <strong className="text-stone-900 dark:text-white">{formData.city} • {tierLabel}</strong>
+                  <strong className="text-stone-900 dark:text-white">
+                    {formData.city} • {budgetCalc ? `${budgetCalc.city_tier} (${budgetCalc.city_tier_multiplier}x)` : 'Tier 1'}
+                  </strong>
                 </div>
                 <div>
                   <span className="text-stone-400 block text-xs">Dates:</span>
@@ -516,8 +580,10 @@ export default function OnboardingPage() {
                   <strong className="text-stone-900 dark:text-white">{formData.guestCount} Confirmed Headcount</strong>
                 </div>
                 <div>
-                  <span className="text-stone-400 block text-xs">Budget Envelope:</span>
-                  <strong className="text-stone-900 dark:text-white">{formatINR(effectiveBudget)}</strong>
+                  <span className="text-stone-400 block text-xs">Scaled Budget Envelope:</span>
+                  <strong className="text-stone-900 dark:text-white">
+                    {budgetCalc ? formatINR(budgetCalc.scaled_envelope) : formatINR(formData.budget)}
+                  </strong>
                 </div>
               </div>
             </div>
@@ -544,7 +610,7 @@ export default function OnboardingPage() {
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
                     </svg>
-                    <span>Composing Celebration Plan...</span>
+                    <span>Synthesizing via FastAPI Backend...</span>
                   </>
                 ) : (
                   <span>✨ Synthesize Master Plan</span>
@@ -554,20 +620,19 @@ export default function OnboardingPage() {
           </div>
         )}
 
-        {/* STEP 5: Master Plan Reveal Result */}
-        {step === 5 && generatedPlan && (
+        {/* STEP 5: Master Plan Output Rendered from Backend */}
+        {step === 5 && masterPlan && (
           <div className="space-y-8 animate-fadeIn">
-            {/* Top Celebration Card */}
             <div className="p-8 rounded-3xl glass-card shadow-2xl border-2 border-haldi/60 relative overflow-hidden">
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6 border-b border-stone-200 dark:border-stone-800">
                 <div>
                   <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 text-xs font-semibold mb-2">
                     <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                    <span>Celebration Blueprint Synthesized</span>
+                    <span>Backend Plan Synthesized • ID: {masterPlan.event_id}</span>
                   </div>
-                  <h1 className="text-3xl font-serif font-bold">{generatedPlan.name}</h1>
+                  <h1 className="text-3xl font-serif font-bold">{masterPlan.name}</h1>
                   <p className="text-stone-500 text-sm mt-1">
-                    {generatedPlan.city_tier} • {generatedPlan.guest_count} Guests • Total Budget: {formatINR(generatedPlan.total_budget)}
+                    Host: {masterPlan.owner_name} • {masterPlan.city_tier} • {masterPlan.guest_count} Guests • Total Budget: {formatINR(masterPlan.total_budget)}
                   </p>
                 </div>
                 <div className="flex gap-3">
@@ -589,20 +654,22 @@ export default function OnboardingPage() {
               {/* Sub-Events Timeline */}
               <div className="mt-8">
                 <h3 className="text-sm font-semibold uppercase tracking-wider text-marigold mb-4">
-                  Multi-Day Sub-Events Schedule
+                  Multi-Day Sub-Events Schedule (DAG Resolved)
                 </h3>
                 <div className="grid sm:grid-cols-2 gap-4">
-                  {generatedPlan.sub_events.map((se, idx) => (
-                    <div key={idx} className="p-5 rounded-2xl bg-white dark:bg-stone-900/60 border border-stone-200 dark:border-stone-800 relative">
+                  {masterPlan.sub_events.map((se) => (
+                    <div key={se.id} className="p-5 rounded-2xl bg-white dark:bg-stone-900/60 border border-stone-200 dark:border-stone-800 relative">
                       {se.is_muhurat_locked && (
                         <span className="absolute top-4 right-4 px-2.5 py-0.5 rounded-full bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 text-xs font-bold font-mono">
                           🕉️ Muhurat Locked
                         </span>
                       )}
                       <h4 className="font-semibold text-base mb-1">{se.name}</h4>
-                      <div className="text-xs text-stone-500 mb-2">{se.duration}</div>
+                      <div className="text-xs text-stone-500 mb-2">
+                        {new Date(se.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - {new Date(se.end_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </div>
                       <div className="text-xs text-stone-600 dark:text-stone-400">
-                        📍 Venue: {se.venue} {se.is_outdoor ? '(Outdoor Lawn)' : '(Indoor Banquet)'}
+                        📍 Venue: {se.venue_name} {se.is_outdoor ? '(Outdoor)' : '(Indoor)'}
                       </div>
                       {se.muhurat_notes && (
                         <div className="mt-2 text-xs text-marigold font-medium">
@@ -614,33 +681,35 @@ export default function OnboardingPage() {
                 </div>
               </div>
 
-              {/* Itemized Budget Allocations */}
+              {/* Itemized Budget Breakdown */}
               <div className="mt-8">
                 <h3 className="text-sm font-semibold uppercase tracking-wider text-marigold mb-4">
-                  Calibrated Budget Allocations
+                  Itemized Budget Allocations (Exact Cents Arithmetic)
                 </h3>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                  {generatedPlan.budget_breakdown.map((b, idx) => (
-                    <div key={idx} className="p-4 rounded-xl bg-stone-50 dark:bg-stone-950 border border-stone-200 dark:border-stone-800">
-                      <div className="text-xs text-stone-400">{b.category} ({b.percentage}%)</div>
-                      <div className="font-bold text-sm mt-1">{formatINR(b.amount)}</div>
+                  {masterPlan.budget_breakdown.map((b) => (
+                    <div key={b.id} className="p-4 rounded-xl bg-stone-50 dark:bg-stone-950 border border-stone-200 dark:border-stone-800">
+                      <div className="text-xs text-stone-400 capitalize">{b.name} ({b.percentage}%)</div>
+                      <div className="font-bold text-sm mt-1">{formatINR(b.planned_amount)}</div>
                     </div>
                   ))}
                 </div>
               </div>
 
-              {/* Scheduled Milestones */}
+              {/* Scheduled Tasks */}
               <div className="mt-8">
                 <h3 className="text-sm font-semibold uppercase tracking-wider text-marigold mb-4">
                   Critical Path Milestones (DAG Scheduled)
                 </h3>
                 <div className="space-y-2">
-                  {generatedPlan.tasks.map((task, idx) => (
-                    <div key={idx} className="p-3.5 rounded-xl bg-white dark:bg-stone-900/40 border border-stone-200 dark:border-stone-800 flex items-center justify-between text-xs">
+                  {masterPlan.tasks.map((task) => (
+                    <div key={task.id} className="p-3.5 rounded-xl bg-white dark:bg-stone-900/40 border border-stone-200 dark:border-stone-800 flex items-center justify-between text-xs">
                       <span className="font-medium text-stone-800 dark:text-stone-200">{task.title}</span>
                       <div className="flex items-center space-x-3 text-stone-500">
-                        <span className="px-2 py-0.5 rounded bg-stone-100 dark:bg-stone-800 font-mono">{task.role}</span>
-                        <span className="font-semibold text-kumkum dark:text-haldi">{task.timeline}</span>
+                        <span className="px-2 py-0.5 rounded bg-stone-100 dark:bg-stone-800 font-mono">{task.assigned_role}</span>
+                        <span className="font-semibold text-kumkum dark:text-haldi">
+                          {task.scheduled_start ? new Date(task.scheduled_start).toLocaleDateString() : 'Pending'}
+                        </span>
                       </div>
                     </div>
                   ))}
@@ -648,7 +717,7 @@ export default function OnboardingPage() {
               </div>
 
               <div className="mt-8">
-                <ElderDisclaimerBanner />
+                <ElderDisclaimerBanner customText={masterPlan.elder_verification_disclaimer} />
               </div>
             </div>
           </div>

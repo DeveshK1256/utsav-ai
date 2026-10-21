@@ -212,6 +212,7 @@ Organizing a multi-day celebration in India is plagued by four structural failur
 | **DEC-008** | **WhatsApp Gateway** | **Meta WhatsApp Business Cloud API** (direct via certified BSP such as Gupshup or Twilio) | Essential for Indian market adoption; 98% open rates compared to <15% for email. | **High** | Meta API pricing changes make automated guest conversations cost-prohibitive. |
 | **DEC-009** | **Elder Disclaimer** | Non-negotiable visible banner: *"Auspicious timings & ritual checklists are algorithmic estimates. Please verify with your family Guruji or elders."* | Eliminates cultural liability and strengthens trust with family elders. | **Critical / Absolute** | Never. Cultural trust requirement. |
 | **DEC-010** | **City Tier Pricing** | City tier cost multipliers (Tier 1: 1.0x, Tier 2: 0.68x, Tier 3: 0.45x) based on municipal real-estate & catering indices | Calibrates realistic budget estimations and hidden-cost flags against local market norms. | **Medium** | Post-launch empirical vendor data demonstrates different regional margins. |
+| **DEC-011** | **Config-Driven City Multipliers** | City-tier cost multipliers are placeholder estimates pending real vendor pricing data; stored as config (`backend/app/config/city_tiers.json`), not code, so they can be recalibrated without a redeploy. | Runtime configuration decouples business calibration from application build releases and prevents hardcoded magic numbers across services. | **High** | After first 20 real quotes are ingested via F5. |
 
 
 ## 4. Functional Requirements

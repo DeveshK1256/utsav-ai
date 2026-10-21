@@ -1,5 +1,22 @@
+import os
+import json
+from pathlib import Path
 from typing import Dict, List, Any, Optional
 from decimal import Decimal, ROUND_HALF_UP
+
+
+CONFIG_PATH = Path(__file__).resolve().parent.parent / "config" / "city_tiers.json"
+
+
+def load_city_tiers_config() -> Dict[str, Any]:
+    if CONFIG_PATH.exists():
+        with open(CONFIG_PATH, "r", encoding="utf-8") as f:
+            return json.load(f)
+    # Default fallback
+    return {
+        "multipliers": {"tier_1": 1.0, "tier_2": 0.68, "tier_3": 0.45},
+        "city_to_tier": {"default": "tier_2"}
+    }
 
 
 class BudgetScalingEngine:
@@ -8,37 +25,8 @@ class BudgetScalingEngine:
     Rules:
     - Zero LLM math. All monetary calculations are performed deterministically.
     - Zero floating point drift: computes exact 2-decimal rounded shares and balances any residual to contingency.
-    - Applies calibrated city-tier cost multipliers.
+    - Loads calibrated city-tier cost multipliers from config/city_tiers.json at runtime, not hardcoded literals.
     """
-
-    CITY_TIER_MULTIPLIERS = {
-        "tier_1": Decimal("1.00"),  # Mumbai, Delhi NCR, Bengaluru, Pune, Hyderabad, Chennai, Kolkata
-        "tier_2": Decimal("0.68"),  # Ahmedabad, Jaipur, Lucknow, Indore, Chandigarh, Kochi, Surat
-        "tier_3": Decimal("0.45")   # Smaller municipal centers, suburban & rural hubs
-    }
-
-    CITY_TO_TIER = {
-        "mumbai": "tier_1",
-        "delhi": "tier_1",
-        "delhi ncr": "tier_1",
-        "bengaluru": "tier_1",
-        "bangalore": "tier_1",
-        "pune": "tier_1",
-        "hyderabad": "tier_1",
-        "chennai": "tier_1",
-        "kolkata": "tier_1",
-        "ahmedabad": "tier_2",
-        "jaipur": "tier_2",
-        "lucknow": "tier_2",
-        "indore": "tier_2",
-        "chandigarh": "tier_2",
-        "kochi": "tier_2",
-        "surat": "tier_2",
-        "nagpur": "tier_2",
-        "bhopal": "tier_2",
-        "patna": "tier_2",
-        "vadodara": "tier_2",
-    }
 
     ALLOCATION_MODELS: Dict[str, Dict[str, Decimal]] = {
         "wedding": {
@@ -79,9 +67,22 @@ class BudgetScalingEngine:
     }
 
     @classmethod
+    def get_config(cls) -> Dict[str, Any]:
+        return load_city_tiers_config()
+
+    @classmethod
     def resolve_city_tier(cls, city: str) -> str:
+        cfg = cls.get_config()
+        mapping = cfg.get("city_to_tier", {})
         cleaned = city.strip().lower()
-        return cls.CITY_TO_TIER.get(cleaned, "tier_2")
+        return mapping.get(cleaned, mapping.get("default", "tier_2"))
+
+    @classmethod
+    def get_tier_multiplier(cls, tier: str) -> Decimal:
+        cfg = cls.get_config()
+        multipliers = cfg.get("multipliers", {})
+        val = multipliers.get(tier, 1.0)
+        return Decimal(str(val))
 
     @classmethod
     def compute_budget_allocation(
@@ -97,7 +98,7 @@ class BudgetScalingEngine:
             raise ValueError("Guest count must be strictly greater than 0")
 
         tier = cls.resolve_city_tier(city)
-        multiplier = cls.CITY_TIER_MULTIPLIERS[tier]
+        multiplier = cls.get_tier_multiplier(tier)
         model_key = event_type.lower() if event_type.lower() in cls.ALLOCATION_MODELS else "wedding"
         allocation_spec = cls.ALLOCATION_MODELS[model_key]
 
