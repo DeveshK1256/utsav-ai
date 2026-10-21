@@ -33,6 +33,7 @@
   - [4.12 F12: Post-Event Wrap-Up, Settlements & Vendor Ratings](#412-f12-post-event-wrap-up-settlements--vendor-ratings)
   - [4.13 F13: "Why This?" Architectural Transparency Layer](#413-f13-why-this-architectural-transparency-layer)
   - [4.14 F14: Community Festival & Housing Society Event Module](#414-f14-community-festival--housing-society-event-module)
+  - [4.15 F15: Vendor & Venue Discovery Map](#415-f15-vendor--venue-discovery-map)
 - [5. Information Architecture](#5-information-architecture)
   - [5.1 App Structure & Sitemap](#51-app-structure--sitemap)
   - [5.2 Navigation Model (Web & Responsive Mobile PWA)](#52-navigation-model-web--responsive-mobile-pwa)
@@ -57,7 +58,7 @@
   - [8.1 High-Level System Architecture](#81-high-level-system-architecture)
   - [8.2 Frontend Architecture (Next.js 15 App Router / TypeScript)](#82-frontend-architecture-nextjs-15-app-router--typescript)
   - [8.3 Backend Architecture (FastAPI & Node Hybrid Services + Queue)](#83-backend-architecture-fastapi--node-hybrid-services--queue)
-  - [8.4 Specialized AI Agent Registry (10 Discrete Autonomous Workers)](#84-specialized-ai-agent-registry-10-discrete-autonomous-workers)
+  - [8.4 Specialized AI Agent Registry (11 Discrete Autonomous Workers)](#84-specialized-ai-agent-registry-11-discrete-autonomous-workers)
   - [8.5 Infrastructure, Environments & CI/CD Pipelines](#85-infrastructure-environments--cicd-pipelines)
 - [9. Technical Requirements Document (TRD)](#9-technical-requirements-document-trd)
   - [9.1 Non-Functional Requirements (NFRs)](#91-non-functional-requirements-nfrs)
@@ -75,7 +76,7 @@
 - [16. Accessibility Specification (WCAG 2.2 AA)](#16-accessibility-specification-wcag-22-aa)
 - [17. Implementation Plan & Milestone Roadmap](#17-implementation-plan--milestone-roadmap)
   - [17.1 Staged Build Sequence](#171-staged-build-sequence)
-  - [17.2 Milestones M0 through M8 with Strict Exit Gates](#172-milestones-m0-through-m8-with-strict-exit-gates)
+  - [17.2 Milestones M0 through M9 with Strict Exit Gates](#172-milestones-m0-through-m9-with-strict-exit-gates)
   - [17.3 Definition of Done (DoD) per Milestone](#173-definition-of-done-dod-per-milestone)
 - [18. Open Decisions for Product Owner](#18-open-decisions-for-product-owner)
 - [19. Post-Document Actions & Starter Build Prompt](#19-post-document-actions--starter-build-prompt)
@@ -213,6 +214,9 @@ Organizing a multi-day celebration in India is plagued by four structural failur
 | **DEC-009** | **Elder Disclaimer** | Non-negotiable visible banner: *"Auspicious timings & ritual checklists are algorithmic estimates. Please verify with your family Guruji or elders."* | Eliminates cultural liability and strengthens trust with family elders. | **Critical / Absolute** | Never. Cultural trust requirement. |
 | **DEC-010** | **City Tier Pricing** | City tier cost multipliers (Tier 1: 1.0x, Tier 2: 0.68x, Tier 3: 0.45x) based on municipal real-estate & catering indices | Calibrates realistic budget estimations and hidden-cost flags against local market norms. | **Medium** | Post-launch empirical vendor data demonstrates different regional margins. |
 | **DEC-011** | **Config-Driven City Multipliers** | City-tier cost multipliers are placeholder estimates pending real vendor pricing data; stored as config (`backend/app/config/city_tiers.json`), not code, so they can be recalibrated without a redeploy. | Runtime configuration decouples business calibration from application build releases and prevents hardcoded magic numbers across services. | **High** | After first 20 real quotes are ingested via F5. |
+| **DEC-012** | **Map Provider** | **Leaflet.js + OpenStreetMap tiles** for the MVP discovery map, abstracted behind a `MapProvider` interface | Zero per-load billing at pre-revenue stage; OSM tile coverage for Indian metros and Tier-2 cities is sufficient for venue/vendor pins. Abstraction layer allows swapping to Mapbox or Google Maps Platform later without touching business logic. | **Medium** | Need for rich place data (photos, live business hours, Street View) or usage volume makes a managed provider cost-justified. |
+| **DEC-013** | **Rating Cold-Start** | New/unreviewed vendors are shown in a distinct **"New / Unrated"** tier, never assigned a synthetic or inferred star rating | Ratings only exist after F12 (Post-Event Wrap-Up) collects real reviews. Fabricating a score to fill the gap would violate the "no invented facts" rule in Section 0 and DEC-002. | **Critical / Absolute** | Never — same standard as panchang/pricing data. |
+| **DEC-014** | **Discovery Cost Estimates** | Per-pin cost estimates are the **median normalized effective total cost** from F5 `QuoteAuditPayload` records for that category + city tier, always labeled `"estimate"`, never a vendor's self-reported headline price | Keeps the map consistent with the Section 0 rule that prices never come from LLM memory or vendor marketing copy; reuses F5's existing hidden-cost-normalized figures instead of a third pricing source. | **High** | Sample size per category/city falls below statistical usefulness (see F15 empty/limited-data states below). |
 
 
 ## 4. Functional Requirements
@@ -539,6 +543,28 @@ Organizing a multi-day celebration in India is plagued by four structural failur
   - Volunteer shift auto-dispatch with 98% delivery rate on WhatsApp.
   - Real-time audit log of all community donations and society expenditures.
 
+### 4.15 F15: Vendor & Venue Discovery Map
+- **Overview:** A geolocation-aware discovery surface that shows the user's current (or searched) location on an interactive map, with nearby venues and vendors plotted as pins — color-coded from top-rated to unrated, each annotated with a category-normalized estimated cost. Functions both as a pre-booking exploration tool (before an event exists) and as a `/dashboard/vendors/discover` view once inside an event.
+- **User Story:** *As a host researching venues in Jaipur before I've even created my event, I want to see a map of decorators and banquet halls near a neighborhood I'm considering, ranked by rating, with an honest cost estimate per pin, so I can shortlist 3–4 before requesting quotes.*
+- **User Flow:**
+  1. User opens Discovery Map (from marketing site pre-signup, or `/dashboard/vendors/discover` once inside an event).
+  2. Browser geolocation permission requested; on denial or unavailability, user can type a city/pincode instead (manual fallback is mandatory, not optional).
+  3. Backend queries `vendor_profiles` within a radius (default 15km, adjustable 5–50km) filtered by category (Venue, Caterer, Decorator, Photographer, etc.) if selected.
+  4. Map renders pins color-coded by rating tier: **Top Rated** (≥4.5★, marigold-gold pin), **Highly Rated** (4.0–4.4★, warm amber), **Rated** (3.0–3.9★, muted gold), **New / Unrated** (grey outline pin, no fabricated score).
+  5. Each pin shows a cost badge (e.g., "~₹85K–₹1.1L · estimate") derived per DEC-014; tapping the pin opens a summary card (rating, review count, category, estimated cost range, "Request Quote" CTA that feeds into F5).
+  6. List view (sortable: Rating ↓, Distance ↑, Estimated Cost ↑/↓) is available alongside the map for accessibility and low-end devices.
+  7. If inside an active event, "Request Quote" pre-fills the vendor's contact into a new F5 quote-ingestion thread instead of a cold outreach.
+- **Edge Cases:** Zero vendors found in radius (auto-expand search radius with user confirmation, never silently); geolocation spoofing/VPN placing user far from stated city; a vendor profile with only 1–2 ratings (statistically thin — show review count alongside the star rating rather than hiding it); mobile/service-area vendors (caterers, decorators) with no fixed address, shown via their declared `service_area_radius_km` rather than a pinned storefront.
+- **Validation Rules:** A pin's cost badge must never render without its underlying sample size; if `n < 5` normalized quotes exist for that category/city, show **"Limited data"** instead of a number (same standard as F5 benchmarking). Rating tiers are computed server-side from stored aggregates, never estimated client-side.
+- **Empty States:** "No vendors mapped yet in this area. Expand your search radius, or be the first to add a vendor you've worked with."
+- **Loading States:** "Finding venues and vendors near you..."
+- **Error States:** "Location access was denied or unavailable. Enter your city or pincode to search manually." / "Map tiles failed to load — showing list view instead." (map failure must degrade to the list view, never to a blank screen).
+- **Acceptance Criteria:**
+  - Map renders and plots all in-radius vendor pins within 2 seconds on 4G.
+  - Every pin's rating tier and cost badge trace back to a stored aggregate the user can inspect via a "Why this estimate?" link (ties into F13).
+  - Full functionality (search, sort, request quote) available in list view with zero map/JS failures.
+  - Geolocation denial never blocks the flow — manual city/pincode entry is always present, not a fallback-only-on-error state.
+
 
 ## 5. Information Architecture
 
@@ -592,6 +618,7 @@ UTSAV APP ROOT
 | **Contribution Ledger** | `/dashboard/budget/contributions`| Multi-uncle/family financial ledger, UPI receipt verification | Treasurer, Host, Elder | Budget subnav |
 | **Risk Forecaster** | `/dashboard/risk-radar` | 14-day weather radar, municipal sound rules, traffic analysis | Coordinator, Host | Dashboard alert badge |
 | **Wrap-up & Settlements** | `/dashboard/wrap-up` | Vendor invoice closure, deposit recovery, thank-you notes | Host, Treasurer | Post-event prompt |
+| **Vendor & Venue Discovery Map** | `/dashboard/vendors/discover` (and public `/discover` pre-signup) | Geolocated map of nearby venues/vendors ranked by rating with normalized cost estimates | Host, Prospective Host | Marketing site CTA, Vendors subnav |
 
 ### 5.4 Layout Hierarchy
 ```
@@ -969,6 +996,16 @@ frontend/
 - **Guardrails:** Cannot archive sensitive payment credentials or PII; must sanitize contact data according to privacy policy.
 - **Fallback Policy:** Store raw tabular summaries in Postgres archive.
 
+#### 11. Discovery Ranking & Explainability Agent (F15)
+- **Trigger:** User loads the Discovery Map or changes filters (category, radius, sort).
+- **Inputs:** User/search coordinates, radius, category filter, aggregated vendor rating + normalized cost data (pre-computed, not generated live).
+- **Tools it May Call:** `query_vendor_geo_index()`, `get_rating_aggregate()`, `get_normalized_cost_estimate()`.
+- **Output JSON Schema:** `DiscoveryMapPayloadSchema`.
+- **Guardrails:** Does NOT compute ratings, distances, or cost figures itself — those are deterministic code/DB aggregates. The agent's only generative role is writing a one-line, factual "why this result" caption per pin (e.g., "Closest top-rated decorator within your radius, 12 reviews") strictly from the structured data provided — it may not add adjectives or claims not present in the input data.
+- **Fallback Policy:** If caption generation fails or times out, render the pin with its raw structured data and no caption — never block map rendering on this agent.
+
+> **Note:** This agent is optional in practice — F15 is fully functional as a pure deterministic ranking/filtering service with zero LLM involvement. It exists only to generate the short explanatory caption; cost and rating math must never depend on it.
+
 ### 8.5 Infrastructure, Environments & CI/CD Pipelines
 - **Hosting Architecture:**
   - Frontend: Vercel or Netlify Edge for global SSR and fast static asset caching.
@@ -1268,6 +1305,7 @@ erDiagram
 #### Table: `vendors`
 - `id` (UUID, Primary Key, `gen_random_uuid()`)
 - `event_id` (UUID, Foreign Key -> `events(id)` ON DELETE CASCADE, Index)
+- `vendor_profile_id` (UUID, FK -> `vendor_profiles(id)` ON DELETE SET NULL, Nullable) — optional link to global directory
 - `business_name` (VARCHAR(255), Not Null)
 - `category` (VARCHAR(100), Not Null)
 - `contact_person` (VARCHAR(150))
@@ -1329,6 +1367,40 @@ erDiagram
 - `diff_payload` (JSONB, Not Null)
 - `actor_id` (UUID, Nullable)
 - `logged_at` (TIMESTAMPTZ, Default `NOW()`)
+
+#### Table: `vendor_profiles` (global directory — distinct from the existing per-event `vendors` table)
+- `id` (UUID, Primary Key, `gen_random_uuid()`)
+- `business_name` (VARCHAR(200), Not Null)
+- `category` (VARCHAR(50), Index) — `venue`, `caterer`, `decorator`, `photographer`, `sound_lighting`, `priest_pandit`, `transport`, `other`
+- `latitude` (NUMERIC(9,6), Nullable — null for pure service-area vendors)
+- `longitude` (NUMERIC(9,6), Nullable)
+- `service_area_radius_km` (INTEGER, Nullable) — set for mobile/traveling vendors instead of a fixed pin
+- `city` (VARCHAR(100), Index)
+- `city_tier` (VARCHAR(20)) — references `city_tiers.json` per DEC-011
+- `contact_phone` (VARCHAR(20))
+- `average_rating` (NUMERIC(2,1), Default NULL) — NULL, not 0, when unrated; denormalized cache updated on new `vendor_ratings` insert
+- `rating_count` (INTEGER, Default 0)
+- `is_verified_profile` (BOOLEAN, Default false) — host-confirmed vendor vs. unclaimed directory entry
+- `created_at` (TIMESTAMPTZ, Default `NOW()`)
+
+#### Table: `vendor_ratings`
+- `id` (UUID, Primary Key)
+- `vendor_profile_id` (UUID, FK -> `vendor_profiles(id)` ON DELETE CASCADE, Index)
+- `event_id` (UUID, FK -> `events(id)` ON DELETE SET NULL) — ties the rating to the real event it came from (F12), never a free-floating review
+- `rating` (SMALLINT, Check `rating BETWEEN 1 AND 5`, Not Null)
+- `review_text` (TEXT, Nullable)
+- `rated_by_user_id` (UUID, FK -> `users(id)`)
+- `created_at` (TIMESTAMPTZ, Default `NOW()`)
+
+#### Table: `vendor_cost_estimates` (materialized aggregate, refreshed on new `quote_audit` ingestion)
+- `id` (UUID, Primary Key)
+- `category` (VARCHAR(50), Index)
+- `city_tier` (VARCHAR(20), Index)
+- `median_normalized_cost` (NUMERIC(14,2))
+- `sample_size` (INTEGER) — drives the `n < 5` "Limited data" rule from F15's validation section
+- `last_computed_at` (TIMESTAMPTZ)
+
+> Note: the existing `vendors` table (Section 10.1/10.2, event-scoped) gains an optional `vendor_profile_id` (UUID, FK -> `vendor_profiles(id)` ON DELETE SET NULL) so a quote booked within an event can link back to its directory profile — not required, since many quotes come from vendors never in the directory.
 
 ---
 
@@ -1512,6 +1584,55 @@ erDiagram
 }
 ```
 
+#### 5. Discovery Map Payload Schema (`DiscoveryMapPayloadSchema`)
+```json
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "DiscoveryMapPayload",
+  "type": "object",
+  "required": ["search_center", "radius_km", "results"],
+  "properties": {
+    "search_center": {
+      "type": "object",
+      "required": ["latitude", "longitude"],
+      "properties": {
+        "latitude": { "type": "number" },
+        "longitude": { "type": "number" }
+      }
+    },
+    "radius_km": { "type": "integer" },
+    "results": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["vendor_profile_id", "business_name", "category", "rating_tier", "distance_km"],
+        "properties": {
+          "vendor_profile_id": { "type": "string", "format": "uuid" },
+          "business_name": { "type": "string" },
+          "category": { "type": "string" },
+          "average_rating": { "type": ["number", "null"] },
+          "rating_count": { "type": "integer" },
+          "rating_tier": { "type": "string", "enum": ["top_rated", "highly_rated", "rated", "new_unrated"] },
+          "distance_km": { "type": "number" },
+          "cost_estimate": {
+            "type": "object",
+            "required": ["is_estimate"],
+            "properties": {
+              "is_estimate": { "type": "boolean", "const": true },
+              "range_low": { "type": "number" },
+              "range_high": { "type": "number" },
+              "sample_size": { "type": "integer" },
+              "limited_data": { "type": "boolean" }
+            }
+          },
+          "caption": { "type": "string", "maxLength": 140 }
+        }
+      }
+    }
+  }
+}
+```
+
 ---
 
 ## 11. API Design & Endpoint Contracts
@@ -1558,6 +1679,20 @@ erDiagram
   - **Purpose:** Translates tables, guests, and affinity/friction constraints into OR-Tools CP-SAT formulation and returns table assignments.
   - **Response (200):** `{ "status": "OPTIMAL", "assignments": [ { "guest_id": "...", "table_id": "T1" } ], "solve_time_ms": 320 }`
 
+### 11.7 Vendor & Venue Discovery (`/api/v1/discovery`)
+- **GET `/api/v1/discovery/vendors`**
+  - **Purpose:** Returns nearby vendor/venue pins ranked by rating tier with normalized cost estimates.
+  - **Query Params:** `lat`, `lng`, `radius_km` (default 15), `category` (optional), `sort` (`rating_desc` default, `distance_asc`, `cost_asc`).
+  - **Response (200):** `DiscoveryMapPayload` (see Section 10.3).
+  - **Caching Strategy:** Redis, keyed on `(lat_round_2, lng_round_2, radius_km, category, sort)`, TTL 15 minutes — geo queries are expensive and results change slowly.
+  - **Retry Strategy:** Client retries once on 5xx with exponential backoff; on repeated failure, frontend falls back to cached last-known results if available, else empty state.
+  - **Error Handling:** 400 if `lat`/`lng` missing and no city/pincode fallback provided; 200 with empty `results` array (never 404) when zero vendors in radius.
+- **POST `/api/v1/discovery/vendors/{id}/rate`**
+  - **Purpose:** Records a post-event rating against a `vendor_profiles` entry (invoked from F12 wrap-up flow).
+  - **Request Body:** `{ "event_id": "uuid", "rating": 1-5, "review_text": "string?" }`
+  - **Response (200):** Updated `average_rating` / `rating_count` for the vendor profile.
+  - **Validation:** `event_id` must belong to the requesting user and be in `completed` status — prevents rating manipulation unconnected to a real event.
+
 ---
 
 ## 12. Component Inventory
@@ -1584,6 +1719,11 @@ A buildable registry of core reusable UI components:
 18. `<ContributionLedgerTable />`: Multi-party financial ledger with UPI verification pills and proof attachment viewer.
 19. `<VolunteerShiftCard />`: Community festival roster card showing assigned resident, contact link, and attendance status.
 20. `<WhatsAppMessageBubble />`: Faithful preview of outbound guest WhatsApp messages including interactive button mockups.
+21. `<DiscoveryMapCanvas />`: Leaflet-based interactive map rendering color-coded vendor/venue pins with clustering at low zoom levels.
+22. `<VendorPinCard />`: Pin summary popover — rating tier badge, review count, cost estimate range, "Request Quote" CTA.
+23. `<RatingTierLegend />`: Persistent map legend explaining the four tiers (Top Rated / Highly Rated / Rated / New·Unrated) so an unrated vendor is never mistaken for a low-rated one.
+24. `<DiscoveryListToggle />`: Map/List view switcher — list view is the accessibility and low-end-device fallback, not a secondary feature.
+25. `<LocationPermissionPrompt />`: Geolocation consent UI with a mandatory manual city/pincode entry path shown alongside, never gated behind permission grant.
 
 
 ## 13. Performance Strategy
@@ -1746,6 +1886,12 @@ flowchart LR
 - **Scope:** Penetration testing, prompt-injection red teaming, WCAG 2.2 AA accessibility audit, load testing (50k virtual users), and multi-region deployment.
 - **Exit Gate (Loop Test):** Zero critical security vulnerabilities; Lighthouse score >= 95 on mobile; WCAG AA compliance verified via automated axe-core.
 
+#### Milestone M9: F15 Vendor & Venue Discovery Map
+- **Scope:** `vendor_profiles` / `vendor_ratings` / `vendor_cost_estimates` schema + migrations, geo-indexed query service (PostGIS extension or lat/lng bounding-box query if PostGIS is unavailable), Leaflet map integration behind the `MapProvider` abstraction (DEC-012), discovery API endpoint, map + list UI, F12 rating-submission wiring into `vendor_ratings`.
+- **Exit Gate (Loop Test):** Returns correct ranked results for 25 seeded test vendors across all 4 rating tiers including New/Unrated; cost badges correctly suppress to "Limited data" when sample size < 5 across 10 seeded low-volume categories; manual city/pincode fallback verified functional with geolocation permission denied in test harness; map failure (simulated tile load error) confirmed to degrade to list view without blank screen.
+
+> **Sequencing note:** F15 depends on F5 (for normalized cost data) and benefits from F12 (for real ratings) already existing, so M9 is correctly sequenced after both rather than inserted earlier in the roadmap.
+
 ### 17.3 Definition of Done (DoD) per Milestone
 A milestone is declared complete ONLY when:
 1. Every feature in the milestone has 100% functional coverage matching this specification.
@@ -1771,6 +1917,7 @@ The following items are cataloged for business and commercial sign-off as implem
    - *Context:* F8 Contribution Tracker logs UPI reference IDs.
    - *Question:* Should Utsav remain a pure ledger, or partner with an RBI-licensed payment aggregator (Razorpay / Cashfree) to hold funds in escrow?
    - *Recommendation:* Start as a pure verification ledger (zero regulatory overhead); explore licensed escrow partnerships in Phase 3.
+4. **Vendor Directory Seeding Strategy:** Should `vendor_profiles` be seeded manually/curated at launch (quality-controlled, slower growth) or allow self-service vendor signup (faster density, needs a verification/spam-prevention flow)? *Recommendation:* curated seeding in the 2 launch cities from DEC-010's open decision, self-service signup gated behind phone OTP + manual review queue once density is established.
 
 ---
 
