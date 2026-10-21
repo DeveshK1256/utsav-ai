@@ -151,3 +151,11 @@ def test_seating_constraint_rules():
     # Move guest_1 to T2 -> Valid
     assignments["guest_1"] = "T2"
     assert validate_seating_allocation(tables, assignments, hard_conflicts)
+
+
+def test_database_url_normalization_to_postgresql():
+    from backend.app.core.config import Settings
+    
+    assert Settings.assemble_db_connection("postgres://user:pass@host/db") == "postgresql://user:pass@host/db"
+    assert Settings.assemble_db_connection("postgresql+psycopg://user:pass@host/db") == "postgresql://user:pass@host/db"
+    assert Settings.assemble_db_connection("sqlite:///./test.db") == "sqlite:///./test.db"
