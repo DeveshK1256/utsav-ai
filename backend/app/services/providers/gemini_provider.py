@@ -16,7 +16,7 @@ from backend.app.services.llm_provider import (
 
 logger = logging.getLogger(__name__)
 
-GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent"
+GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent"
 
 class GeminiQuoteExtractionProvider(BaseQuoteExtractionProvider):
     """
@@ -105,8 +105,9 @@ class GeminiQuoteExtractionProvider(BaseQuoteExtractionProvider):
                     resp.raise_for_status()
                     data = resp.json()
                     
-                    candidate_text = data["candidates"][0]["content"]["parts"][0]["text"]
-                    cleaned_json = candidate_text.strip()
+                    parts = data["candidates"][0]["content"]["parts"]
+                    candidate_text = "".join(p.get("text", "") for p in parts).strip()
+                    cleaned_json = candidate_text
                     if cleaned_json.startswith("```json"):
                         cleaned_json = cleaned_json[7:]
                     if cleaned_json.startswith("```"):
@@ -190,7 +191,8 @@ class GeminiNegotiationDraftProvider(BaseNegotiationDraftProvider):
                 )
                 resp.raise_for_status()
                 data = resp.json()
-                text = data["candidates"][0]["content"]["parts"][0]["text"].strip()
+                parts = data["candidates"][0]["content"]["parts"]
+                text = "".join(p.get("text", "") for p in parts).strip()
                 if text.startswith("```json"):
                     text = text[7:]
                 if text.startswith("```"):
