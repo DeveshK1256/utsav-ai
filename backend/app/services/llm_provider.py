@@ -3,6 +3,12 @@ import json
 from abc import ABC, abstractmethod
 from typing import Dict, Any, Optional, List
 from backend.app.schemas.quotes import QuoteExtractionPayloadSchema, ExtractedLineItemSchema
+from backend.app.schemas.vibe import (
+    VibeExtractionPayloadSchema,
+    SingleImageVibeSchema,
+    ThemeGenerationPayloadSchema,
+    DecorItemProposalSchema,
+)
 
 
 class ExtractionValidationError(Exception):
@@ -50,12 +56,34 @@ class BaseReplanningExplanationProvider(ABC):
         """
         Generate plain-language explanation of calculated changes and mitigation suggestions
         if budget is exceeded. Grounded strictly in provided computed numbers.
-        Returns:
-        {
-            "explanation": "...",
-            "mitigation_suggestions": ["...", "..."],
-            "reasoning": "..."
-        }
+        """
+        pass
+
+
+class BaseVibeExtractionProvider(ABC):
+    @abstractmethod
+    def extract_vibe_from_images(
+        self,
+        images: List[Dict[str, Any]],
+        text_description: Optional[str] = None
+    ) -> VibeExtractionPayloadSchema:
+        """
+        Extract aesthetic vibe (palettes, tags, materials, mood keywords) from a batch of images.
+        Each image dict has: {'bytes': bytes, 'mime_type': str, 'file_name': str}.
+        """
+        pass
+
+
+class BaseThemeGenerationProvider(ABC):
+    @abstractmethod
+    def generate_theme_proposal(
+        self,
+        style_profile: Dict[str, Any],
+        event_details: Dict[str, Any]
+    ) -> ThemeGenerationPayloadSchema:
+        """
+        Generate a comprehensive theme proposal with >=10 concrete decor items with formulas,
+        palettes, culinary directions, playlist genres, dress codes, and invitation briefs.
         """
         pass
 
@@ -440,3 +468,179 @@ def get_replanning_explanation_provider() -> BaseReplanningExplanationProvider:
             pass
 
     return DeterministicStubReplanningExplanationProvider()
+
+
+class DeterministicStubVibeProvider(BaseVibeExtractionProvider, BaseThemeGenerationProvider):
+    """
+    Deterministic stub provider for Vibe-to-Plan mood extraction and theme generation (M3).
+    Zero external network calls, zero token costs, 100% reproducible fixtures.
+    """
+
+    def extract_vibe_from_images(
+        self,
+        images: List[Dict[str, Any]],
+        text_description: Optional[str] = None
+    ) -> VibeExtractionPayloadSchema:
+        single_images = []
+        count = max(len(images), 1)
+
+        palette_variants = [
+            ["#FF9933", "#800020", "#FFD700", "#2E8B57", "#FFF8DC"],
+            ["#FF9933", "#D4AF37", "#800020", "#FFF8DC", "#CD7F32"],
+            ["#800020", "#FF9933", "#2E8B57", "#FFD700", "#FAF0E6"],
+        ]
+
+        for i in range(count):
+            p = palette_variants[i % len(palette_variants)]
+            single_images.append(
+                SingleImageVibeSchema(
+                    palette=p,
+                    style_tags=["royal_rajasthani", "heritage_palace", "marigold_grandeur", "traditional"],
+                    materials=["brass", "marigold", "raw_silk", "terracotta"],
+                    lighting_mood="warm_candlelight_ambient",
+                    flower_types=["genda_marigold", "rajnigandha", "red_rose"]
+                )
+            )
+
+        return VibeExtractionPayloadSchema(
+            images=single_images,
+            overall_mood_words=["regal", "vibrant", "traditional", "festive", "auspicious"]
+        )
+
+    def generate_theme_proposal(
+        self,
+        style_profile: Dict[str, Any],
+        event_details: Dict[str, Any]
+    ) -> ThemeGenerationPayloadSchema:
+        palette = style_profile.get("extracted_palette") or ["#FF9933", "#800020", "#FFD700", "#2E8B57", "#FFF8DC"]
+
+        decor_items = [
+            DecorItemProposalSchema(
+                category="stage_backdrop",
+                name="Royal Carved Jharokha Stage Backdrop with Brass Urli Accents",
+                quantity_formula="1 fixed",
+                cost_tier="medium",
+                sourcing_type="rent",
+                reasoning={"aesthetic": "focal point regal stage framing"}
+            ),
+            DecorItemProposalSchema(
+                category="mandap",
+                name="Four-Pillar Traditional Floral Mandap with Hanging Marigold Garlands",
+                quantity_formula="1 fixed",
+                cost_tier="high",
+                sourcing_type="rent",
+                reasoning={"aesthetic": "sacred ritual enclosure with fresh marigolds"}
+            ),
+            DecorItemProposalSchema(
+                category="entrance_arch",
+                name="Grand Marigold & Brass Lantern Entrance Arch",
+                quantity_formula="2 units",
+                cost_tier="medium",
+                sourcing_type="rent",
+                reasoning={"aesthetic": "welcoming royal gateway transition"}
+            ),
+            DecorItemProposalSchema(
+                category="table_centerpiece",
+                name="Mini Brass Urli with Floating Diya & Rajnigandha",
+                quantity_formula="1 per table",
+                cost_tier="medium",
+                sourcing_type="rent",
+                reasoning={"aesthetic": "intimate fragrant dining table accents"}
+            ),
+            DecorItemProposalSchema(
+                category="lighting",
+                name="Warm Ambient Fairy Light Strings & Hanging Terracotta Lanterns",
+                quantity_formula="1 per 10 guests",
+                cost_tier="low",
+                sourcing_type="rent",
+                reasoning={"aesthetic": "magical golden hour glow for evening rituals"}
+            ),
+            DecorItemProposalSchema(
+                category="photobooth",
+                name="Vintage Rajasthani Jharokha Photo Booth with Cultural Props",
+                quantity_formula="1 fixed",
+                cost_tier="medium",
+                sourcing_type="rent",
+                reasoning={"aesthetic": "interactive memories station for guests"}
+            ),
+            DecorItemProposalSchema(
+                category="default",
+                name="Gold-Framed Calligraphy Welcome Sign on Antique Brass Easel",
+                quantity_formula="1 fixed",
+                cost_tier="low",
+                sourcing_type="rent",
+                reasoning={"aesthetic": "elegant arrival greeting"}
+            ),
+            DecorItemProposalSchema(
+                category="seating_lounges",
+                name="Royal Diwan Seating with Bandhani Cushion Bolsters",
+                quantity_formula="1 per 25 guests",
+                cost_tier="medium",
+                sourcing_type="rent",
+                reasoning={"aesthetic": "comfortable heritage lounge for family elders"}
+            ),
+            DecorItemProposalSchema(
+                category="default",
+                name="Fresh Red Rose & Yellow Marigold Petal Pathway Border",
+                quantity_formula="1 fixed",
+                cost_tier="medium",
+                sourcing_type="buy",
+                reasoning={"aesthetic": "auspicious bridal walkway"}
+            ),
+            DecorItemProposalSchema(
+                category="default",
+                name="Traditional Mango Leaf & Genda Toran for Entry Gateways",
+                quantity_formula="1 per 15 guests",
+                cost_tier="low",
+                sourcing_type="diy",
+                reasoning={"aesthetic": "auspicious doorway blessings"}
+            ),
+            DecorItemProposalSchema(
+                category="default",
+                name="Handcrafted Pichwai Textile Wall Accents",
+                quantity_formula="4 units",
+                cost_tier="medium",
+                sourcing_type="rent",
+                reasoning={"aesthetic": "traditional devotional artistry on side walls"}
+            ),
+        ]
+
+        return ThemeGenerationPayloadSchema(
+            theme_name="Royal Marigold & Heritage Brass",
+            palette=palette[:5],
+            menu_direction="Heritage Rajasthani Royal Thali & live chaat counters, featuring Dal Baati Churma, Ker Sangri, and saffron Ghewar.",
+            playlist_genres=["Rajasthani Folk & Manganiyar", "Sufi Bollywood", "Acoustic Shehnai Fusion"],
+            dress_code_suggestion="Royal Traditional (Bandhani, Leheriya, Sherwanis in Marigold Yellow, Rust, and Deep Crimson)",
+            invitation_design_brief="Handmade raw-silk textured digital invites featuring gold foil Pichwai motifs, elephant borders, and royal devanagari typography.",
+            decor_items=decor_items
+        )
+
+
+def get_vibe_extraction_provider() -> BaseVibeExtractionProvider:
+    """
+    Factory returning vibe extraction provider (Gemini if key configured, otherwise deterministic stub).
+    """
+    gemini_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
+    if gemini_key:
+        try:
+            from backend.app.services.providers.gemini_provider import GeminiVibeProvider
+            return GeminiVibeProvider(api_key=gemini_key)
+        except Exception:
+            pass
+
+    return DeterministicStubVibeProvider()
+
+
+def get_theme_generation_provider() -> BaseThemeGenerationProvider:
+    """
+    Factory returning theme generation provider (Gemini if key configured, otherwise deterministic stub).
+    """
+    gemini_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
+    if gemini_key:
+        try:
+            from backend.app.services.providers.gemini_provider import GeminiVibeProvider
+            return GeminiVibeProvider(api_key=gemini_key)
+        except Exception:
+            pass
+
+    return DeterministicStubVibeProvider()

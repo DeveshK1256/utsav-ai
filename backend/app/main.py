@@ -7,6 +7,7 @@ from backend.app.api.v1.intake import router as intake_router
 from backend.app.api.v1.events import router as events_router
 from backend.app.api.v1.quotes import router as quotes_router
 from backend.app.api.v1.replanning import router as replanning_router
+from backend.app.api.v1.vibe import router as vibe_router
 
 app = FastAPI(
     title=f"{settings.PROJECT_NAME} API Engine",
@@ -28,6 +29,7 @@ app.include_router(intake_router, prefix=settings.API_V1_STR)
 app.include_router(events_router, prefix=settings.API_V1_STR)
 app.include_router(quotes_router, prefix=settings.API_V1_STR)
 app.include_router(replanning_router, prefix=settings.API_V1_STR)
+app.include_router(vibe_router, prefix=settings.API_V1_STR)
 
 
 @app.get("/health")

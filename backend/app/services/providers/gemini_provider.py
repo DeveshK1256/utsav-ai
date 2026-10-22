@@ -7,13 +7,22 @@ import httpx
 from pydantic import ValidationError
 
 from backend.app.schemas.quotes import QuoteExtractionPayloadSchema, ExtractedLineItemSchema
+from backend.app.schemas.vibe import (
+    VibeExtractionPayloadSchema,
+    SingleImageVibeSchema,
+    ThemeGenerationPayloadSchema,
+    DecorItemProposalSchema,
+)
 from backend.app.services.llm_provider import (
     BaseQuoteExtractionProvider,
     BaseNegotiationDraftProvider,
     BaseReplanningExplanationProvider,
+    BaseVibeExtractionProvider,
+    BaseThemeGenerationProvider,
     DeterministicStubQuoteExtractionProvider,
     DeterministicStubNegotiationDraftProvider,
     DeterministicStubReplanningExplanationProvider,
+    DeterministicStubVibeProvider,
     ExtractionValidationError
 )
 
@@ -334,3 +343,233 @@ class GeminiReplanningExplanationProvider(BaseReplanningExplanationProvider):
         stub_res["provider_used"] = fallback_reason
         stub_res["fallback_warning"] = warning_msg
         return stub_res
+
+
+class GeminiVibeProvider(BaseVibeExtractionProvider, BaseThemeGenerationProvider):
+    """
+    Real Google Gemini provider for multi-image aesthetic vibe extraction and theme generation (M3).
+    Batches up to 10 images into a single generateContent call per DEC-023.
+    Enforces Zero LLM Math: LLM produces only quantity formulas and cost tiers.
+    """
+
+    def __init__(self, api_key: str):
+        self.api_key = api_key
+        self.fallback_stub = DeterministicStubVibeProvider()
+        self.last_provider_used = "gemini-3-flash-preview"
+        self.last_fallback_warning = None
+
+    def extract_vibe_from_images(
+        self,
+        images: List[Dict[str, Any]],
+        text_description: Optional[str] = None
+    ) -> VibeExtractionPayloadSchema:
+        if not self.api_key:
+            logger.warning("No GEMINI_API_KEY provided; falling back to deterministic stub for vibe extraction.")
+            self.last_provider_used = "deterministic_stub"
+            return self.fallback_stub.extract_vibe_from_images(images, text_description)
+
+        system_instruction = (
+            "You are an expert Indian wedding and cultural event aesthetic stylist and visual designer.\n"
+            "Analyze the provided inspiration image(s) and accompanying aesthetic description.\n"
+            "Extract the visual and cultural essence into structured JSON with:\n"
+            "{\n"
+            '  "images": [\n'
+            '    {\n'
+            '      "palette": ["#FF9933", "#800020", "#FFD700", "#2E8B57", "#FFF8DC"],\n'
+            '      "style_tags": ["royal_rajasthani", "heritage_palace", "traditional"],\n'
+            '      "materials": ["brass", "raw_silk", "marigold", "terracotta"],\n'
+            '      "lighting_mood": "warm_candlelight_ambient",\n'
+            '      "flower_types": ["genda_marigold", "rajnigandha", "rose"]\n'
+            '    }\n'
+            '  ],\n'
+            '  "overall_mood_words": ["regal", "vibrant", "traditional", "festive", "auspicious"]\n'
+            "}\n\n"
+            "CRITICAL RULES:\n"
+            "1. If N images are provided, the 'images' array MUST contain exactly N items corresponding to each image in order.\n"
+            "2. Each palette must have exactly 5 valid hex color codes starting with #.\n"
+            "3. Ground all tags, materials, and flowers in Indian event design traditions.\n"
+            "4. Return strictly valid JSON."
+        )
+
+        parts: List[Dict[str, Any]] = [
+            {"text": f"{system_instruction}\n\nUser Vision Description: {text_description or 'None provided'}"}
+        ]
+
+        # Batched multi-image inlineData injection (DEC-023)
+        for img in images:
+            raw_bytes = img.get("bytes", b"")
+            m_type = img.get("mime_type") or "image/jpeg"
+            if m_type == "application/octet-stream":
+                m_type = "image/jpeg"
+            encoded = base64.b64encode(raw_bytes).decode("utf-8")
+            parts.append({
+                "inline_data": {
+                    "mime_type": m_type,
+                    "data": encoded
+                }
+            })
+
+        payload = {
+            "contents": [{"parts": parts}],
+            "generationConfig": {
+                "response_mime_type": "application/json",
+                "temperature": 0.2
+            }
+        }
+
+        attempts = 0
+        last_err = None
+        while attempts < 3:
+            attempts += 1
+            try:
+                with httpx.Client(timeout=45.0) as client:
+                    resp = client.post(
+                        f"{GEMINI_API_URL}?key={self.api_key}",
+                        json=payload
+                    )
+                    resp.raise_for_status()
+                    data = resp.json()
+                    res_parts = data["candidates"][0]["content"]["parts"]
+                    text = "".join(p.get("text", "") for p in res_parts).strip()
+                    if text.startswith("```json"):
+                        text = text[7:]
+                    if text.startswith("```"):
+                        text = text[3:]
+                    if text.endswith("```"):
+                        text = text[:-3]
+                    parsed = json.loads(text.strip())
+                    validated = VibeExtractionPayloadSchema.model_validate(parsed)
+                    self.last_provider_used = "gemini-3-flash-preview"
+                    self.last_fallback_warning = None
+                    return validated
+            except Exception as e:
+                last_err = e
+                is_429 = "429" in str(e) or (hasattr(e, "response") and getattr(e.response, "status_code", None) == 429)
+                logger.error(
+                    f"CRITICAL: Gemini vibe extraction attempt {attempts} failed with {type(e).__name__}: {e}. "
+                    f"Quota exhausted: {is_429}."
+                )
+                if attempts < 3:
+                    time.sleep(2.0 * attempts)
+
+        fallback_reason = "stub_fallback_quota_exhausted (HTTP 429)" if ("429" in str(last_err)) else f"stub_fallback_error ({type(last_err).__name__})"
+        warning_msg = (
+            f"LOUD ALERT: Live LLM vibe extraction failed after 3 attempts due to {last_err}. "
+            f"Output safely degraded to deterministic fixture ({fallback_reason})."
+        )
+        logger.error(warning_msg)
+        self.last_provider_used = fallback_reason
+        self.last_fallback_warning = warning_msg
+        return self.fallback_stub.extract_vibe_from_images(images, text_description)
+
+    def generate_theme_proposal(
+        self,
+        style_profile: Dict[str, Any],
+        event_details: Dict[str, Any]
+    ) -> ThemeGenerationPayloadSchema:
+        if not self.api_key:
+            logger.warning("No GEMINI_API_KEY provided; falling back to deterministic stub for theme generation.")
+            self.last_provider_used = "deterministic_stub"
+            return self.fallback_stub.generate_theme_proposal(style_profile, event_details)
+
+        prompt = (
+            "You are an expert Indian wedding and cultural event creative director and theme designer.\n"
+            "Based on the extracted style profile and event parameters, design a comprehensive, cohesive theme.\n\n"
+            f"Event Parameters:\n"
+            f"- Event Type: {event_details.get('event_type', 'Wedding')}\n"
+            f"- City: {event_details.get('city', 'Jaipur')}\n"
+            f"- Guest Count: {event_details.get('guest_count', 250)}\n"
+            f"- Total Budget: ₹{event_details.get('total_budget', 1500000):,.2f}\n"
+            f"- Extracted Dominant Palette: {style_profile.get('extracted_palette', [])}\n"
+            f"- Style Tags: {style_profile.get('style_tags', [])}\n"
+            f"- Mood Keywords: {style_profile.get('mood_words', [])}\n"
+            f"- User Vision Notes: {style_profile.get('text_description') or 'None'}\n\n"
+            "CRITICAL RULES:\n"
+            "1. ZERO LLM MATH: Do NOT compute rupee amounts or multiply quantities. Only specify the formula string and cost_tier.\n"
+            "2. Return AT LEAST 10 distinct, culturally rich decor items covering:\n"
+            "   - stage_backdrop (formula: '1 fixed')\n"
+            "   - mandap (formula: '1 fixed')\n"
+            "   - entrance_arch (formula: '2 units' or '1 fixed')\n"
+            "   - table_centerpiece (formula: '1 per table')\n"
+            "   - lighting (formula: '1 per 10 guests')\n"
+            "   - photobooth (formula: '1 fixed')\n"
+            "   - seating_lounges (formula: '1 per 25 guests')\n"
+            "   - default/accents (formulas: '1 fixed', '1 per 15 guests', etc.)\n"
+            "3. cost_tier must be strictly 'low', 'medium', or 'high'.\n"
+            "4. sourcing_type must be strictly 'rent', 'diy', or 'buy'.\n"
+            "5. Return strictly valid JSON matching this schema:\n"
+            "{\n"
+            '  "theme_name": "string",\n'
+            '  "palette": ["#...", "#...", "#...", "#...", "#..."],\n'
+            '  "menu_direction": "string",\n'
+            '  "playlist_genres": ["genre 1", "genre 2", "genre 3"],\n'
+            '  "dress_code_suggestion": "string",\n'
+            '  "invitation_design_brief": "string",\n'
+            '  "decor_items": [\n'
+            '    {\n'
+            '      "category": "stage_backdrop | entrance_arch | table_centerpiece | lighting | photobooth | seating_lounges | mandap | default",\n'
+            '      "name": "item title",\n'
+            '      "quantity_formula": "1 fixed | 1 per table | 1 per 10 guests | 2 units",\n'
+            '      "cost_tier": "low | medium | high",\n'
+            '      "sourcing_type": "rent | diy | buy",\n'
+            '      "reasoning": {"aesthetic": "brief reason"}\n'
+            '    }\n'
+            '  ]\n'
+            "}"
+        )
+
+        payload = {
+            "contents": [{"parts": [{"text": prompt}]}],
+            "generationConfig": {
+                "response_mime_type": "application/json",
+                "temperature": 0.2
+            }
+        }
+
+        attempts = 0
+        last_err = None
+        while attempts < 3:
+            attempts += 1
+            try:
+                with httpx.Client(timeout=45.0) as client:
+                    resp = client.post(
+                        f"{GEMINI_API_URL}?key={self.api_key}",
+                        json=payload
+                    )
+                    resp.raise_for_status()
+                    data = resp.json()
+                    res_parts = data["candidates"][0]["content"]["parts"]
+                    text = "".join(p.get("text", "") for p in res_parts).strip()
+                    if text.startswith("```json"):
+                        text = text[7:]
+                    if text.startswith("```"):
+                        text = text[3:]
+                    if text.endswith("```"):
+                        text = text[:-3]
+                    parsed = json.loads(text.strip())
+                    validated = ThemeGenerationPayloadSchema.model_validate(parsed)
+                    if len(validated.decor_items) >= 10:
+                        self.last_provider_used = "gemini-3-flash-preview"
+                        self.last_fallback_warning = None
+                        return validated
+                    else:
+                        logger.warning(f"Gemini returned only {len(validated.decor_items)} decor items (< 10). Retrying...")
+            except Exception as e:
+                last_err = e
+                is_429 = "429" in str(e) or (hasattr(e, "response") and getattr(e.response, "status_code", None) == 429)
+                logger.error(
+                    f"CRITICAL: Gemini theme generation attempt {attempts} failed with {type(e).__name__}: {e}. "
+                    f"Quota exhausted: {is_429}."
+                )
+                if attempts < 3:
+                    time.sleep(2.0 * attempts)
+
+        fallback_reason = "stub_fallback_quota_exhausted (HTTP 429)" if ("429" in str(last_err)) else f"stub_fallback_error ({type(last_err).__name__})"
+        warning_msg = (
+            f"LOUD ALERT: Live LLM theme generation failed after 3 attempts due to {last_err}. "
+            f"Output safely degraded to deterministic fixture ({fallback_reason})."
+        )
+        logger.error(warning_msg)
+        self.last_provider_used = fallback_reason
+        self.last_fallback_warning = warning_msg
+        return self.fallback_stub.generate_theme_proposal(style_profile, event_details)

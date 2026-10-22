@@ -87,6 +87,7 @@ class Event(Base):
     quote_documents = relationship("QuoteDocument", back_populates="event", cascade="all, delete-orphan")
     change_events = relationship("ChangeEvent", back_populates="event", cascade="all, delete-orphan")
     ai_suggestions = relationship("AISuggestion", back_populates="event", cascade="all, delete-orphan")
+    style_profiles = relationship("StyleProfile", back_populates="event", cascade="all, delete-orphan")
 
 
 class SubEvent(Base):
@@ -257,4 +258,78 @@ class AISuggestion(Base):
 
     event = relationship("Event", back_populates="ai_suggestions")
     change_event = relationship("ChangeEvent", back_populates="suggestions")
+
+
+class StyleProfile(Base):
+    __tablename__ = "style_profiles"
+
+    id = Column(String(36), primary_key=True, default=generate_uuid)
+    event_id = Column(String(36), ForeignKey("events.id", ondelete="CASCADE"), nullable=False, index=True)
+    uploaded_image_refs = Column(JSON, default=list, nullable=False)
+    extracted_palette = Column(JSON, default=list, nullable=False)  # Array of hex colors
+    style_tags = Column(JSON, default=list, nullable=False)
+    mood_words = Column(JSON, default=list, nullable=False)
+    text_description = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
+
+    event = relationship("Event", back_populates="style_profiles")
+    uploaded_images = relationship("UploadedImage", back_populates="style_profile", cascade="all, delete-orphan")
+    theme_proposals = relationship("ThemeProposal", back_populates="style_profile", cascade="all, delete-orphan")
+
+
+class UploadedImage(Base):
+    __tablename__ = "uploaded_images"
+
+    id = Column(String(36), primary_key=True, default=generate_uuid)
+    style_profile_id = Column(String(36), ForeignKey("style_profiles.id", ondelete="CASCADE"), nullable=False, index=True)
+    image_data = Column(LargeBinary, nullable=False)  # Stored directly as bytea per DEC-017
+    content_type = Column(String(100), nullable=False)
+    uploaded_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
+
+    style_profile = relationship("StyleProfile", back_populates="uploaded_images")
+
+
+class ThemeProposal(Base):
+    __tablename__ = "theme_proposals"
+
+    id = Column(String(36), primary_key=True, default=generate_uuid)
+    style_profile_id = Column(String(36), ForeignKey("style_profiles.id", ondelete="CASCADE"), nullable=False, index=True)
+    theme_name = Column(String(255), nullable=False)
+    palette = Column(JSON, default=list, nullable=False)
+    menu_direction = Column(Text, nullable=True)
+    playlist_genres = Column(JSON, default=list, nullable=False)
+    dress_code_suggestion = Column(Text, nullable=True)
+    invitation_design_brief = Column(Text, nullable=True)
+    status = Column(String(50), default="proposed", nullable=False, index=True)  # proposed, accepted, rejected
+    provider_used = Column(String(100), default="gemini-3-flash-preview", nullable=True)
+    fallback_warning = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
+
+    style_profile = relationship("StyleProfile", back_populates="theme_proposals")
+    decor_items = relationship("DecorItem", back_populates="theme_proposal", cascade="all, delete-orphan")
+
+
+class DecorItem(Base):
+    __tablename__ = "decor_items"
+
+    id = Column(String(36), primary_key=True, default=generate_uuid)
+    theme_proposal_id = Column(String(36), ForeignKey("theme_proposals.id", ondelete="CASCADE"), nullable=False, index=True)
+    category = Column(String(100), nullable=False)  # stage_backdrop, table_centerpiece, entrance_arch, lighting, photobooth, seating_lounges
+    name = Column(String(255), nullable=False)
+    quantity_formula = Column(Text, nullable=False)
+    computed_quantity = Column(Integer, default=1, nullable=False)
+    cost_tier = Column(String(50), default="medium", nullable=False)  # low, medium, high
+    cost_range_low = Column(Numeric(14, 2), nullable=False)
+    cost_range_high = Column(Numeric(14, 2), nullable=False)
+    sourcing_type = Column(String(50), default="rent", nullable=False)  # rent, diy, buy
+    budget_item_id = Column(String(36), ForeignKey("budget_items.id", ondelete="SET NULL"), nullable=True, index=True)
+    task_id = Column(String(36), ForeignKey("tasks.id", ondelete="SET NULL"), nullable=True, index=True)
+    status = Column(String(50), default="proposed", nullable=False, index=True)  # proposed, accepted, rejected
+    reasoning = Column(JSON, default=dict, nullable=False)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
+
+    theme_proposal = relationship("ThemeProposal", back_populates="decor_items")
+    budget_item = relationship("BudgetItem")
+    task = relationship("Task")
+
 
