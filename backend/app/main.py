@@ -41,11 +41,13 @@ def health_check():
 
 @app.get("/env-check")
 def env_check():
+    all_keys = sorted(list(os.environ.keys()))
     matching_keys = [
-        k for k in os.environ.keys()
-        if any(term in k.upper() for term in ["GEMINI", "GOOGLE", "LLM", "API_KEY"])
+        k for k in all_keys
+        if any(term in k.upper() for term in ["GEMINI", "GOOGLE", "LLM", "API", "KEY", "AI"])
     ]
     return {
+        "all_env_key_names": all_keys,
         "matching_env_keys": matching_keys,
         "has_gemini_api_key": bool(os.getenv("GEMINI_API_KEY")),
         "has_google_api_key": bool(os.getenv("GOOGLE_API_KEY")),
