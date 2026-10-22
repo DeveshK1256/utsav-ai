@@ -37,3 +37,17 @@ def health_check():
         "version": settings.VERSION,
         "active_llm_provider": "gemini" if bool(gemini_key) else "stub"
     }
+
+
+@app.get("/env-check")
+def env_check():
+    matching_keys = [
+        k for k in os.environ.keys()
+        if any(term in k.upper() for term in ["GEMINI", "GOOGLE", "LLM", "API_KEY"])
+    ]
+    return {
+        "matching_env_keys": matching_keys,
+        "has_gemini_api_key": bool(os.getenv("GEMINI_API_KEY")),
+        "has_google_api_key": bool(os.getenv("GOOGLE_API_KEY")),
+        "has_database_url": bool(os.getenv("DATABASE_URL"))
+    }
