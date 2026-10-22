@@ -963,9 +963,14 @@ frontend/
 - **Trigger:** User uploads vendor quote document (PDF/Image/Text).
 - **Inputs:** Raw document file, category (Catering, Decor, Sound, Venue), target budget.
 - **Tools it May Call:** `run_document_ocr()`, `detect_hidden_costs()`, `benchmark_category_rates()`.
-- **Output JSON Schema:** `QuoteAuditPayloadSchema`.
+- **Output JSON Schema:** `QuoteAuditPayloadSchema` / `QuoteDocumentResponseSchema`.
 - **Guardrails:** MUST cite verbatim clause/line for every flagged hidden cost; negotiation drafts must be respectful.
-- **Fallback Policy:** Extract raw OCR text and present manual line-item entry form.
+- **Maximum Gemini API Call Ceiling per Upload:** Strictly capped at **3 calls** per document upload (1 initial attempt + up to 2 retries). The rate-limit exponential backoff layer (2.0s * attempt) and schema validation retry share this exact counter, guaranteeing no runaway API consumption.
+- **Extraction Status Lifecycle & Frontend Branching:**
+  - `completed`: Extraction parsed successfully with model `confidence_score >= 0.60`. Frontend presents verified line items, benchmark badges, and hidden-fee flags.
+  - `flagged_review`: Extraction syntactically conforms to schema but `confidence_score < 0.60` (e.g., non-quote recipe/receipt, low-legibility scan, or missing critical totals). Frontend renders extracted fields accompanied by a prominent warning banner prompting the host to review before accepting.
+  - `failed_needs_manual_entry`: Document unparseable, corrupted, or schema validation failed after all 3 attempts. Frontend renders an empty manual entry spreadsheet for the user to key in totals directly.
+- **Fallback Policy:** On `failed_needs_manual_entry`, persist document metadata in Postgres with `raw_extracted_json={"error": ..., "retries_attempted": 2}` and render manual entry interface.
 
 #### 7. Risk Forecaster Agent (F6)
 - **Trigger:** Scheduled cron (T-30, T-14, T-7, T-3, T-1, Day-of) or weather warning.

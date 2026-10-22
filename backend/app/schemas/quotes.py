@@ -1,5 +1,5 @@
 from datetime import datetime, date
-from typing import List, Optional, Dict, Any
+from typing import List, Optional, Dict, Any, Literal
 from pydantic import BaseModel, Field, ConfigDict
 
 
@@ -62,7 +62,13 @@ class QuoteDocumentResponseSchema(BaseModel):
     category: str
     file_name: str
     file_type: str
-    extraction_status: str
+    extraction_status: Literal["completed", "flagged_review", "failed_needs_manual_entry"] = Field(
+        ...,
+        description=(
+            "Extraction state: 'completed' (confidence >= 0.60), 'flagged_review' (confidence < 0.60, e.g. non-quote "
+            "or low clarity document), or 'failed_needs_manual_entry' (corrupted file, unparseable schema, or hard error)"
+        )
+    )
     total_quoted_amount: Optional[float] = None
     tax_amount: Optional[float] = None
     line_items: List[ExtractedLineItemSchema] = Field(default_factory=list)
