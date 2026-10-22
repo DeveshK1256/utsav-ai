@@ -88,6 +88,8 @@ def main():
     change_id = proposal["change_id"]
     print(f"Change ID: {change_id}")
     print(f"Proposal Status: {proposal['status']}")
+    print(f"Provider Used: {proposal.get('provider_used')}")
+    print(f"Fallback Warning: {proposal.get('fallback_warning')}")
     print(f"Capacity Alert: {proposal['capacity_warning']}")
     print(f"AI Explanation: {proposal['explanation']}")
     print(f"Mitigations Count: {len(proposal.get('mitigation_suggestions', []))}")
