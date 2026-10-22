@@ -116,7 +116,7 @@ class BudgetItem(Base):
     vendor_id = Column(String(36), nullable=True)
     category = Column(String(100), nullable=False)
     name = Column(String(255), nullable=False)
-    scaling_rule = Column(String(50), default="per_guest", nullable=False)  # per_guest, fixed, tiered per DEC-015
+    scaling_rule = Column(String(50), default="per_guest", nullable=False)  # per_guest, fixed, tiered per DEC-018
     planned_amount = Column(Numeric(14, 2), nullable=False)
     actual_amount = Column(Numeric(14, 2), default=0.00, nullable=False)
     is_paid = Column(Boolean, default=False, nullable=False)

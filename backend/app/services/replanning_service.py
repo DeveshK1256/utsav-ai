@@ -210,6 +210,7 @@ class ReplanningService:
 
         # 4. Generate plain-language explanation and mitigation suggestions
         diff_summary = {
+            "budget_total_old": budget_old,
             "budget_total_delta": budget_delta,
             "budget_total_new": budget_new,
             "capacity_exceeded": bool(capacity_warning),

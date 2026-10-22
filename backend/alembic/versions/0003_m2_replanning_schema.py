@@ -24,7 +24,7 @@ def upgrade() -> None:
         sa.Column('scaling_rule', sa.String(length=50), nullable=False, server_default='per_guest')
     )
 
-    # Backfill scaling_rule for existing categories per DEC-015
+    # Backfill scaling_rule for existing categories per DEC-018
     op.execute("""
         UPDATE budget_items
         SET scaling_rule = CASE

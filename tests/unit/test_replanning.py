@@ -42,7 +42,7 @@ def replanning_event():
     db.add(event)
     db.flush()
 
-    # Create budget items with scaling rules per DEC-015
+    # Create budget items with scaling rules per DEC-018
     items = [
         BudgetItem(
             event_id=event.id,

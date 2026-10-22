@@ -19,7 +19,7 @@ from backend.app.services.llm_provider import (
 
 logger = logging.getLogger(__name__)
 
-GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent"
+GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent"
 
 class GeminiQuoteExtractionProvider(BaseQuoteExtractionProvider):
     """
