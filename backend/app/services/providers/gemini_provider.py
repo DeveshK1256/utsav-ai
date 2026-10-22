@@ -1,4 +1,5 @@
 import json
+import time
 import base64
 import logging
 from typing import Dict, Any, Optional, List
@@ -122,6 +123,11 @@ class GeminiQuoteExtractionProvider(BaseQuoteExtractionProvider):
             except (httpx.HTTPError, KeyError, json.JSONDecodeError, ValidationError) as e:
                 last_error = e
                 logger.warning(f"Gemini quote extraction attempt {attempts} failed: {e}")
+                if attempts < 3:
+                    # Exponential backoff on rate-limits (HTTP 429) or transient errors
+                    sleep_sec = 2.0 * attempts
+                    logger.info(f"Retrying Gemini extraction in {sleep_sec}s...")
+                    time.sleep(sleep_sec)
 
         logger.error(f"Gemini quote extraction failed after 2 retries ({last_error}).")
         raise ExtractionValidationError(f"Schema validation failed after 2 retries (3 total attempts): {last_error}")
@@ -183,28 +189,34 @@ class GeminiNegotiationDraftProvider(BaseNegotiationDraftProvider):
             }
         }
 
-        try:
-            with httpx.Client(timeout=30.0) as client:
-                resp = client.post(
-                    f"{GEMINI_API_URL}?key={self.api_key}",
-                    json=payload
-                )
-                resp.raise_for_status()
-                data = resp.json()
-                parts = data["candidates"][0]["content"]["parts"]
-                text = "".join(p.get("text", "") for p in parts).strip()
-                if text.startswith("```json"):
-                    text = text[7:]
-                if text.startswith("```"):
-                    text = text[3:]
-                if text.endswith("```"):
-                    text = text[:-3]
-                parsed = json.loads(text.strip())
-                if "polite" in parsed and "firm" in parsed and "bundle_ask" in parsed:
-                    return parsed
-        except Exception as e:
-            logger.warning(f"Gemini negotiation draft generation failed: {e}; falling back to deterministic stub.")
+        attempts = 0
+        while attempts < 3:
+            attempts += 1
+            try:
+                with httpx.Client(timeout=30.0) as client:
+                    resp = client.post(
+                        f"{GEMINI_API_URL}?key={self.api_key}",
+                        json=payload
+                    )
+                    resp.raise_for_status()
+                    data = resp.json()
+                    parts = data["candidates"][0]["content"]["parts"]
+                    text = "".join(p.get("text", "") for p in parts).strip()
+                    if text.startswith("```json"):
+                        text = text[7:]
+                    if text.startswith("```"):
+                        text = text[3:]
+                    if text.endswith("```"):
+                        text = text[:-3]
+                    parsed = json.loads(text.strip())
+                    if "polite" in parsed and "firm" in parsed and "bundle_ask" in parsed:
+                        return parsed
+            except Exception as e:
+                logger.warning(f"Gemini negotiation draft attempt {attempts} failed: {e}")
+                if attempts < 3:
+                    time.sleep(2.0 * attempts)
 
+        logger.warning("All Gemini negotiation draft attempts failed; falling back to deterministic stub.")
         return self.fallback_stub.generate_negotiation_drafts(
             vendor_name, category, quoted_total, target_discount_pct, leverage_points, competing_vendor_name, competing_quote_total
         )
