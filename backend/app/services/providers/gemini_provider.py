@@ -304,8 +304,10 @@ class GeminiReplanningExplanationProvider(BaseReplanningExplanationProvider):
                         return {
                             "explanation": parsed["explanation"],
                             "mitigation_suggestions": parsed["mitigation_suggestions"],
+                            "provider_used": "gemini-3-flash-preview",
+                            "fallback_warning": None,
                             "reasoning": {
-                                "source": "gemini-3.5-flash",
+                                "source": "gemini-3-flash-preview",
                                 "change_type": change_type,
                                 "budget_total_delta": delta,
                                 "is_over_budget": over_budget,
@@ -313,9 +315,22 @@ class GeminiReplanningExplanationProvider(BaseReplanningExplanationProvider):
                             }
                         }
             except Exception as e:
-                logger.warning(f"Gemini replanning explanation attempt {attempts} failed: {e}")
+                last_err = e
+                is_429 = "429" in str(e) or (hasattr(e, "response") and getattr(e.response, "status_code", None) == 429)
+                logger.error(
+                    f"CRITICAL: Gemini replanning explanation attempt {attempts} failed with {type(e).__name__}: {e}. "
+                    f"Quota exhausted: {is_429}."
+                )
                 if attempts < 3:
                     time.sleep(2.0 * attempts)
 
-        logger.warning("All Gemini replanning explanation attempts failed; falling back to deterministic stub.")
-        return self.fallback_stub.generate_explanation_and_mitigations(change_type, diff_summary, total_budget)
+        fallback_reason = "stub_fallback_quota_exhausted (HTTP 429)" if ("429" in str(last_err)) else f"stub_fallback_error ({type(last_err).__name__})"
+        warning_msg = (
+            f"LOUD ALERT: Live LLM explanation failed after 3 attempts due to {last_err}. "
+            f"Output safely degraded to deterministic rule-based template ({fallback_reason})."
+        )
+        logger.error(warning_msg)
+        stub_res = self.fallback_stub.generate_explanation_and_mitigations(change_type, diff_summary, total_budget)
+        stub_res["provider_used"] = fallback_reason
+        stub_res["fallback_warning"] = warning_msg
+        return stub_res

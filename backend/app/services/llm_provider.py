@@ -415,6 +415,8 @@ class DeterministicStubReplanningExplanationProvider(BaseReplanningExplanationPr
         return {
             "explanation": explanation,
             "mitigation_suggestions": mitigations,
+            "provider_used": "deterministic_stub",
+            "fallback_warning": None,
             "reasoning": {
                 "source": "deterministic_rules_engine",
                 "change_type": change_type,

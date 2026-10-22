@@ -264,6 +264,8 @@ class ReplanningService:
             "infeasibility_reason": None,
             "explanation": ai_resp.get("explanation"),
             "mitigation_suggestions": ai_resp.get("mitigation_suggestions", []),
+            "provider_used": ai_resp.get("provider_used", "deterministic_stub"),
+            "fallback_warning": ai_resp.get("fallback_warning"),
             "created_at": change_event.created_at.isoformat()
         }
 
@@ -295,6 +297,8 @@ class ReplanningService:
             infeasibility_reason=None,
             explanation=proposal_payload["explanation"],
             mitigation_suggestions=proposal_payload["mitigation_suggestions"],
+            provider_used=proposal_payload["provider_used"],
+            fallback_warning=proposal_payload["fallback_warning"],
             created_at=change_event.created_at
         )
 
@@ -333,6 +337,8 @@ class ReplanningService:
             infeasibility_reason=p.get("infeasibility_reason"),
             explanation=p.get("explanation"),
             mitigation_suggestions=p.get("mitigation_suggestions", []),
+            provider_used=p.get("provider_used", "deterministic_stub"),
+            fallback_warning=p.get("fallback_warning"),
             created_at=change_event.created_at
         )
 
