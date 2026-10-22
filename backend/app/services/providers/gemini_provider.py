@@ -10,7 +10,8 @@ from backend.app.services.llm_provider import (
     BaseQuoteExtractionProvider,
     BaseNegotiationDraftProvider,
     DeterministicStubQuoteExtractionProvider,
-    DeterministicStubNegotiationDraftProvider
+    DeterministicStubNegotiationDraftProvider,
+    ExtractionValidationError
 )
 
 logger = logging.getLogger(__name__)
@@ -121,10 +122,8 @@ class GeminiQuoteExtractionProvider(BaseQuoteExtractionProvider):
                 last_error = e
                 logger.warning(f"Gemini quote extraction attempt {attempts} failed: {e}")
 
-        logger.error(f"Gemini quote extraction failed after 3 attempts ({last_error}); falling back to stub.")
-        stub_res = self.fallback_stub.extract_quote_from_document(file_bytes, file_name, mime_type, category_hint)
-        stub_res.confidence_score = 0.50
-        return stub_res
+        logger.error(f"Gemini quote extraction failed after 2 retries ({last_error}).")
+        raise ExtractionValidationError(f"Schema validation failed after 2 retries (3 total attempts): {last_error}")
 
 
 class GeminiNegotiationDraftProvider(BaseNegotiationDraftProvider):

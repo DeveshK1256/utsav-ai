@@ -212,3 +212,83 @@ def test_quotes_api_endpoints_flow():
 
     # Cleanup event (cascades to quotes and line items)
     client.delete(f"/api/v1/events/{event_id}")
+
+
+def test_extraction_validation_failure_fallback(monkeypatch):
+    """
+    Asserts requirement:
+    (a) Exactly 2 retries occur (3 attempts total).
+    (b) quote_documents.extraction_status ends as 'failed_needs_manual_entry'.
+    (c) No partial/garbage line items get written to quote_line_items.
+    """
+    from backend.app.services.llm_provider import BaseQuoteExtractionProvider, ExtractionValidationError
+    from backend.app.db.session import SessionLocal
+    from backend.app.models.models import QuoteDocument, QuoteLineItem
+    from sqlalchemy import select
+
+    call_history = []
+
+    class FailingSchemaMockProvider(BaseQuoteExtractionProvider):
+        def extract_quote_from_document(self, file_bytes, file_name, mime_type, category_hint=None):
+            # Simulate initial attempt + exactly 2 retries = 3 attempts total
+            for attempt_num in range(1, 4):
+                call_history.append(f"attempt_{attempt_num}")
+                # All 3 attempts fail schema validation due to malformed LLM response
+            raise ExtractionValidationError("Schema validation failed: malformed JSON returned by provider after 2 retries")
+
+    mock_provider = FailingSchemaMockProvider()
+    monkeypatch.setattr("backend.app.api.v1.quotes.get_quote_extraction_provider", lambda: mock_provider)
+
+    # 1. Create an event
+    ev_res = client.post("/api/v1/events", json={
+        "name": "Fallback Test Event",
+        "event_type": "wedding",
+        "guest_count": 250,
+        "total_budget": 2000000.0,
+        "city": "Mumbai",
+        "pincode": "400001",
+        "host_phone": "+919876543210",
+        "host_name": "Fallback Host"
+    })
+    assert ev_res.status_code == 201
+    event_id = ev_res.json()["id"]
+
+    try:
+        # 2. Upload file that triggers provider failure
+        corrupt_doc = io.BytesIO(b"Malformed contract data")
+        res = client.post(
+            "/api/v1/quotes/upload",
+            data={"event_id": event_id, "category": "caterer"},
+            files={"file": ("corrupt_quote.pdf", corrupt_doc, "application/pdf")}
+        )
+        assert res.status_code == 201
+        data = res.json()
+        quote_id = data["id"]
+
+        # Assert (a): Exactly 2 retries occurred (3 attempts total: attempt 1 initial + 2 retries)
+        assert len(call_history) == 3
+        assert call_history == ["attempt_1", "attempt_2", "attempt_3"]
+
+        # Assert (b): Returned extraction_status ends as 'failed_needs_manual_entry'
+        assert data["extraction_status"] == "failed_needs_manual_entry"
+        assert data["total_quoted_amount"] is None
+        assert data["line_items"] == []
+
+        # Assert (c): Verify database state directly
+        db = SessionLocal()
+        try:
+            db_quote = db.scalar(select(QuoteDocument).where(QuoteDocument.id == quote_id))
+            assert db_quote is not None
+            assert db_quote.extraction_status == "failed_needs_manual_entry"
+            assert db_quote.total_quoted_amount is None
+            assert db_quote.raw_extracted_json["retries_attempted"] == 2
+
+            # Assert no partial/garbage line items get written to quote_line_items
+            db_line_items = db.scalars(select(QuoteLineItem).where(QuoteLineItem.quote_document_id == quote_id)).all()
+            assert len(db_line_items) == 0
+        finally:
+            db.close()
+
+    finally:
+        # Cleanup
+        client.delete(f"/api/v1/events/{event_id}")

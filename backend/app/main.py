@@ -1,3 +1,4 @@
+import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -29,8 +30,10 @@ app.include_router(quotes_router, prefix=settings.API_V1_STR)
 
 @app.get("/health")
 def health_check():
+    gemini_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
     return {
         "status": "healthy",
         "service": "utsav-backend",
-        "version": settings.VERSION
+        "version": settings.VERSION,
+        "active_llm_provider": "gemini" if bool(gemini_key) else "stub"
     }

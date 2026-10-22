@@ -22,7 +22,8 @@ from backend.app.services.quote_comparison_engine import QuoteComparisonEngine
 from backend.app.services.budget_engine import BudgetScalingEngine
 from backend.app.services.llm_provider import (
     get_quote_extraction_provider,
-    get_negotiation_draft_provider
+    get_negotiation_draft_provider,
+    ExtractionValidationError
 )
 
 router = APIRouter(prefix="/quotes", tags=["quotes"])
@@ -61,12 +62,57 @@ async def upload_quote(
     # 3. Extract quote data via provider (deterministic stub in tests, real Gemini if configured)
     provider = get_quote_extraction_provider()
     content_type = file.content_type or "application/octet-stream"
-    extracted = provider.extract_quote_from_document(
-        file_bytes=file_bytes,
-        file_name=file.filename or "quote.pdf",
-        mime_type=content_type,
-        category_hint=category
-    )
+
+    try:
+        extracted = provider.extract_quote_from_document(
+            file_bytes=file_bytes,
+            file_name=file.filename or "quote.pdf",
+            mime_type=content_type,
+            category_hint=category
+        )
+        extraction_failed = False
+        error_detail = None
+    except Exception as e:
+        extracted = None
+        extraction_failed = True
+        error_detail = str(e)
+
+    # Fallback path if schema validation / extraction failed after retries
+    if extraction_failed:
+        fallback_category = (category or "caterer").lower()
+        quote_doc = QuoteDocument(
+            event_id=event_id,
+            vendor_id=None,
+            vendor_name="Unassigned Vendor (Extraction Failed)",
+            category=fallback_category,
+            file_name=file.filename or "quote.pdf",
+            file_type=content_type,
+            uploaded_file=file_bytes,
+            extraction_status="failed_needs_manual_entry",
+            raw_extracted_json={"error": error_detail, "retries_attempted": 2},
+            total_quoted_amount=None,
+            tax_amount=None,
+            uploaded_at=datetime.now(timezone.utc)
+        )
+        db.add(quote_doc)
+        db.commit()
+        db.refresh(quote_doc)
+        return QuoteDocumentResponseSchema(
+            id=quote_doc.id,
+            event_id=quote_doc.event_id,
+            vendor_id=None,
+            vendor_name=quote_doc.vendor_name,
+            category=quote_doc.category,
+            file_name=quote_doc.file_name,
+            file_type=quote_doc.file_type,
+            extraction_status="failed_needs_manual_entry",
+            total_quoted_amount=None,
+            tax_amount=None,
+            line_items=[],
+            hidden_cost_alerts=[],
+            benchmark_comparison=None,
+            uploaded_at=quote_doc.uploaded_at
+        )
 
     assigned_category = (category or extracted.category or "caterer").lower()
 

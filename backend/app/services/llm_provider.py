@@ -5,6 +5,11 @@ from typing import Dict, Any, Optional, List
 from backend.app.schemas.quotes import QuoteExtractionPayloadSchema, ExtractedLineItemSchema
 
 
+class ExtractionValidationError(Exception):
+    """Raised when an extraction provider fails schema validation after all retries."""
+    pass
+
+
 class BaseQuoteExtractionProvider(ABC):
     @abstractmethod
     def extract_quote_from_document(
