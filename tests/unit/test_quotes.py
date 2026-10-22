@@ -292,3 +292,60 @@ def test_extraction_validation_failure_fallback(monkeypatch):
     finally:
         # Cleanup
         client.delete(f"/api/v1/events/{event_id}")
+
+
+def test_deterministic_confidence_calculation():
+    """
+    Asserts zero LLM self-reported math:
+    - Consistent mathematical quote yields score >= 0.60 (completed).
+    - Recipe/zeroed document yields score < 0.60 (flagged_review).
+    - Arithmetically inconsistent quote drops confidence score.
+    """
+    from backend.app.schemas.quotes import QuoteExtractionPayloadSchema, ExtractedLineItemSchema
+
+    # 1. Valid, consistent quote
+    valid_payload = QuoteExtractionPayloadSchema(
+        vendor_name="Royal Rajputana Banquets",
+        category="caterer",
+        subtotal=576000.0,
+        tax_amount=28800.0,
+        total_amount=604800.0,
+        line_items=[
+            ExtractedLineItemSchema(name="Maharaja Thali", qty=300.0, unit="plate", unit_price=1450.0, total=435000.0),
+            ExtractedLineItemSchema(name="Chaat Counter", qty=300.0, unit="plate", unit_price=320.0, total=96000.0),
+            ExtractedLineItemSchema(name="Butler Service", qty=1.0, unit="package", unit_price=45000.0, total=45000.0)
+        ]
+    )
+    score_valid = valid_payload.compute_deterministic_confidence()
+    assert score_valid == 1.0
+    assert score_valid >= 0.60
+
+    # 2. Non-quote recipe payload (zeroed financials, unknown vendor, no items)
+    recipe_payload = QuoteExtractionPayloadSchema(
+        vendor_name="Unknown",
+        category="caterer",
+        subtotal=0.0,
+        tax_amount=0.0,
+        total_amount=0.0,
+        line_items=[]
+    )
+    score_recipe = recipe_payload.compute_deterministic_confidence()
+    assert score_recipe == 0.0
+    assert score_recipe < 0.60
+
+    # 3. Mismatched arithmetic (line items sum to 100k, but subtotal is 500k and tax doesn't balance)
+    mismatched_payload = QuoteExtractionPayloadSchema(
+        vendor_name="Unreliable Vendor",
+        category="caterer",
+        subtotal=500000.0,
+        tax_amount=10000.0,
+        total_amount=900000.0,
+        line_items=[
+            ExtractedLineItemSchema(name="Item 1", qty=10.0, unit="units", unit_price=10000.0, total=100000.0)
+        ]
+    )
+    score_mismatched = mismatched_payload.compute_deterministic_confidence()
+    # Has identity (+0.10), total > 0 (+0.10), len(items) >= 1 (+0.10), item math (+0.15), but math consistency fails and tax fails
+    assert score_mismatched == 0.45
+    assert score_mismatched < 0.60
+

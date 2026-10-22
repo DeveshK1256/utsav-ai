@@ -118,6 +118,8 @@ class GeminiQuoteExtractionProvider(BaseQuoteExtractionProvider):
                     
                     parsed_dict = json.loads(cleaned_json.strip())
                     validated = QuoteExtractionPayloadSchema.model_validate(parsed_dict)
+                    # Zero LLM self-reported math: compute confidence deterministically in Python
+                    validated.confidence_score = validated.compute_deterministic_confidence()
                     return validated
 
             except (httpx.HTTPError, KeyError, json.JSONDecodeError, ValidationError) as e:

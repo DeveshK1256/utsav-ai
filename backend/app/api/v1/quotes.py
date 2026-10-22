@@ -143,6 +143,7 @@ async def upload_quote(
         db.flush()
 
     # 6. Save QuoteDocument with DB bytea storage
+    deterministic_confidence = extracted.compute_deterministic_confidence()
     quote_doc = QuoteDocument(
         event_id=event_id,
         vendor_id=vendor.id,
@@ -151,8 +152,8 @@ async def upload_quote(
         file_name=file.filename or "quote.pdf",
         file_type=content_type,
         uploaded_file=file_bytes,
-        extraction_status="completed" if extracted.confidence_score >= 0.60 else "flagged_review",
-        raw_extracted_json=extracted.model_dump(),
+        extraction_status="completed" if deterministic_confidence >= 0.60 else "flagged_review",
+        raw_extracted_json={**extracted.model_dump(), "deterministic_confidence_score": deterministic_confidence},
         total_quoted_amount=extracted.total_amount,
         tax_amount=extracted.tax_amount,
         uploaded_at=datetime.now(timezone.utc)
