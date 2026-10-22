@@ -492,9 +492,12 @@ class GeminiVibeProvider(BaseVibeExtractionProvider, BaseThemeGenerationProvider
             "   - entrance_arch (formula: '2 units' or '1 fixed')\n"
             "   - table_centerpiece (formula: '1 per table')\n"
             "   - lighting (formula: '1 per 10 guests')\n"
+            "   - ceiling_drapes (formula: '1 fixed')\n"
             "   - photobooth (formula: '1 fixed')\n"
             "   - seating_lounges (formula: '1 per 25 guests')\n"
-            "   - default/accents (formulas: '1 fixed', '1 per 15 guests', etc.)\n"
+            "   - cultural_performance (formula: '1 fixed', e.g. traditional welcome nagada/shehnai troupe or welcome folk dancers)\n"
+            "   - default/accents (formulas: '1 fixed', '1 per 15 guests', etc. for physical displays, torans, petal carpets)\n"
+            "   CATEGORY RULES: Live musical acts or welcome performers MUST be categorized as 'cultural_performance' (not 'default'). Full-venue overhead rigging/fabric treatments MUST be categorized as 'ceiling_drapes' (not 'default').\n"
             "3. cost_tier must be strictly 'low', 'medium', or 'high'.\n"
             "4. sourcing_type must be strictly 'rent', 'diy', or 'buy'.\n"
             "5. Return strictly valid JSON matching this schema:\n"
@@ -507,7 +510,7 @@ class GeminiVibeProvider(BaseVibeExtractionProvider, BaseThemeGenerationProvider
             '  "invitation_design_brief": "string",\n'
             '  "decor_items": [\n'
             '    {\n'
-            '      "category": "stage_backdrop | entrance_arch | table_centerpiece | lighting | photobooth | seating_lounges | mandap | default",\n'
+            '      "category": "stage_backdrop | entrance_arch | table_centerpiece | lighting | photobooth | seating_lounges | mandap | ceiling_drapes | cultural_performance | default",\n'
             '      "name": "item title",\n'
             '      "quantity_formula": "1 fixed | 1 per table | 1 per 10 guests | 2 units",\n'
             '      "cost_tier": "low | medium | high",\n'

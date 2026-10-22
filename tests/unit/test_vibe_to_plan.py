@@ -111,6 +111,48 @@ def test_decor_base_rate_sanity_ceiling_regression():
     assert 0.6 <= (lighting_low / centerpiece_low) <= 1.5
     assert 0.6 <= (lighting_high / centerpiece_high) <= 1.5
 
+    # 5. Low-end floor regression tests (prevents ₹238 / ₹544 anomaly on standalone fixed items)
+    default_fixed_low, default_fixed_high = DecorCostEngine.calculate_cost_range(
+        category="default",
+        cost_tier="low",
+        quantity=1,
+        formula_str="1 fixed",
+        city="Jaipur"
+    )
+    assert default_fixed_low >= 1200.0, f"Standalone default low tier resolved to ₹{default_fixed_low}, expected >= ₹1,200"
+    assert default_fixed_high <= 3000.0, f"Standalone default low tier resolved to ₹{default_fixed_high}, expected <= ₹3,000"
+
+    default_fixed_med, default_fixed_med_high = DecorCostEngine.calculate_cost_range(
+        category="default",
+        cost_tier="medium",
+        quantity=1,
+        formula_str="1 fixed",
+        city="Jaipur"
+    )
+    assert default_fixed_med >= 2300.0, f"Standalone default medium tier resolved to ₹{default_fixed_med}, expected >= ₹2,300"
+    assert default_fixed_med_high <= 5000.0, f"Standalone default medium tier resolved to ₹{default_fixed_med_high}, expected <= ₹5,000"
+
+    # 6. Specific categories: ceiling_drapes and cultural_performance
+    drapes_low, drapes_high = DecorCostEngine.calculate_cost_range(
+        category="ceiling_drapes",
+        cost_tier="medium",
+        quantity=1,
+        formula_str="1 fixed",
+        city="Jaipur"
+    )
+    assert 10000.0 <= drapes_low <= 12000.0, f"Ceiling drapes medium resolved to ₹{drapes_low}, expected ~₹10,880"
+    assert 18000.0 <= drapes_high <= 21000.0, f"Ceiling drapes medium resolved to ₹{drapes_high}, expected ~₹19,040"
+
+    perf_low, perf_high = DecorCostEngine.calculate_cost_range(
+        category="cultural_performance",
+        cost_tier="low",
+        quantity=1,
+        formula_str="1 fixed",
+        city="Jaipur"
+    )
+    assert 2500.0 <= perf_low <= 3000.0, f"Cultural performance low resolved to ₹{perf_low}, expected ~₹2,720"
+    assert 5000.0 <= perf_high <= 6000.0, f"Cultural performance low resolved to ₹{perf_high}, expected ~₹5,440"
+
 
 def test_vibe_aggregation_engine():
     payload = VibeExtractionPayloadSchema(

@@ -25,7 +25,8 @@ class DecorCostEngine:
     Zero LLM math. All monetary calculations are performed in code.
     """
 
-    STRUCTURAL_CATEGORIES = {"mandap", "stage_backdrop", "entrance_arch", "photobooth"}
+    STRUCTURAL_CATEGORIES = {"mandap", "stage_backdrop", "entrance_arch", "photobooth", "ceiling_drapes"}
+    SERVICE_CATEGORIES = {"cultural_performance"}
     DISTRIBUTED_CATEGORIES = {"lighting", "seating_lounges", "table_centerpiece", "default"}
 
     BASE_UNIT_COSTS: Dict[str, Dict[str, Tuple[float, float]]] = {
@@ -50,6 +51,18 @@ class DecorCostEngine:
             "medium": (14000.0, 22000.0),
             "high": (28000.0, 45000.0),
         },
+        "ceiling_drapes": {
+            "low": (8000.0, 15000.0),
+            "medium": (16000.0, 28000.0),
+            "high": (32000.0, 55000.0),
+        },
+
+        # Cultural Services & Live Traditional Welcome Acts
+        "cultural_performance": {
+            "low": (4000.0, 8000.0),
+            "medium": (8000.0, 15000.0),
+            "high": (16000.0, 30000.0),
+        },
 
         # Distributed Per-Unit Items (scale with guest count, tables, or counts)
         "lighting": {
@@ -72,6 +85,21 @@ class DecorCostEngine:
             "medium": (800.0, 1500.0),
             "high": (1800.0, 3200.0),
         }
+    }
+
+    # Rates for standalone fixed accent/display items when categorized under 'default'
+    # Prevents 1-off focal pieces (e.g. welcome easel, brass display) from resolving to 1x distributed trinket rates
+    STANDALONE_DEFAULT_COSTS: Dict[str, Tuple[float, float]] = {
+        "low": (1800.0, 3200.0),
+        "medium": (3500.0, 6500.0),
+        "high": (7500.0, 14000.0),
+    }
+
+    # Defensive absolute floors for any standalone/fixed line item before city multiplier
+    MIN_STANDALONE_FLOOR: Dict[str, Tuple[float, float]] = {
+        "low": (1200.0, 2200.0),
+        "medium": (2400.0, 4200.0),
+        "high": (4800.0, 8500.0),
     }
 
     LIGHTING_PACKAGE_COSTS: Dict[str, Tuple[float, float]] = {
@@ -127,6 +155,7 @@ class DecorCostEngine:
         """
         Resolves unit cost based on category and tier, applies city multiplier,
         and multiplies by computed quantity.
+        Enforces defensive sanity floors so standalone items never collapse below minimum viable market rates.
         """
         qty = quantity if quantity is not None else computed_quantity
         cat_clean = (category or "").lower().strip()
@@ -134,10 +163,17 @@ class DecorCostEngine:
         if tier_clean not in ("low", "medium", "high"):
             tier_clean = "medium"
 
-        # Check if lighting is a one-off full-venue package or a distributed fixture
-        if cat_clean == "lighting" and qty == 1 and formula_str and any(w in formula_str.lower() for w in ("package", "venue", "full")):
+        formula_lower = (formula_str or "").lower().strip()
+        is_fixed = (qty == 1) or ("fixed" in formula_lower)
+
+        # 1. Package lighting
+        if cat_clean == "lighting" and is_fixed and any(w in formula_lower for w in ("package", "venue", "full")):
             cat_costs = cls.LIGHTING_PACKAGE_COSTS
             low_unit, high_unit = cat_costs.get(tier_clean, cat_costs["medium"])
+        # 2. Standalone fixed default items (focal displays, welcome accents)
+        elif cat_clean == "default" and is_fixed:
+            low_unit, high_unit = cls.STANDALONE_DEFAULT_COSTS.get(tier_clean, cls.STANDALONE_DEFAULT_COSTS["medium"])
+        # 3. Standard category resolution
         else:
             cat_costs = cls.BASE_UNIT_COSTS.get(cat_clean, cls.BASE_UNIT_COSTS["default"])
             low_unit, high_unit = cat_costs.get(tier_clean, cat_costs["medium"])
@@ -146,6 +182,16 @@ class DecorCostEngine:
 
         total_low = round(low_unit * city_mult * qty, 2)
         total_high = round(high_unit * city_mult * qty, 2)
+
+        # 4. Defensive floor guard: ensure fixed/standalone items never collapse below viable vendor cost
+        if is_fixed:
+            min_floor_low, min_floor_high = cls.MIN_STANDALONE_FLOOR.get(tier_clean, cls.MIN_STANDALONE_FLOOR["medium"])
+            scaled_floor_low = round(min_floor_low * city_mult, 2)
+            scaled_floor_high = round(min_floor_high * city_mult, 2)
+            if total_low < scaled_floor_low:
+                total_low = scaled_floor_low
+            if total_high < scaled_floor_high:
+                total_high = scaled_floor_high
 
         return (total_low, total_high)
 
