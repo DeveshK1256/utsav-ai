@@ -183,7 +183,8 @@ class VibeService:
                 category=item_data.category,
                 cost_tier=item_data.cost_tier,
                 quantity=qty,
-                city=city
+                city=city,
+                formula_str=item_data.quantity_formula
             )
 
             decor_rec = DecorItem(

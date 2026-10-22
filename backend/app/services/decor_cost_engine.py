@@ -25,47 +25,59 @@ class DecorCostEngine:
     Zero LLM math. All monetary calculations are performed in code.
     """
 
+    STRUCTURAL_CATEGORIES = {"mandap", "stage_backdrop", "entrance_arch", "photobooth"}
+    DISTRIBUTED_CATEGORIES = {"lighting", "seating_lounges", "table_centerpiece", "default"}
+
     BASE_UNIT_COSTS: Dict[str, Dict[str, Tuple[float, float]]] = {
+        # Structural Installations (typically 1-2 fixed units per celebration)
+        "mandap": {
+            "low": (25000.0, 45000.0),
+            "medium": (45000.0, 75000.0),
+            "high": (85000.0, 150000.0),
+        },
         "stage_backdrop": {
             "low": (15000.0, 25000.0),
-            "medium": (30000.0, 50000.0),
-            "high": (65000.0, 120000.0),
+            "medium": (28000.0, 45000.0),
+            "high": (55000.0, 95000.0),
         },
         "entrance_arch": {
             "low": (8000.0, 14000.0),
-            "medium": (18000.0, 28000.0),
-            "high": (35000.0, 60000.0),
+            "medium": (16000.0, 26000.0),
+            "high": (30000.0, 50000.0),
+        },
+        "photobooth": {
+            "low": (7000.0, 12000.0),
+            "medium": (14000.0, 22000.0),
+            "high": (28000.0, 45000.0),
+        },
+
+        # Distributed Per-Unit Items (scale with guest count, tables, or counts)
+        "lighting": {
+            "low": (400.0, 800.0),
+            "medium": (900.0, 1600.0),
+            "high": (2000.0, 3600.0),
+        },
+        "seating_lounges": {
+            "low": (800.0, 1500.0),
+            "medium": (1800.0, 3200.0),
+            "high": (3500.0, 6000.0),
         },
         "table_centerpiece": {
             "low": (400.0, 750.0),
             "medium": (1000.0, 1800.0),
-            "high": (2200.0, 4500.0),
-        },
-        "lighting": {
-            "low": (12000.0, 20000.0),
-            "medium": (25000.0, 45000.0),
-            "high": (55000.0, 95000.0),
-        },
-        "photobooth": {
-            "low": (7000.0, 12000.0),
-            "medium": (15000.0, 25000.0),
-            "high": (32000.0, 55000.0),
-        },
-        "seating_lounges": {
-            "low": (10000.0, 18000.0),
-            "medium": (22000.0, 38000.0),
-            "high": (45000.0, 80000.0),
-        },
-        "mandap": {
-            "low": (25000.0, 45000.0),
-            "medium": (50000.0, 85000.0),
-            "high": (100000.0, 200000.0),
+            "high": (2200.0, 4200.0),
         },
         "default": {
-            "low": (2000.0, 4000.0),
-            "medium": (5000.0, 10000.0),
-            "high": (12000.0, 25000.0),
+            "low": (350.0, 700.0),
+            "medium": (800.0, 1500.0),
+            "high": (1800.0, 3200.0),
         }
+    }
+
+    LIGHTING_PACKAGE_COSTS: Dict[str, Tuple[float, float]] = {
+        "low": (12000.0, 20000.0),
+        "medium": (22000.0, 38000.0),
+        "high": (45000.0, 75000.0),
     }
 
     @classmethod
@@ -109,7 +121,8 @@ class DecorCostEngine:
         cost_tier: str,
         computed_quantity: int = 1,
         city: str = "pune",
-        quantity: Optional[int] = None
+        quantity: Optional[int] = None,
+        formula_str: Optional[str] = None
     ) -> Tuple[float, float]:
         """
         Resolves unit cost based on category and tier, applies city multiplier,
@@ -121,8 +134,13 @@ class DecorCostEngine:
         if tier_clean not in ("low", "medium", "high"):
             tier_clean = "medium"
 
-        cat_costs = cls.BASE_UNIT_COSTS.get(cat_clean, cls.BASE_UNIT_COSTS["default"])
-        low_unit, high_unit = cat_costs.get(tier_clean, cat_costs["medium"])
+        # Check if lighting is a one-off full-venue package or a distributed fixture
+        if cat_clean == "lighting" and qty == 1 and formula_str and any(w in formula_str.lower() for w in ("package", "venue", "full")):
+            cat_costs = cls.LIGHTING_PACKAGE_COSTS
+            low_unit, high_unit = cat_costs.get(tier_clean, cat_costs["medium"])
+        else:
+            cat_costs = cls.BASE_UNIT_COSTS.get(cat_clean, cls.BASE_UNIT_COSTS["default"])
+            low_unit, high_unit = cat_costs.get(tier_clean, cat_costs["medium"])
 
         city_mult = get_city_multiplier(city)
 

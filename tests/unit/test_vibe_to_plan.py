@@ -37,8 +37,8 @@ def test_decor_cost_engine_formulas_and_ranges():
         quantity=1,
         city="Jaipur"
     )
-    assert cost_low == round(30000.0 * 0.68, 2)
-    assert cost_high == round(50000.0 * 0.68, 2)
+    assert cost_low == round(28000.0 * 0.68, 2)
+    assert cost_high == round(45000.0 * 0.68, 2)
     assert cost_low < cost_high
 
     # Tier 1 city (Mumbai: multiplier 1.0)
@@ -48,8 +48,68 @@ def test_decor_cost_engine_formulas_and_ranges():
         quantity=1,
         city="Mumbai"
     )
-    assert mumbai_low == 30000.0
-    assert mumbai_high == 50000.0
+    assert mumbai_low == 28000.0
+    assert mumbai_high == 45000.0
+
+
+def test_decor_base_rate_sanity_ceiling_regression():
+    """
+    Regression guard: Prevents order-of-magnitude typos or whole-package assumptions
+    from being assigned to per-unit items.
+    Asserts that no distributed medium-tier item resolves to > 3-5x another medium-tier item.
+    """
+    distributed_cats = DecorCostEngine.DISTRIBUTED_CATEGORIES
+    structural_cats = DecorCostEngine.STRUCTURAL_CATEGORIES
+
+    # 1. Distributed items ratio check within each tier
+    for tier in ("low", "medium", "high"):
+        lows = [DecorCostEngine.BASE_UNIT_COSTS[cat][tier][0] for cat in distributed_cats]
+        highs = [DecorCostEngine.BASE_UNIT_COSTS[cat][tier][1] for cat in distributed_cats]
+
+        ratio_low = max(lows) / min(lows)
+        ratio_high = max(highs) / min(highs)
+
+        # Sanity bound: max must not exceed 3.5x min across distributed items
+        assert ratio_low <= 3.5, f"Tier '{tier}' low-bound ratio {ratio_low:.2f} exceeds 3.5x ceiling across distributed items"
+        assert ratio_high <= 3.5, f"Tier '{tier}' high-bound ratio {ratio_high:.2f} exceeds 3.5x ceiling across distributed items"
+
+    # 2. Structural installations ratio check within each tier
+    for tier in ("low", "medium", "high"):
+        lows = [DecorCostEngine.BASE_UNIT_COSTS[cat][tier][0] for cat in structural_cats]
+        highs = [DecorCostEngine.BASE_UNIT_COSTS[cat][tier][1] for cat in structural_cats]
+
+        ratio_low = max(lows) / min(lows)
+        ratio_high = max(highs) / min(highs)
+
+        assert ratio_low <= 4.0, f"Tier '{tier}' structural low ratio {ratio_low:.2f} exceeds 4.0x ceiling"
+        assert ratio_high <= 4.0, f"Tier '{tier}' structural high ratio {ratio_high:.2f} exceeds 4.0x ceiling"
+
+    # 3. Specific lighting sanity checks (the exact regression reported)
+    lighting_medium = DecorCostEngine.BASE_UNIT_COSTS["lighting"]["medium"]
+    assert lighting_medium[0] <= 1500.0, f"Lighting medium low-bound ₹{lighting_medium[0]} exceeds per-unit ceiling"
+    assert lighting_medium[1] <= 2500.0, f"Lighting medium high-bound ₹{lighting_medium[1]} exceeds per-unit ceiling"
+
+    # 4. End-to-end resolved comparison for 25 units in Jaipur (lighting vs table centerpiece)
+    lighting_low, lighting_high = DecorCostEngine.calculate_cost_range(
+        category="lighting",
+        cost_tier="medium",
+        quantity=25,
+        city="Jaipur"
+    )
+    centerpiece_low, centerpiece_high = DecorCostEngine.calculate_cost_range(
+        category="table_centerpiece",
+        cost_tier="medium",
+        quantity=25,
+        city="Jaipur"
+    )
+
+    # Both must be in the sane ₹15k - ₹35k range, not ₹425k - ₹765k!
+    assert 12000.0 <= lighting_low <= 25000.0, f"Lighting 25 units low was ₹{lighting_low:,.0f}, expected ₹12k - ₹25k"
+    assert 22000.0 <= lighting_high <= 35000.0, f"Lighting 25 units high was ₹{lighting_high:,.0f}, expected ₹22k - ₹35k"
+
+    # Sane parity: lighting and centerpiece for 25 units must be within 1.5x of each other
+    assert 0.6 <= (lighting_low / centerpiece_low) <= 1.5
+    assert 0.6 <= (lighting_high / centerpiece_high) <= 1.5
 
 
 def test_vibe_aggregation_engine():
