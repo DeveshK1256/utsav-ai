@@ -78,6 +78,10 @@ class BudgetScalingEngine:
         return mapping.get(cleaned, mapping.get("default", "tier_2"))
 
     @classmethod
+    def get_city_tier(cls, city: str) -> str:
+        return cls.resolve_city_tier(city)
+
+    @classmethod
     def get_tier_multiplier(cls, tier: str) -> Decimal:
         cfg = cls.get_config()
         multipliers = cfg.get("multipliers", {})

@@ -2,9 +2,26 @@
   {
     "agent_name": "Quote Extraction & Negotiation Agent",
     "prompt_id": "PR-F5-01",
+    "category": "caterer",
     "test_input": "Catering quote for 250 plates at Rs 1200 per plate. Generator fuel and GST extra. Overtime Rs 3000/hr after midnight.",
     "expected_keys": ["vendor_name", "category", "base_quote", "normalized_total_cost", "detected_hidden_costs"],
     "expected_hidden_cost_categories": ["MISSING_GST", "GENERATOR_FUEL", "OVERTIME_SURCHARGE"]
+  },
+  {
+    "agent_name": "Quote Extraction & Negotiation Agent",
+    "prompt_id": "PR-F5-02",
+    "category": "venue",
+    "test_input": "Heritage banquet hall rental Rs 6,50,000. AC timing strictly 6 PM to 11:30 PM. Outside decorator royalty Rs 35,000 applies.",
+    "expected_keys": ["vendor_name", "category", "line_items", "terms_and_conditions", "detected_hidden_costs"],
+    "expected_hidden_cost_categories": ["VENUE_AC_OVERTIME", "OUTSIDE_VENDOR_ROYALTY", "GENERATOR_FUEL"]
+  },
+  {
+    "agent_name": "Quote Extraction & Negotiation Agent",
+    "prompt_id": "PR-F5-03",
+    "category": "decorator",
+    "test_input": "Mandap and floral entrance setup Rs 4,20,000. Teardown mandatory by 6:00 AM next day. Flower mandi fluctuation may apply.",
+    "expected_keys": ["vendor_name", "category", "line_items", "terms_and_conditions", "detected_hidden_costs"],
+    "expected_hidden_cost_categories": ["DEC_FLORAL_FLUCTUATION", "DEC_DISMANTLING_CREW"]
   },
   {
     "agent_name": "Replanning Agent",

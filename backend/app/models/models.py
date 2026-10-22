@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime, timezone
 from sqlalchemy import (
     Column, String, Integer, Numeric, Boolean, Date, DateTime,
-    ForeignKey, Text, JSON, CheckConstraint, Index
+    ForeignKey, Text, JSON, CheckConstraint, Index, LargeBinary
 )
 from sqlalchemy.orm import relationship
 from backend.app.db.base import Base
@@ -82,6 +82,8 @@ class Event(Base):
     budget_items = relationship("BudgetItem", back_populates="event", cascade="all, delete-orphan")
     tasks = relationship("Task", back_populates="event", cascade="all, delete-orphan")
     event_logs = relationship("EventLog", back_populates="event", cascade="all, delete-orphan")
+    vendors = relationship("Vendor", back_populates="event", cascade="all, delete-orphan")
+    quote_documents = relationship("QuoteDocument", back_populates="event", cascade="all, delete-orphan")
 
 
 class SubEvent(Base):
@@ -151,3 +153,73 @@ class EventLog(Base):
     logged_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
 
     event = relationship("Event", back_populates="event_logs")
+
+
+class Vendor(Base):
+    __tablename__ = "vendors"
+
+    id = Column(String(36), primary_key=True, default=generate_uuid)
+    event_id = Column(String(36), ForeignKey("events.id", ondelete="CASCADE"), nullable=False, index=True)
+    business_name = Column(String(255), nullable=False)
+    category = Column(String(100), nullable=False)
+    contact_person = Column(String(150), nullable=True)
+    contact_phone = Column(String(20), nullable=True)
+    agreed_quote = Column(Numeric(14, 2), nullable=True)
+    advance_paid = Column(Numeric(14, 2), default=0.00, nullable=False)
+    contract_terms = Column(JSON, default=dict, nullable=False)
+    hidden_cost_alerts = Column(JSON, default=list, nullable=False)
+    rating = Column(Integer, nullable=True)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
+
+    event = relationship("Event", back_populates="vendors")
+    quotes = relationship("QuoteDocument", back_populates="vendor")
+
+
+class QuoteDocument(Base):
+    __tablename__ = "quote_documents"
+
+    id = Column(String(36), primary_key=True, default=generate_uuid)
+    event_id = Column(String(36), ForeignKey("events.id", ondelete="CASCADE"), nullable=False, index=True)
+    vendor_id = Column(String(36), ForeignKey("vendors.id", ondelete="SET NULL"), nullable=True, index=True)
+    vendor_name = Column(String(200), nullable=False)
+    category = Column(String(50), nullable=False, index=True)
+    file_name = Column(String(255), nullable=False)
+    file_type = Column(String(100), nullable=False)
+    uploaded_file = Column(LargeBinary, nullable=False)  # Stored in DB bytea per DEC-017
+    extraction_status = Column(String(50), default="pending", nullable=False, index=True)
+    raw_extracted_json = Column(JSON, default=dict, nullable=False)
+    total_quoted_amount = Column(Numeric(14, 2), nullable=True)
+    tax_amount = Column(Numeric(14, 2), nullable=True)
+    uploaded_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
+
+    event = relationship("Event", back_populates="quote_documents")
+    vendor = relationship("Vendor", back_populates="quotes")
+    line_items = relationship("QuoteLineItem", back_populates="quote_document", cascade="all, delete-orphan")
+
+
+class QuoteLineItem(Base):
+    __tablename__ = "quote_line_items"
+
+    id = Column(String(36), primary_key=True, default=generate_uuid)
+    quote_document_id = Column(String(36), ForeignKey("quote_documents.id", ondelete="CASCADE"), nullable=False, index=True)
+    name = Column(String(255), nullable=False)
+    qty = Column(Numeric(10, 2), default=1.0, nullable=False)
+    unit = Column(String(50), default="units", nullable=False)
+    unit_price = Column(Numeric(14, 2), nullable=False)
+    total = Column(Numeric(14, 2), nullable=False)
+    category_tag = Column(String(50), nullable=True)
+    notes = Column(Text, nullable=True)
+
+    quote_document = relationship("QuoteDocument", back_populates="line_items")
+
+
+class VendorBenchmarkSample(Base):
+    __tablename__ = "vendor_benchmark_samples"
+
+    id = Column(String(36), primary_key=True, default=generate_uuid)
+    category = Column(String(50), nullable=False, index=True)
+    city_tier = Column(String(20), nullable=False, index=True)
+    normalized_unit_cost = Column(Numeric(14, 2), nullable=False)
+    source_event_id = Column(String(36), ForeignKey("events.id", ondelete="SET NULL"), nullable=True)
+    notes = Column(String(255), nullable=True)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)

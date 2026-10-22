@@ -1,0 +1,164 @@
+{
+  "caterer": [
+    {
+      "code": "cat_overtime",
+      "name": "Kitchen & Service Overtime",
+      "description": "Hourly surcharge if dinner/reception extends past scheduled midnight cutoff",
+      "typical_impact": "₹5,000 to ₹15,000 per hour",
+      "suggested_question": "What is the hourly overtime rate for kitchen and service staff if food service extends past 11:30 PM?"
+    },
+    {
+      "code": "cat_extra_plates",
+      "name": "Extra Plates / Floating Guest Buffer",
+      "description": "Rate charged for guest counts exceeding guaranteed minimum head count",
+      "typical_impact": "10-25% surcharge over standard per-plate rate",
+      "suggested_question": "How many buffer plates are prepared, and at what rate are excess plates billed on the day?"
+    },
+    {
+      "code": "cat_gst",
+      "name": "GST Tax Disclosure (5% vs 18%)",
+      "description": "Unitemized Goods and Services Tax (5% standalone catering vs 18% bundled hotel catering)",
+      "typical_impact": "Adds 5% to 18% on total bill",
+      "suggested_question": "Is the quoted rate inclusive of GST, and which GST rate (5% or 18%) applies to this contract?"
+    },
+    {
+      "code": "cat_crockery_breakage",
+      "name": "Crockery, Cutlery & Breakage Deposit",
+      "description": "Security deposit and deduction schedule for broken glassware/plates",
+      "typical_impact": "₹10,000 to ₹25,000 non-refundable deduction risk",
+      "suggested_question": "Is chinaware/cutlery included, and what is the breakage deposit and replacement cost per piece?"
+    },
+    {
+      "code": "cat_transport_chafing",
+      "name": "Transport, Chafing Fuel & Ice Charges",
+      "description": "Separate line items for food transport vehicles, commercial ice, and chafing dish fuel",
+      "typical_impact": "₹8,000 to ₹20,000",
+      "suggested_question": "Are transport of prepared food, chafing fuel, and commercial cube ice included or billed at actuals?"
+    },
+    {
+      "code": "cat_service_staff",
+      "name": "Waiter & Uniformed Staff Gratuity/Charges",
+      "description": "Service charge or mandated per-server gratuity fee",
+      "typical_impact": "₹500 to ₹1,200 per server",
+      "suggested_question": "Is service staff remuneration fully covered, or is there an additional service charge or mandatory tip?"
+    }
+  ],
+  "venue": [
+    {
+      "code": "venue_generator_fuel",
+      "name": "Generator Diesel & Power Backup",
+      "description": "Diesel fuel charges for DG sets billed 'at actuals' rather than included in rent",
+      "typical_impact": "₹2,500 to ₹6,000 per hour of operation",
+      "suggested_question": "Does the venue rental include generator power backup and diesel fuel, or is diesel billed separately at actuals?"
+    },
+    {
+      "code": "venue_corkage",
+      "name": "Corkage & Outside Liquor License Fee",
+      "description": "Per-bottle or flat fee for serving family-procured liquor, plus mandatory 1-day liquor permit (FL-4)",
+      "typical_impact": "₹300 to ₹800 per bottle or flat ₹25,000 to ₹50,000",
+      "suggested_question": "What is the venue corkage charge for serving outside liquor, and do you arrange the FL-4 permit?"
+    },
+    {
+      "code": "venue_cleaning",
+      "name": "Post-Event Deep Cleaning & Waste Disposal",
+      "description": "Sanitation fee deducted from security deposit if hall is not cleared by morning",
+      "typical_impact": "₹5,000 to ₹20,000",
+      "suggested_question": "Is post-event deep cleaning and trash removal included in the venue rental cost?"
+    },
+    {
+      "code": "venue_vendor_royalty",
+      "name": "Outside Vendor Royalty / In-House Mandate",
+      "description": "Penalty fee charged for bringing non-empanelled caterers or decorators",
+      "typical_impact": "10-20% commission on outside vendor's invoice",
+      "suggested_question": "Is there any royalty fee or penalty for bringing our own decorator or photographer?"
+    },
+    {
+      "code": "venue_aircon_overtime",
+      "name": "Air Conditioning Hours & Overtime",
+      "description": "AC switched off strictly at 11:00 PM unless paid hourly overtime in advance",
+      "typical_impact": "₹3,000 to ₹8,000 per hour",
+      "suggested_question": "Until what exact time is central air conditioning included during the evening reception?"
+    },
+    {
+      "code": "venue_valet_parking",
+      "name": "Valet Parking & Traffic Marshals",
+      "description": "Parking space hire and dedicated valet driver fees not included in hall rent",
+      "typical_impact": "₹8,000 to ₹25,000",
+      "suggested_question": "Does the venue rent cover dedicated valet parking drivers and municipal parking space?"
+    }
+  ],
+  "decorator": [
+    {
+      "code": "dec_dismantling",
+      "name": "Teardown & Mandap Dismantling Fee",
+      "description": "Labor charges to dismantle mandap and staging before next morning event",
+      "typical_impact": "₹10,000 to ₹30,000",
+      "suggested_question": "Does your quote include complete teardown and site clearance, and by what time will it be cleared?"
+    },
+    {
+      "code": "dec_heavy_electricity",
+      "name": "Heavy Electricity & Distribution Hookup",
+      "description": "Electrician labor and 3-phase cabling from main distribution box to stage lighting",
+      "typical_impact": "₹8,000 to ₹18,000",
+      "suggested_question": "Are the 3-phase power distribution boxes, heavy cables, and on-site electrician included?"
+    },
+    {
+      "code": "dec_fresh_flower_fluctuation",
+      "name": "Mandi Floral Price Fluctuation Buffer",
+      "description": "Surplus billed if wholesale flower rates surge during wedding muhurat week",
+      "typical_impact": "15-30% escalation during peak wedding dates",
+      "suggested_question": "Is the floral decor price fixed regardless of wholesale mandi market fluctuations during the wedding week?"
+    },
+    {
+      "code": "dec_transport_logistics",
+      "name": "Truck Freight & Loading/Unloading",
+      "description": "Tempo transportation and local union loading (mathadi) charges",
+      "typical_impact": "₹6,000 to ₹20,000",
+      "suggested_question": "Are tempo transportation, toll taxes, and labor loading/unloading fees fully covered in this quote?"
+    },
+    {
+      "code": "dec_taxes",
+      "name": "18% GST on Decor & Production",
+      "description": "Quotes presented without explicit mention of 18% GST tax liability",
+      "typical_impact": "18% on total production value",
+      "suggested_question": "Does this quote include 18% GST, and will an official tax invoice with GSTIN be issued?"
+    }
+  ],
+  "photographer": [
+    {
+      "code": "photo_overtime",
+      "name": "Lead & Candid Crew Hourly Overtime",
+      "description": "Hourly rate per team member if ceremonies extend past planned 8-hour shift",
+      "typical_impact": "₹3,000 to ₹7,000 per hour per team",
+      "suggested_question": "What is the overtime rate if the Sangeet or Bidaai extends past the scheduled hours?"
+    },
+    {
+      "code": "photo_hard_drive",
+      "name": "Raw Footage Delivery & Storage Drive",
+      "description": "Separate charge for 2TB SSD/HDD containing all unedited 4K raw video files",
+      "typical_impact": "₹6,000 to ₹12,000",
+      "suggested_question": "How will raw 4K footage and photos be delivered, and is the external storage drive included?"
+    },
+    {
+      "code": "photo_drone_permissions",
+      "name": "Drone Operator & Local Permissions",
+      "description": "Drone footage quoted but municipal/police NOC or specialized pilot billed extra",
+      "typical_impact": "₹10,000 to ₹25,000",
+      "suggested_question": "Is the drone pilot and aerial capture included, and who handles any required local permits?"
+    },
+    {
+      "code": "photo_album_shipping",
+      "name": "Canvera / Flush-Mount Album Courier & Pages",
+      "description": "Extra charge for additional album spreads (>40 pages), leatherette box, and courier shipping",
+      "typical_impact": "₹12,000 to ₹35,000",
+      "suggested_question": "How many pages/sheets are included in the physical photo album, and does it include shipping?"
+    },
+    {
+      "code": "photo_crew_travel",
+      "name": "Crew Travel, Food & Local Logistics",
+      "description": "Out-of-station meals, cabs, or hotel room requirements for 4-6 crew members",
+      "typical_impact": "₹15,000 to ₹40,000 for destination/out-of-town events",
+      "suggested_question": "Are crew meals, local cab transfers, and accommodation expected from the host family?"
+    }
+  ]
+}
