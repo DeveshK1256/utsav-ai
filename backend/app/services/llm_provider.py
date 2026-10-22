@@ -39,6 +39,27 @@ class BaseNegotiationDraftProvider(ABC):
         pass
 
 
+class BaseReplanningExplanationProvider(ABC):
+    @abstractmethod
+    def generate_explanation_and_mitigations(
+        self,
+        change_type: str,
+        diff_summary: Dict[str, Any],
+        total_budget: float
+    ) -> Dict[str, Any]:
+        """
+        Generate plain-language explanation of calculated changes and mitigation suggestions
+        if budget is exceeded. Grounded strictly in provided computed numbers.
+        Returns:
+        {
+            "explanation": "...",
+            "mitigation_suggestions": ["...", "..."],
+            "reasoning": "..."
+        }
+        """
+        pass
+
+
 class DeterministicStubQuoteExtractionProvider(BaseQuoteExtractionProvider):
     """
     Deterministic stub provider for local tests, schema validation, and CI.
@@ -323,3 +344,97 @@ def get_negotiation_draft_provider() -> BaseNegotiationDraftProvider:
             pass
 
     return DeterministicStubNegotiationDraftProvider()
+
+
+class DeterministicStubReplanningExplanationProvider(BaseReplanningExplanationProvider):
+    """
+    Deterministic stub provider for plain-language replanning explanations and mitigations.
+    Zero external network calls, 100% reproducible fixtures.
+    """
+
+    def generate_explanation_and_mitigations(
+        self,
+        change_type: str,
+        diff_summary: Dict[str, Any],
+        total_budget: float
+    ) -> Dict[str, Any]:
+        delta = diff_summary.get("budget_total_delta", 0.0)
+        new_total = diff_summary.get("budget_total_new", 0.0)
+        over_budget = new_total > total_budget
+        over_amount = round(new_total - total_budget, 2) if over_budget else 0.0
+        capacity_exceeded = diff_summary.get("capacity_exceeded", False)
+        capacity_warning = diff_summary.get("capacity_warning")
+
+        if change_type == "guest_count_changed":
+            from_g = diff_summary.get("from_guest_count", 0)
+            to_g = diff_summary.get("to_guest_count", 0)
+            explanation = (
+                f"Guest count adjusted from {from_g} to {to_g}. "
+                f"Per-guest allocations (catering, rentals, invitations) were rescaled accordingly, "
+                f"resulting in a net budget change of ₹{delta:+,.2f}."
+            )
+            if capacity_exceeded and capacity_warning:
+                explanation += f" Note: {capacity_warning}"
+        elif change_type == "date_moved":
+            days = diff_summary.get("days_shifted", 0)
+            from_d = diff_summary.get("from_date", "")
+            to_d = diff_summary.get("to_date", "")
+            explanation = (
+                f"Event date shifted by {days:+d} days (from {from_d} to {to_d}). "
+                f"All operational tasks and ritual sub-events have been shifted in lockstep while preserving dependency chains."
+            )
+        elif change_type == "vendor_cancelled":
+            cat = diff_summary.get("vendor_category", "vendor")
+            name = diff_summary.get("vendor_name", "Vendor")
+            explanation = (
+                f"Cancellation of {name} ({cat}) recorded. "
+                f"High-priority replacement sourcing tasks have been scheduled and quote requirements flagged."
+            )
+        elif change_type == "budget_cut":
+            cut = diff_summary.get("cut_amount", abs(delta))
+            explanation = (
+                f"Target budget decreased by ₹{cut:,.2f}. Flexible categories have been proportionally scaled down "
+                f"while locked contracts and paid deposits remain protected."
+            )
+        elif change_type == "venue_unavailable":
+            v_name = diff_summary.get("venue_name", "primary venue")
+            explanation = (
+                f"Venue unavailability noted for {v_name}. Critical path emergency venue scouting tasks have been added."
+            )
+        else:
+            explanation = f"Change event ({change_type}) evaluated with total budget delta of ₹{delta:+,.2f}."
+
+        mitigations = []
+        if over_budget:
+            mitigations = [
+                f"Reduce flexible decor and lighting production tiers to absorb the ₹{over_amount:,.0f} overage.",
+                "Negotiate fixed lump-sum packages with photography and entertainment vendors.",
+                "Review high-cost catering line items (live stations, exotic desserts) to trim per-plate costs."
+            ]
+
+        return {
+            "explanation": explanation,
+            "mitigation_suggestions": mitigations,
+            "reasoning": {
+                "source": "deterministic_rules_engine",
+                "change_type": change_type,
+                "budget_total_delta": delta,
+                "is_over_budget": over_budget,
+                "overage_amount": over_amount
+            }
+        }
+
+
+def get_replanning_explanation_provider() -> BaseReplanningExplanationProvider:
+    """
+    Factory returning replanning explanation provider (Gemini if key configured, otherwise deterministic stub).
+    """
+    gemini_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
+    if gemini_key:
+        try:
+            from backend.app.services.providers.gemini_provider import GeminiReplanningExplanationProvider
+            return GeminiReplanningExplanationProvider(api_key=gemini_key)
+        except Exception:
+            pass
+
+    return DeterministicStubReplanningExplanationProvider()

@@ -10,8 +10,10 @@ from backend.app.schemas.quotes import QuoteExtractionPayloadSchema, ExtractedLi
 from backend.app.services.llm_provider import (
     BaseQuoteExtractionProvider,
     BaseNegotiationDraftProvider,
+    BaseReplanningExplanationProvider,
     DeterministicStubQuoteExtractionProvider,
     DeterministicStubNegotiationDraftProvider,
+    DeterministicStubReplanningExplanationProvider,
     ExtractionValidationError
 )
 
@@ -222,3 +224,98 @@ class GeminiNegotiationDraftProvider(BaseNegotiationDraftProvider):
         return self.fallback_stub.generate_negotiation_drafts(
             vendor_name, category, quoted_total, target_discount_pct, leverage_points, competing_vendor_name, competing_quote_total
         )
+
+
+class GeminiReplanningExplanationProvider(BaseReplanningExplanationProvider):
+    """
+    Real Google Gemini provider for generating plain-language replanning explanations and mitigations.
+    Grounded strictly in pre-computed figures. Falls back gracefully to deterministic stub.
+    """
+
+    def __init__(self, api_key: str):
+        self.api_key = api_key
+        self.fallback_stub = DeterministicStubReplanningExplanationProvider()
+
+    def generate_explanation_and_mitigations(
+        self,
+        change_type: str,
+        diff_summary: Dict[str, Any],
+        total_budget: float
+    ) -> Dict[str, Any]:
+        if not self.api_key:
+            return self.fallback_stub.generate_explanation_and_mitigations(change_type, diff_summary, total_budget)
+
+        delta = diff_summary.get("budget_total_delta", 0.0)
+        new_total = diff_summary.get("budget_total_new", 0.0)
+        over_budget = new_total > total_budget
+        over_amount = round(new_total - total_budget, 2) if over_budget else 0.0
+
+        prompt = (
+            f"You are an expert Indian wedding and cultural event planning advisor (Plan B replanning engine).\n"
+            f"A change event was processed with final computed numbers:\n"
+            f"- Change Type: {change_type}\n"
+            f"- Original Budget Total: ₹{diff_summary.get('budget_total_old', 0.0):,.2f}\n"
+            f"- Revised Budget Total: ₹{new_total:,.2f}\n"
+            f"- Net Budget Delta: ₹{delta:+,.2f}\n"
+            f"- Event Ceiling Budget: ₹{total_budget:,.2f}\n"
+            f"- Over Budget: {'YES (by ₹' + f'{over_amount:,.2f}' + ')' if over_budget else 'NO'}\n"
+            f"- Capacity Exceeded: {diff_summary.get('capacity_exceeded', False)}\n"
+            f"- Capacity Warning: {diff_summary.get('capacity_warning')}\n\n"
+            f"CRITICAL RULES:\n"
+            f"1. Zero invented numbers: only refer to the numbers given above.\n"
+            f"2. Provide a reassuring, concise plain-language explanation of what changed.\n"
+            f"3. If over budget, provide 2-3 concrete mitigation suggestions using standard categories (decor, photography, catering).\n"
+            f"Return strictly JSON format:\n"
+            "{\n"
+            '  "explanation": "string explanation",\n'
+            '  "mitigation_suggestions": ["suggestion 1", "suggestion 2"]\n'
+            "}"
+        )
+
+        payload = {
+            "contents": [{"parts": [{"text": prompt}]}],
+            "generationConfig": {
+                "response_mime_type": "application/json",
+                "temperature": 0.2
+            }
+        }
+
+        attempts = 0
+        while attempts < 3:
+            attempts += 1
+            try:
+                with httpx.Client(timeout=30.0) as client:
+                    resp = client.post(
+                        f"{GEMINI_API_URL}?key={self.api_key}",
+                        json=payload
+                    )
+                    resp.raise_for_status()
+                    data = resp.json()
+                    parts = data["candidates"][0]["content"]["parts"]
+                    text = "".join(p.get("text", "") for p in parts).strip()
+                    if text.startswith("```json"):
+                        text = text[7:]
+                    if text.startswith("```"):
+                        text = text[3:]
+                    if text.endswith("```"):
+                        text = text[:-3]
+                    parsed = json.loads(text.strip())
+                    if "explanation" in parsed and "mitigation_suggestions" in parsed:
+                        return {
+                            "explanation": parsed["explanation"],
+                            "mitigation_suggestions": parsed["mitigation_suggestions"],
+                            "reasoning": {
+                                "source": "gemini-3.5-flash",
+                                "change_type": change_type,
+                                "budget_total_delta": delta,
+                                "is_over_budget": over_budget,
+                                "overage_amount": over_amount
+                            }
+                        }
+            except Exception as e:
+                logger.warning(f"Gemini replanning explanation attempt {attempts} failed: {e}")
+                if attempts < 3:
+                    time.sleep(2.0 * attempts)
+
+        logger.warning("All Gemini replanning explanation attempts failed; falling back to deterministic stub.")
+        return self.fallback_stub.generate_explanation_and_mitigations(change_type, diff_summary, total_budget)

@@ -67,6 +67,7 @@ class Event(Base):
     start_date = Column(Date, nullable=False)
     end_date = Column(Date, nullable=False)
     status = Column(String(50), default="planning", nullable=False, index=True)
+    venue_capacity = Column(Integer, nullable=True)  # Manually-entered placeholder per DEC-016
     metadata_json = Column(JSON, default=dict, nullable=False)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
 
@@ -84,6 +85,8 @@ class Event(Base):
     event_logs = relationship("EventLog", back_populates="event", cascade="all, delete-orphan")
     vendors = relationship("Vendor", back_populates="event", cascade="all, delete-orphan")
     quote_documents = relationship("QuoteDocument", back_populates="event", cascade="all, delete-orphan")
+    change_events = relationship("ChangeEvent", back_populates="event", cascade="all, delete-orphan")
+    ai_suggestions = relationship("AISuggestion", back_populates="event", cascade="all, delete-orphan")
 
 
 class SubEvent(Base):
@@ -113,6 +116,7 @@ class BudgetItem(Base):
     vendor_id = Column(String(36), nullable=True)
     category = Column(String(100), nullable=False)
     name = Column(String(255), nullable=False)
+    scaling_rule = Column(String(50), default="per_guest", nullable=False)  # per_guest, fixed, tiered per DEC-015
     planned_amount = Column(Numeric(14, 2), nullable=False)
     actual_amount = Column(Numeric(14, 2), default=0.00, nullable=False)
     is_paid = Column(Boolean, default=False, nullable=False)
@@ -223,3 +227,34 @@ class VendorBenchmarkSample(Base):
     source_event_id = Column(String(36), ForeignKey("events.id", ondelete="SET NULL"), nullable=True)
     notes = Column(String(255), nullable=True)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
+
+
+class ChangeEvent(Base):
+    __tablename__ = "change_events"
+
+    id = Column(String(36), primary_key=True, default=generate_uuid)
+    event_id = Column(String(36), ForeignKey("events.id", ondelete="CASCADE"), nullable=False, index=True)
+    change_type = Column(String(50), nullable=False)  # guest_count_changed, vendor_cancelled, date_moved, budget_cut, venue_unavailable
+    payload = Column(JSON, nullable=False)
+    status = Column(String(50), default="pending", nullable=False, index=True)  # pending, queued, applied, rejected, blocked_infeasible
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
+
+    event = relationship("Event", back_populates="change_events")
+    suggestions = relationship("AISuggestion", back_populates="change_event", cascade="all, delete-orphan")
+
+
+class AISuggestion(Base):
+    __tablename__ = "ai_suggestions"
+
+    id = Column(String(36), primary_key=True, default=generate_uuid)
+    event_id = Column(String(36), ForeignKey("events.id", ondelete="CASCADE"), nullable=False, index=True)
+    change_event_id = Column(String(36), ForeignKey("change_events.id", ondelete="CASCADE"), nullable=True, index=True)
+    agent_name = Column(String(100), nullable=False)
+    proposal_payload = Column(JSON, nullable=False)
+    reasoning = Column(JSON, nullable=True)
+    status = Column(String(50), default="pending", nullable=False, index=True)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
+
+    event = relationship("Event", back_populates="ai_suggestions")
+    change_event = relationship("ChangeEvent", back_populates="suggestions")
+

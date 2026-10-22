@@ -1,0 +1,52 @@
+{
+  "decor": {
+    "default_multiplier": 1.0,
+    "tiers": [
+      {
+        "max_guests": 100,
+        "multiplier": 0.70,
+        "tier_name": "Intimate Hall (up to 100 guests)"
+      },
+      {
+        "max_guests": 250,
+        "multiplier": 1.00,
+        "tier_name": "Standard Banquet (101-250 guests)"
+      },
+      {
+        "max_guests": 500,
+        "multiplier": 1.40,
+        "tier_name": "Large Lawn / Ballroom (251-500 guests)"
+      },
+      {
+        "max_guests": 10000,
+        "multiplier": 1.85,
+        "tier_name": "Grand Palace / Mega Hangar (500+ guests)"
+      }
+    ]
+  },
+  "sound_light": {
+    "default_multiplier": 1.0,
+    "tiers": [
+      {
+        "max_guests": 100,
+        "multiplier": 0.75,
+        "tier_name": "Basic PA & Ambient Truss (up to 100 guests)"
+      },
+      {
+        "max_guests": 250,
+        "multiplier": 1.00,
+        "tier_name": "Standard DJ, Line Array & Moving Heads (101-250 guests)"
+      },
+      {
+        "max_guests": 500,
+        "multiplier": 1.35,
+        "tier_name": "Dual Stage Line Array & Beam Truss (251-500 guests)"
+      },
+      {
+        "max_guests": 10000,
+        "multiplier": 1.70,
+        "tier_name": "Concert-grade Arena Audio & Laser Grid (500+ guests)"
+      }
+    ]
+  }
+}

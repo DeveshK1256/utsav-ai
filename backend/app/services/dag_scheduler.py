@@ -193,3 +193,60 @@ class DAGScheduler:
                 "assigned_role": task.assigned_role
             })
         return scheduled
+
+    @classmethod
+    def shift_tasks_for_date_moved(cls, tasks: List[Any], days_delta: int) -> List[Dict[str, Any]]:
+        """
+        Shifts scheduled timing of existing tasks by days_delta while preserving dependency ordering.
+        Returns list of task diffs.
+        """
+        diffs = []
+        for t in tasks:
+            t_id = getattr(t, "id", "")
+            title = getattr(t, "title", "")
+            old_start = getattr(t, "scheduled_start", None)
+            old_end = getattr(t, "scheduled_end", None)
+
+            new_start = old_start + timedelta(days=days_delta) if old_start else None
+            new_end = old_end + timedelta(days=days_delta) if old_end else None
+
+            diffs.append({
+                "task_id": t_id,
+                "title": title,
+                "old_start": old_start.isoformat() if old_start else None,
+                "new_start": new_start.isoformat() if new_start else None,
+                "old_end": old_end.isoformat() if old_end else None,
+                "new_end": new_end.isoformat() if new_end else None,
+                "days_shifted": days_delta,
+                "formula": f"Date moved: shifted by {days_delta:+d} days to match new event date"
+            })
+        return diffs
+
+    @classmethod
+    def shift_sub_events_for_date_moved(cls, sub_events: List[Any], days_delta: int) -> List[Dict[str, Any]]:
+        """
+        Shifts sub-event start and end timestamps by days_delta.
+        Flags whether religious muhurats are preserved.
+        """
+        diffs = []
+        for se in sub_events:
+            se_id = getattr(se, "id", "")
+            name = getattr(se, "name", "")
+            old_start = getattr(se, "start_time", None)
+            old_end = getattr(se, "end_time", None)
+            is_muhurat_locked = getattr(se, "is_muhurat_locked", False)
+
+            new_start = old_start + timedelta(days=days_delta) if old_start else None
+            new_end = old_end + timedelta(days=days_delta) if old_end else None
+
+            diffs.append({
+                "sub_event_id": se_id,
+                "name": name,
+                "old_start": old_start.isoformat() if old_start else None,
+                "new_start": new_start.isoformat() if new_start else None,
+                "old_end": old_end.isoformat() if old_end else None,
+                "new_end": new_end.isoformat() if new_end else None,
+                "is_muhurat_locked": is_muhurat_locked,
+                "formula": f"Event date moved: shifted by {days_delta:+d} days (Muhurat lock: {'Preserved' if is_muhurat_locked else 'Standard'})"
+            })
+        return diffs
