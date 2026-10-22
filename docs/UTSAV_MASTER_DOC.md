@@ -1857,7 +1857,7 @@ flowchart LR
 - **Scope:** PostgreSQL schema migrations, Next.js 15 app shell, Conversational Intake Wizard, DAG task dependency scheduler, deterministic city-tier budget scaling, and immutable audit logging.
 - **Exit Gate (Loop Test):** 100% unit test pass on budget math; DAG scheduler creates 100+ tasks without cycles; intake wizard completes in < 45 seconds.
 
-#### Milestone M1: F5 Hidden-Cost Detector & Quote Comparison [COMPLETE]
+#### Milestone M1: F5 Hidden-Cost Detector & Quote Comparison [COMPLETE — STUB VERIFIED, GEMINI PENDING FURTHER TESTING]
 - **Scope:** Document OCR ingestion pipeline, taxonomy normalizer, rule-based hidden fee detector (diesel, overtime, GST, crew meals), side-by-side comparison table, and multilingual negotiation prompt generator.
 - **Exit Gate (Loop Test):** Detects 100% of seeded hidden traps across 20 sample vendor contracts (PDF and image formats).
 
