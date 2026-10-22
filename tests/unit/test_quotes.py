@@ -345,7 +345,31 @@ def test_deterministic_confidence_calculation():
         ]
     )
     score_mismatched = mismatched_payload.compute_deterministic_confidence()
-    # Has identity (+0.10), total > 0 (+0.10), len(items) >= 1 (+0.10), item math (+0.15), but math consistency fails and tax fails
-    assert score_mismatched == 0.45
+    # Has identity (+0.10), total > 0 (+0.10), len(items) >= 1 (+0.10), item math (+0.10), but macro-math fails and tax fails
+    assert score_mismatched == 0.40
     assert score_mismatched < 0.60
+
+    # 4. Stress Test: Plausible-looking quote with subtle line-item discrepancy (sum 275k vs stated subtotal 300k)
+    discrepant_payload = QuoteExtractionPayloadSchema(
+        vendor_name="Raj Tent & Catering",
+        category="caterer",
+        subtotal=300000.0,
+        tax_amount=54000.0,
+        total_amount=354000.0,
+        line_items=[
+            ExtractedLineItemSchema(name="Silver Buffet", qty=1.0, unit="package", unit_price=150000.0, total=150000.0),
+            ExtractedLineItemSchema(name="Beverage Bar", qty=1.0, unit="package", unit_price=75000.0, total=75000.0),
+            ExtractedLineItemSchema(name="Service Staff", qty=1.0, unit="package", unit_price=50000.0, total=50000.0)
+        ]
+    )
+    score_discrepant = discrepant_payload.compute_deterministic_confidence()
+    # Check 1: identity (+0.10)
+    # Check 2: non-zero total (+0.10)
+    # Check 3: completeness (+0.10)
+    # Check 4: item arithmetic (+0.10)
+    # Check 5: macro-math fails (275,000 != 300,000 subtotal) -> 0.00
+    # Check 6: tax integrity (300,000 + 54,000 == 354,000) -> +0.15
+    # Total score = 0.55 < 0.60 -> correctly routed to flagged_review
+    assert score_discrepant == 0.55
+    assert score_discrepant < 0.60
 

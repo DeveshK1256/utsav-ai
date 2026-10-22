@@ -37,9 +37,10 @@ class QuoteExtractionPayloadSchema(BaseModel):
           1. Essential Identity (0.10): Non-empty, non-generic vendor name
           2. Financial Non-Zero (0.10): total_amount > 0
           3. Completeness (0.10): len(line_items) >= 1
-          4. Per-Item Arithmetic (0.15): qty * unit_price == total for all line items (within 1.5 INR)
-          5. Math Consistency (0.35): sum(line_items.total) matches subtotal or total (within 2.0 INR)
-          6. Tax & Grand Total Integrity (0.20): subtotal + tax_amount == total or GST included (within 2.0 INR)
+          4. Per-Item Arithmetic (0.10): qty * unit_price == total for all line items (within 1.5 INR)
+          5. Math Consistency (0.45): sum(line_items.total) matches subtotal or total (within 2.0 INR)
+          6. Tax & Grand Total Integrity (0.15): subtotal + tax_amount == total or GST included (within 2.0 INR)
+        Guarantees that any quote failing Macro-Math Consistency cannot exceed 0.55 (< 0.60 gate).
         """
         score = 0.0
 
@@ -56,7 +57,7 @@ class QuoteExtractionPayloadSchema(BaseModel):
         if self.line_items and len(self.line_items) >= 1:
             score += 0.10
 
-        # 4. Per-Item Arithmetic (0.15)
+        # 4. Per-Item Arithmetic (0.10)
         if self.line_items and len(self.line_items) >= 1:
             all_items_arithmetic_valid = True
             for it in self.line_items:
@@ -67,27 +68,27 @@ class QuoteExtractionPayloadSchema(BaseModel):
                     all_items_arithmetic_valid = False
                     break
             if all_items_arithmetic_valid:
-                score += 0.15
+                score += 0.10
 
-        # 5. Math Consistency: sum(line_items) vs Subtotal / Total (0.35)
+        # 5. Math Consistency: sum(line_items) vs Subtotal / Total (0.45)
         if self.line_items and len(self.line_items) >= 1:
             items_sum = sum(it.total for it in self.line_items)
             if self.subtotal > 0 and abs(items_sum - self.subtotal) <= 2.0:
-                score += 0.35
+                score += 0.45
             elif self.total_amount > 0 and abs(items_sum - self.total_amount) <= 2.0:
-                score += 0.35
+                score += 0.45
             elif self.total_amount > 0 and abs((items_sum + self.tax_amount) - self.total_amount) <= 2.0:
-                score += 0.35
+                score += 0.45
 
-        # 6. Tax & Grand Total Integrity (0.20)
+        # 6. Tax & Grand Total Integrity (0.15)
         if self.total_amount > 0:
             if self.subtotal > 0:
                 if abs((self.subtotal + self.tax_amount) - self.total_amount) <= 2.0:
-                    score += 0.20
+                    score += 0.15
                 elif self.is_gst_included and abs(self.subtotal - self.total_amount) <= 2.0:
-                    score += 0.20
+                    score += 0.15
             elif self.tax_amount == 0.0:
-                score += 0.20
+                score += 0.15
 
         return round(min(max(score, 0.0), 1.0), 2)
 
