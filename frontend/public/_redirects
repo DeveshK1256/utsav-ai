@@ -1,5 +1,9 @@
 /api/*  https://utsav-ai-ycg2.onrender.com/api/:splat  200!
+/dashboard/events/:id/vendors/quotes  /dashboard/events/default/vendors/quotes.html  200
 /dashboard/events/:id/vibe  /dashboard/events/default/vibe.html  200
 /dashboard/events/:id/changes/:change_id  /dashboard/events/default/changes/default.html  200
+/dashboard/events/:id/changes  /dashboard/events/default/changes/default.html  200
 /dashboard/events/:id  /dashboard/events/default.html  200
+/dashboard/vendors/quotes  /dashboard/vendors/quotes.html  200
 /dashboard  /dashboard.html  200
+/demo  /demo.html  200

@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
-import { useParams } from 'next/navigation';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Navbar } from '@/components/ui/Navbar';
 import { ElderDisclaimerBanner } from '@/components/ui/ElderDisclaimerBanner';
@@ -83,331 +83,129 @@ interface StyleProfile {
   theme_concept?: string;
 }
 
-const DEFAULT_EVENT_DATA: EventData = {
-  id: 'default',
-  name: "Ananya & Rohan's Celebration",
-  owner_name: 'Rohan Joshi',
-  event_type: 'wedding',
-  city: 'Pune',
-  city_tier: 'tier_2',
-  guest_count: 350,
-  total_budget: 3500000,
-  tradition_code: 'maharashtrian_vedic',
-  status: 'planning',
-  start_date: '2027-11-12',
-  end_date: '2027-11-14',
-  elder_verification_disclaimer:
-    'Auspicious timings & ritual checklists are algorithmic estimates computed via astronomical ephemeris models. Please verify with your family Guruji or elders.',
-  sub_events: [
-    {
-      id: 'se-1',
-      name: 'Sakharpuda (Engagement & Ring Ceremony)',
-      start_time: '2027-11-12T10:00:00',
-      end_time: '2027-11-12T13:00:00',
-      venue_name: 'The Heritage Banquets, Koregaon Park',
-      is_outdoor: false,
-      is_muhurat_locked: true,
-      muhurat_notes: 'Shubh Muhurat fixed by Panditji: 10:45 AM - 11:30 AM',
-      sort_order: 1
-    },
-    {
-      id: 'se-2',
-      name: 'Haldi & Sangeet Evening',
-      start_time: '2027-11-12T17:00:00',
-      end_time: '2027-11-12T22:30:00',
-      venue_name: 'Emerald Lawns (Open Air Pavilion)',
-      is_outdoor: true,
-      is_muhurat_locked: false,
-      muhurat_notes: 'Sound curfew enforced strictly at 10:00 PM',
-      sort_order: 2
-    },
-    {
-      id: 'se-3',
-      name: 'Mandap Muhurat & Lagna Vivah',
-      start_time: '2027-11-13T09:30:00',
-      end_time: '2027-11-13T14:30:00',
-      venue_name: 'Vedic Wedding Hall, Pune',
-      is_outdoor: false,
-      is_muhurat_locked: true,
-      muhurat_notes: 'Sacred Saptapadi Muhurat: 11:15 AM (Rahu Kaal clear)',
-      sort_order: 3
-    },
-    {
-      id: 'se-4',
-      name: 'Grand Reception & Gala Dinner',
-      start_time: '2027-11-13T19:00:00',
-      end_time: '2027-11-13T23:30:00',
-      venue_name: 'Grand Ballroom, JW Marriott Pune',
-      is_outdoor: false,
-      is_muhurat_locked: false,
-      muhurat_notes: 'Photo sessions initiate promptly at 7:30 PM',
-      sort_order: 4
-    }
-  ],
-  budget_breakdown: [
-    {
-      id: 'b-1',
-      category: 'catering',
-      name: 'Catering & Food Service',
-      planned_amount: 980000,
-      actual_amount: 0,
-      percentage: 28,
-      reasoning_spec: {
-        formula: '350 guests × 2 meals × ₹1,400 tier-2 rate',
-        city_tier: 'tier_2',
-        guest_count: 350,
-        benchmark_basis: 'Regional catering index calibrated for Pune Tier-2 banquet rates'
-      }
-    },
-    {
-      id: 'b-2',
-      category: 'venue',
-      name: 'Venue & Banquet Rental',
-      planned_amount: 770000,
-      actual_amount: 0,
-      percentage: 22,
-      reasoning_spec: {
-        formula: '2 days dual-venue package (Indoor Hall + Lawn)',
-        city_tier: 'tier_2',
-        guest_count: 350,
-        benchmark_basis: 'Pune venue rental market rate for 350-capacity premium lawns'
-      }
-    },
-    {
-      id: 'b-3',
-      category: 'decor',
-      name: 'Mandap & Floral Decor',
-      planned_amount: 560000,
-      actual_amount: 0,
-      percentage: 16,
-      reasoning_spec: {
-        formula: 'Traditional Marigold mandap + Sangeet stage trussing',
-        city_tier: 'tier_2',
-        guest_count: 350,
-        benchmark_basis: 'Authentic Maharashtrian floral & fabric decor benchmark'
-      }
-    },
-    {
-      id: 'b-4',
-      category: 'photography',
-      name: 'Photography & Cinematography',
-      planned_amount: 315000,
-      actual_amount: 0,
-      percentage: 9,
-      reasoning_spec: {
-        formula: '3-day traditional + candid coverage + drone footage',
-        city_tier: 'tier_2',
-        guest_count: 350,
-        benchmark_basis: 'Standard Tier-2 multi-cam cinematic production tier'
-      }
-    },
-    {
-      id: 'b-5',
-      category: 'entertainment',
-      name: 'DJ, Sound & Sangeet Artists',
-      planned_amount: 245000,
-      actual_amount: 0,
-      percentage: 7,
-      reasoning_spec: {
-        formula: 'Sound system rental + Dhol tasha troupe + Sangeet DJ',
-        city_tier: 'tier_2',
-        guest_count: 350,
-        benchmark_basis: 'Regional entertainment tariff guidelines'
-      }
-    },
-    {
-      id: 'b-6',
-      category: 'wardrobe',
-      name: 'Bridal & Groom Attire',
-      planned_amount: 210000,
-      actual_amount: 0,
-      percentage: 6,
-      reasoning_spec: {
-        formula: 'Paithani silk sarees, Nauvari, and traditional Kurta sets',
-        city_tier: 'tier_2',
-        guest_count: 350,
-        benchmark_basis: 'Maharashtrian traditional wedding trousseau benchmark'
-      }
-    },
-    {
-      id: 'b-7',
-      category: 'rituals',
-      name: 'Panditji Dakshina & Samagri',
-      planned_amount: 140000,
-      actual_amount: 0,
-      percentage: 4,
-      reasoning_spec: {
-        formula: 'Complete Vedic samagri kit + Guruji dakshina for 4 ceremonies',
-        city_tier: 'tier_2',
-        guest_count: 350,
-        benchmark_basis: 'Deterministic Vedic Lagna ritual samagri list'
-      }
-    },
-    {
-      id: 'b-8',
-      category: 'logistics',
-      name: 'Guest Shuttles & Valet',
-      planned_amount: 140000,
-      actual_amount: 0,
-      percentage: 4,
-      reasoning_spec: {
-        formula: '2 Tempo Travellers + 4 valet drivers across 2 days',
-        city_tier: 'tier_2',
-        guest_count: 350,
-        benchmark_basis: 'Intra-city transport & logistics allocation'
-      }
-    },
-    {
-      id: 'b-9',
-      category: 'contingency',
-      name: 'Contingency & Fuel Buffer',
-      planned_amount: 140000,
-      actual_amount: 0,
-      percentage: 4,
-      reasoning_spec: {
-        formula: '4% unallocated buffer for generator fuel & overtime',
-        city_tier: 'tier_2',
-        guest_count: 350,
-        benchmark_basis: 'Mandatory contingency reserve against vendor slippage'
-      }
-    }
-  ],
-  tasks: [
-    {
-      id: 't-1',
-      title: 'Lock Caterer Menu & Food Tasting Session',
-      status: 'scheduled',
-      scheduled_start: '2027-10-15T11:00:00',
-      scheduled_end: '2027-10-15T14:00:00',
-      assigned_role: 'Food Coordinator'
-    },
-    {
-      id: 't-2',
-      title: 'Panditji Samagri Checklist Verification',
-      status: 'scheduled',
-      scheduled_start: '2027-10-20T10:00:00',
-      scheduled_end: '2027-10-20T11:30:00',
-      assigned_role: 'Family Elder'
-    },
-    {
-      id: 't-3',
-      title: 'Stage Lighting & Audio Soundcheck',
-      status: 'scheduled',
-      scheduled_start: '2027-11-12T15:00:00',
-      scheduled_end: '2027-11-12T16:30:00',
-      assigned_role: 'Tech Lead'
-    },
-    {
-      id: 't-4',
-      title: 'Arrival of Fresh Marigold & Lotus Garlands',
-      status: 'scheduled',
-      scheduled_start: '2027-11-13T07:00:00',
-      scheduled_end: '2027-11-13T08:30:00',
-      assigned_role: 'Decor Supervisor'
-    }
-  ]
-};
-
 export default function EventDashboardClient() {
   const params = useParams();
-  const eventId = (params?.id as string) || 'default';
+  const router = useRouter();
+  const rawEventId = (params?.id as string) || '';
 
-  const [eventData, setEventData] = useState<EventData>(DEFAULT_EVENT_DATA);
+  const [eventData, setEventData] = useState<EventData | null>(null);
   const [styleProfile, setStyleProfile] = useState<StyleProfile | null>(null);
   const [activeTab, setActiveTab] = useState<'overview' | 'itinerary' | 'budget' | 'vendors' | 'vibe'>('overview');
   const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [isLiveConnected, setIsLiveConnected] = useState<boolean>(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [selectedWhyThis, setSelectedWhyThis] = useState<BudgetItem | null>(null);
 
-  // Store active event ID to localStorage for quick navigation
-  useEffect(() => {
-    if (eventId && eventId !== 'default') {
+  // Dynamic API Base URL resolver
+  const getApiBase = () => {
+    return typeof window !== 'undefined' && window.location.hostname.includes('netlify.app')
+      ? '/api/v1'
+      : 'https://utsav-ai-ycg2.onrender.com/api/v1';
+  };
+
+  // Fetch real event data from backend API — strictly zero invented facts
+  const fetchEventData = useCallback(async () => {
+    setIsLoading(true);
+    setErrorMessage(null);
+
+    // Guard: If rawEventId is 'default' or empty, check if we have a saved ID, else reject immediately
+    let targetId = rawEventId;
+    if (!targetId || targetId === 'default') {
       try {
-        localStorage.setItem('utsav_last_event_id', eventId);
+        const saved = localStorage.getItem('utsav_last_event_id');
+        if (saved && saved !== 'default') {
+          targetId = saved;
+          router.replace(`/dashboard/events/${saved}`);
+          return;
+        }
       } catch (e) {
         // ignore
       }
+      setIsLoading(false);
+      setErrorMessage('No celebration event selected. Please create your plan via the intake wizard to launch your real workspace.');
+      return;
     }
-  }, [eventId]);
 
-  // Load Event Data and Style Profiles
-  useEffect(() => {
-    let isMounted = true;
-    const fetchEventData = async () => {
-      setIsLoading(true);
-      const apiBase =
-        typeof window !== 'undefined' && window.location.hostname.includes('netlify.app')
-          ? '/api/v1'
-          : 'https://utsav-ai-ycg2.onrender.com/api/v1';
+    try {
+      const apiBase = getApiBase();
+      const res = await fetch(`${apiBase}/events/${targetId}`);
 
-      if (eventId && eventId !== 'default') {
-        try {
-          const res = await fetch(`${apiBase}/events/${eventId}`);
-          if (res.ok) {
-            const data = await res.json();
-            if (isMounted) {
-              setEventData({
-                id: data.id,
-                name: data.name || DEFAULT_EVENT_DATA.name,
-                owner_name: data.owner_name || DEFAULT_EVENT_DATA.owner_name,
-                event_type: data.event_type || DEFAULT_EVENT_DATA.event_type,
-                city: data.city || DEFAULT_EVENT_DATA.city,
-                city_tier: data.city_tier || 'tier_2',
-                guest_count: data.guest_count || DEFAULT_EVENT_DATA.guest_count,
-                total_budget: data.total_budget || DEFAULT_EVENT_DATA.total_budget,
-                tradition_code: data.tradition_code || DEFAULT_EVENT_DATA.tradition_code,
-                status: data.status || 'planning',
-                start_date: data.start_date || DEFAULT_EVENT_DATA.start_date,
-                end_date: data.end_date || DEFAULT_EVENT_DATA.end_date,
-                elder_verification_disclaimer:
-                  data.elder_verification_disclaimer || DEFAULT_EVENT_DATA.elder_verification_disclaimer,
-                sub_events: data.sub_events && data.sub_events.length > 0 ? data.sub_events : DEFAULT_EVENT_DATA.sub_events,
-                budget_breakdown:
-                  data.budget_breakdown && data.budget_breakdown.length > 0
-                    ? data.budget_breakdown
-                    : DEFAULT_EVENT_DATA.budget_breakdown,
-                tasks: data.tasks && data.tasks.length > 0 ? data.tasks : DEFAULT_EVENT_DATA.tasks
-              });
-              setIsLiveConnected(true);
-            }
-          }
-        } catch (err) {
-          console.warn('Could not fetch remote event; running with cached state', err);
-        }
-
-        // Try fetching style profiles
-        try {
-          const vibeRes = await fetch(`${apiBase}/events/${eventId}/vibe/profiles`);
-          if (vibeRes.ok) {
-            const profiles = await vibeRes.json();
-            if (isMounted && profiles && profiles.length > 0) {
-              setStyleProfile(profiles[0]);
-            }
-          }
-        } catch (e) {
-          // ignore
-        }
+      if (res.status === 404) {
+        setIsLoading(false);
+        setErrorMessage(`Event with ID "${targetId}" was not found in the live database. Please check the URL or create a new celebration plan.`);
+        return;
       }
 
-      if (isMounted) setIsLoading(false);
-    };
+      if (!res.ok) {
+        setIsLoading(false);
+        setErrorMessage(`Backend server returned HTTP error ${res.status} (${res.statusText || 'Failed to fetch event'}).`);
+        return;
+      }
 
+      const data = await res.json();
+      setEventData({
+        id: data.id,
+        name: data.name,
+        owner_name: data.owner_name || 'Host',
+        event_type: data.event_type || 'wedding',
+        city: data.city,
+        city_tier: data.city_tier || 'tier_2',
+        guest_count: data.guest_count,
+        total_budget: Number(data.total_budget),
+        tradition_code: data.tradition_code || 'maharashtrian_vedic',
+        status: data.status || 'planning',
+        start_date: data.start_date,
+        end_date: data.end_date,
+        elder_verification_disclaimer: data.elder_verification_disclaimer ||
+          'Auspicious timings & ritual checklists are algorithmic estimates computed via astronomical ephemeris models. Please verify with your family Guruji or elders.',
+        sub_events: data.sub_events || [],
+        budget_breakdown: data.budget_breakdown || [],
+        tasks: data.tasks || []
+      });
+
+      // Persist active ID in localStorage
+      try {
+        localStorage.setItem('utsav_last_event_id', data.id);
+      } catch (e) {
+        // ignore
+      }
+
+      // Try fetching style profiles for this event
+      try {
+        const vibeRes = await fetch(`${apiBase}/events/${targetId}/vibe/profiles`);
+        if (vibeRes.ok) {
+          const profiles = await vibeRes.json();
+          if (profiles && profiles.length > 0) {
+            setStyleProfile(profiles[0]);
+          }
+        }
+      } catch (e) {
+        // ignore vibe fetch failures
+      }
+    } catch (err: any) {
+      console.error('Failed to fetch live event:', err);
+      setErrorMessage(`Network error connecting to backend: ${err.message || 'Unable to reach API server'}. Please verify backend health.`);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [rawEventId, router]);
+
+  useEffect(() => {
     fetchEventData();
-    return () => {
-      isMounted = false;
-    };
-  }, [eventId]);
+  }, [fetchEventData]);
 
-  // Derived KPI calculations
+  // Derived KPI calculations from REAL database data
   const totalAllocated = useMemo(() => {
+    if (!eventData?.budget_breakdown) return 0;
     return eventData.budget_breakdown.reduce((sum, item) => sum + (item.planned_amount || 0), 0);
-  }, [eventData.budget_breakdown]);
+  }, [eventData]);
 
   const muhuratCount = useMemo(() => {
+    if (!eventData?.sub_events) return 0;
     return eventData.sub_events.filter((s) => s.is_muhurat_locked).length;
-  }, [eventData.sub_events]);
+  }, [eventData]);
 
   const traditionTitle = useMemo(() => {
+    if (!eventData?.tradition_code) return 'Celebration';
     const map: Record<string, string> = {
       maharashtrian_vedic: 'Maharashtrian Vedic Lagna 🕉️',
       gujarati_hindu: 'Gujarati Hindu Vivah 🪔',
@@ -418,7 +216,81 @@ export default function EventDashboardClient() {
       community_festival: 'Sarvajanik Community Utsav 🚩'
     };
     return map[eventData.tradition_code] || `${eventData.tradition_code.replace('_', ' ')} ✨`;
-  }, [eventData.tradition_code]);
+  }, [eventData]);
+
+  // Loading state
+  if (isLoading) {
+    return (
+      <div className="min-h-screen pb-20">
+        <Navbar badge="Live Command" />
+        <div className="max-w-lg mx-auto pt-24 px-4 text-center space-y-4">
+          <div className="w-12 h-12 border-4 border-amber-500 border-t-transparent rounded-full animate-spin mx-auto" />
+          <h2 className="text-xl font-serif font-bold text-stone-900 dark:text-stone-100">
+            Connecting to PostgreSQL Event Registry...
+          </h2>
+          <p className="text-xs text-stone-500 dark:text-stone-400 font-mono">
+            Resolving live event #{rawEventId} • Zero invented facts policy active
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // Explicit, impossible-to-miss Error State (Zero Invented Facts)
+  if (errorMessage || !eventData) {
+    return (
+      <div className="min-h-screen pb-20">
+        <Navbar badge="Live Command" />
+        <div className="max-w-xl mx-auto pt-16 px-4">
+          <div className="glass-card rounded-3xl p-8 border-2 border-rose-400/80 dark:border-rose-800 shadow-xl text-center space-y-6">
+            <div className="w-16 h-16 rounded-2xl bg-rose-100 dark:bg-rose-950/80 text-rose-600 dark:text-rose-400 flex items-center justify-center text-3xl mx-auto shadow-sm">
+              ⚠️
+            </div>
+
+            <div className="space-y-2">
+              <h2 className="text-2xl font-serif font-bold text-stone-900 dark:text-stone-50">
+                Unable to Load Event Data
+              </h2>
+              <p className="text-sm text-stone-600 dark:text-stone-300 leading-relaxed">
+                {errorMessage}
+              </p>
+            </div>
+
+            <div className="p-4 rounded-2xl bg-stone-100 dark:bg-stone-900/60 border border-stone-200 dark:border-stone-800 text-xs text-stone-600 dark:text-stone-400 font-mono text-left space-y-1.5">
+              <div className="font-semibold text-rose-700 dark:text-rose-400 uppercase tracking-wider text-[11px]">
+                Integrity Guard Active
+              </div>
+              <div>• Requested Event ID: <span className="font-bold text-stone-900 dark:text-stone-200">{rawEventId || '(none)'}</span></div>
+              <div>• Zero Invented Facts: Utsav never fabricates placeholder budgets or fake schedules when real database records cannot be verified.</div>
+            </div>
+
+            <div className="flex flex-col sm:flex-row gap-3 justify-center pt-2">
+              <button
+                onClick={() => fetchEventData()}
+                className="px-5 py-2.5 rounded-xl border border-stone-300 dark:border-stone-700 text-xs font-semibold hover:bg-stone-100 dark:hover:bg-stone-800 text-stone-800 dark:text-stone-200 transition-colors"
+              >
+                🔄 Retry Connection
+              </button>
+              <Link
+                href="/onboarding"
+                className="px-5 py-2.5 rounded-xl bg-[#8B1E28] hover:bg-[#721820] text-white dark:bg-[#F4B41A] dark:text-stone-950 font-semibold text-xs shadow-md transition-all"
+              >
+                + Create Celebration Plan
+              </Link>
+              <Link
+                href="/demo"
+                className="px-5 py-2.5 rounded-xl border border-amber-300 dark:border-amber-700 text-amber-800 dark:text-amber-300 hover:bg-amber-50 dark:hover:bg-amber-950/40 text-xs font-semibold transition-all"
+              >
+                Explore Demo Preview →
+              </Link>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const currentEventId = eventData.id;
 
   return (
     <div className="min-h-screen pb-24">
@@ -427,15 +299,9 @@ export default function EventDashboardClient() {
         badge="Live Command"
         rightAction={
           <div className="flex items-center gap-2">
-            <span
-              className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${
-                isLiveConnected
-                  ? 'bg-emerald-100 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800'
-                  : 'bg-amber-100 dark:bg-amber-950/80 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-800'
-              }`}
-            >
-              <span className={`w-2 h-2 rounded-full ${isLiveConnected ? 'bg-emerald-500' : 'bg-amber-500'} animate-pulse`} />
-              {isLiveConnected ? 'DB Live' : 'Demo Mode'}
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-100 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+              Live PostgreSQL
             </span>
             <Link
               href="/onboarding"
@@ -456,7 +322,7 @@ export default function EventDashboardClient() {
           <span>/</span>
           <span className="text-stone-700 dark:text-stone-300">Celebration Workspace</span>
           <span>/</span>
-          <span className="font-mono text-stone-400 truncate max-w-[200px]">{eventId}</span>
+          <span className="font-mono text-stone-400 truncate max-w-[200px]">{currentEventId}</span>
         </div>
 
         {/* Header Hero Banner */}
@@ -492,31 +358,31 @@ export default function EventDashboardClient() {
               </p>
             </div>
 
-            {/* Quick Action Navigation CTAs */}
+            {/* Quick Action Navigation CTAs (Properly Event-Scoped) */}
             <div className="flex flex-wrap sm:flex-nowrap gap-2.5 self-start lg:self-center">
               <Link
-                href={`/dashboard/events/${eventId}/changes/default`}
+                href={`/dashboard/events/${currentEventId}/changes/default`}
                 className="px-4 py-2.5 rounded-xl bg-amber-50 dark:bg-amber-950/60 border border-amber-300 dark:border-amber-800 text-amber-900 dark:text-amber-200 text-xs font-semibold hover:bg-amber-100 dark:hover:bg-amber-900/60 transition-all shadow-sm flex items-center gap-1.5"
               >
                 <span>⚡</span> Plan B Replanner
               </Link>
               <Link
-                href={`/dashboard/events/${eventId}/vibe`}
+                href={`/dashboard/events/${currentEventId}/vibe`}
                 className="px-4 py-2.5 rounded-xl bg-purple-50 dark:bg-purple-950/60 border border-purple-300 dark:border-purple-800 text-purple-900 dark:text-purple-200 text-xs font-semibold hover:bg-purple-100 dark:hover:bg-purple-900/60 transition-all shadow-sm flex items-center gap-1.5"
               >
                 <span>🎨</span> Vibe Studio
               </Link>
               <Link
-                href="/dashboard/vendors/quotes"
+                href={`/dashboard/events/${currentEventId}/vendors/quotes`}
                 className="px-4 py-2.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-300 dark:border-emerald-800 text-emerald-900 dark:text-emerald-200 text-xs font-semibold hover:bg-emerald-100 dark:hover:bg-emerald-900/60 transition-all shadow-sm flex items-center gap-1.5"
               >
-                <span>📑</span> Quote Auditor
+                <span>📑</span> Vendor Quotes
               </Link>
             </div>
           </div>
         </section>
 
-        {/* Live KPI Cards (4 Pillars) */}
+        {/* Live KPI Cards (4 Pillars Grounded in Real Data) */}
         <section className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           {/* 1. Target Budget Envelope */}
           <div className="glass-card p-5 rounded-2xl shadow-sm border border-stone-200/80 dark:border-stone-800/80 space-y-1.5">
@@ -614,7 +480,7 @@ export default function EventDashboardClient() {
                   </p>
                 </div>
                 <Link
-                  href={`/dashboard/events/${eventId}/changes/default`}
+                  href={`/dashboard/events/${currentEventId}/changes/default`}
                   className="inline-flex items-center text-xs font-bold text-amber-700 dark:text-amber-400 hover:underline gap-1"
                 >
                   Simulate Replanning Scenario →
@@ -635,7 +501,7 @@ export default function EventDashboardClient() {
                   </p>
                 </div>
                 <Link
-                  href={`/dashboard/events/${eventId}/vibe`}
+                  href={`/dashboard/events/${currentEventId}/vibe`}
                   className="inline-flex items-center text-xs font-bold text-purple-700 dark:text-purple-400 hover:underline gap-1"
                 >
                   Open Vibe Studio →
@@ -656,10 +522,10 @@ export default function EventDashboardClient() {
                   </p>
                 </div>
                 <Link
-                  href="/dashboard/vendors/quotes"
+                  href={`/dashboard/events/${currentEventId}/vendors/quotes`}
                   className="inline-flex items-center text-xs font-bold text-emerald-700 dark:text-emerald-400 hover:underline gap-1"
                 >
-                  Audit Vendor Quotes →
+                  Audit Scoped Vendor Quotes →
                 </Link>
               </div>
             </div>
@@ -680,30 +546,34 @@ export default function EventDashboardClient() {
                   </button>
                 </div>
                 <div className="space-y-3">
-                  {eventData.sub_events.slice(0, 3).map((se) => (
-                    <div
-                      key={se.id}
-                      className="p-3.5 rounded-xl bg-white/70 dark:bg-stone-900/60 border border-stone-200/80 dark:border-stone-800/80 flex items-start justify-between gap-3 shadow-xs"
-                    >
-                      <div>
-                        <div className="font-semibold text-xs sm:text-sm text-stone-900 dark:text-stone-100">
-                          {se.name}
+                  {eventData.sub_events.length === 0 ? (
+                    <p className="text-xs text-stone-500 py-3">No sub-events generated yet.</p>
+                  ) : (
+                    eventData.sub_events.slice(0, 3).map((se) => (
+                      <div
+                        key={se.id}
+                        className="p-3.5 rounded-xl bg-white/70 dark:bg-stone-900/60 border border-stone-200/80 dark:border-stone-800/80 flex items-start justify-between gap-3 shadow-xs"
+                      >
+                        <div>
+                          <div className="font-semibold text-xs sm:text-sm text-stone-900 dark:text-stone-100">
+                            {se.name}
+                          </div>
+                          <div className="text-xs text-stone-500 dark:text-stone-400 font-mono mt-0.5">
+                            {new Date(se.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} -{' '}
+                            {new Date(se.end_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          </div>
+                          <div className="text-xs text-stone-600 dark:text-stone-300 mt-1">
+                            📍 {se.venue_name}
+                          </div>
                         </div>
-                        <div className="text-xs text-stone-500 dark:text-stone-400 font-mono mt-0.5">
-                          {new Date(se.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} -{' '}
-                          {new Date(se.end_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                        </div>
-                        <div className="text-xs text-stone-600 dark:text-stone-300 mt-1">
-                          📍 {se.venue_name}
-                        </div>
+                        {se.is_muhurat_locked && (
+                          <span className="shrink-0 px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 text-[10px] font-bold font-mono">
+                            🕉️ Muhurat Locked
+                          </span>
+                        )}
                       </div>
-                      {se.is_muhurat_locked && (
-                        <span className="shrink-0 px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 text-[10px] font-bold font-mono">
-                          🕉️ Muhurat Locked
-                        </span>
-                      )}
-                    </div>
-                  ))}
+                    ))
+                  )}
                 </div>
               </div>
 
@@ -718,27 +588,31 @@ export default function EventDashboardClient() {
                   </span>
                 </div>
                 <div className="space-y-3">
-                  {eventData.tasks.slice(0, 4).map((task) => (
-                    <div
-                      key={task.id}
-                      className="p-3.5 rounded-xl bg-white/70 dark:bg-stone-900/60 border border-stone-200/80 dark:border-stone-800/80 flex items-center justify-between gap-3 shadow-xs text-xs"
-                    >
-                      <div className="space-y-0.5">
-                        <div className="font-semibold text-stone-900 dark:text-stone-100">
-                          {task.title}
+                  {eventData.tasks.length === 0 ? (
+                    <p className="text-xs text-stone-500 py-3">No tasks scheduled yet.</p>
+                  ) : (
+                    eventData.tasks.slice(0, 4).map((task) => (
+                      <div
+                        key={task.id}
+                        className="p-3.5 rounded-xl bg-white/70 dark:bg-stone-900/60 border border-stone-200/80 dark:border-stone-800/80 flex items-center justify-between gap-3 shadow-xs text-xs"
+                      >
+                        <div className="space-y-0.5">
+                          <div className="font-semibold text-stone-900 dark:text-stone-100">
+                            {task.title}
+                          </div>
+                          <div className="text-[11px] text-stone-500 dark:text-stone-400">
+                            Role:{' '}
+                            <span className="font-mono text-stone-700 dark:text-stone-300 font-medium">
+                              {task.assigned_role || 'Coordinator'}
+                            </span>
+                          </div>
                         </div>
-                        <div className="text-[11px] text-stone-500 dark:text-stone-400">
-                          Role:{' '}
-                          <span className="font-mono text-stone-700 dark:text-stone-300 font-medium">
-                            {task.assigned_role || 'Coordinator'}
-                          </span>
-                        </div>
+                        <span className="shrink-0 px-2.5 py-1 rounded-md bg-stone-100 dark:bg-stone-800 text-stone-700 dark:text-stone-300 font-mono font-medium text-[11px]">
+                          {task.scheduled_start ? new Date(task.scheduled_start).toLocaleDateString() : 'Pending'}
+                        </span>
                       </div>
-                      <span className="shrink-0 px-2.5 py-1 rounded-md bg-stone-100 dark:bg-stone-800 text-stone-700 dark:text-stone-300 font-mono font-medium text-[11px]">
-                        {task.scheduled_start ? new Date(task.scheduled_start).toLocaleDateString() : 'Pending'}
-                      </span>
-                    </div>
-                  ))}
+                    ))
+                  )}
                 </div>
               </div>
             </div>
@@ -867,48 +741,48 @@ export default function EventDashboardClient() {
           </div>
         )}
 
-        {/* TAB 4: VENDOR HUB & QUOTE AUDITOR */}
+        {/* TAB 4: VENDOR HUB & QUOTE AUDITOR (SCOPED TO CURRENT EVENT) */}
         {activeTab === 'vendors' && (
           <div className="space-y-6 animate-fadeIn">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div>
                 <h2 className="text-2xl font-serif font-bold text-stone-900 dark:text-stone-100">
-                  Vendor Hub & Quote Management
+                  Vendor Hub & Quotes
                 </h2>
                 <p className="text-xs text-stone-600 dark:text-stone-300 mt-1">
-                  Upload vendor proposals and let the deterministic comparison engine flag hidden fees, generator surges, and overtime rates.
+                  Upload vendor proposals scoped to <strong className="font-semibold">{eventData.name}</strong>. Flag hidden fees, generator charges, and overtime rates.
                 </p>
               </div>
               <Link
-                href="/dashboard/vendors/quotes"
+                href={`/dashboard/events/${currentEventId}/vendors/quotes`}
                 className="self-start sm:self-auto px-5 py-2.5 rounded-xl bg-[#8B1E28] hover:bg-[#721820] text-white dark:bg-[#F4B41A] dark:text-stone-950 font-semibold text-xs shadow-md transition-all"
               >
-                + Upload Quote for Audit
+                + Manage Quotes for this Event
               </Link>
             </div>
 
             <div className="grid md:grid-cols-3 gap-6">
               <div className="glass-card p-6 rounded-3xl border border-stone-200/80 dark:border-stone-800/80 space-y-3">
                 <div className="text-xs font-semibold uppercase tracking-wider text-stone-500">
-                  Required Vendors Shortlist
+                  Target Event
                 </div>
-                <div className="text-2xl font-bold font-serif text-stone-900 dark:text-stone-100">
-                  8 Categories
+                <div className="text-xl font-bold font-serif text-stone-900 dark:text-stone-100 truncate">
+                  {eventData.name}
                 </div>
                 <div className="text-xs text-stone-600 dark:text-stone-400">
-                  Caterer, Mandap, Sound & Light, Priest, Photography, Hair & Makeup, Transport, Hospitality.
+                  Guest Count: {eventData.guest_count} • City: {eventData.city}
                 </div>
               </div>
 
               <div className="glass-card p-6 rounded-3xl border border-stone-200/80 dark:border-stone-800/80 space-y-3">
                 <div className="text-xs font-semibold uppercase tracking-wider text-stone-500">
-                  Audited Quotes
+                  OCR Comparison Engine
                 </div>
-                <div className="text-2xl font-bold font-serif text-emerald-600 dark:text-emerald-400">
-                  Active OCR Engine
+                <div className="text-xl font-bold font-serif text-emerald-600 dark:text-emerald-400">
+                  18 Red Flag Checks
                 </div>
                 <div className="text-xs text-stone-600 dark:text-stone-400">
-                  Cross-checks line items against 18 regional hidden charge patterns (DEC-013).
+                  Cross-checks line items against regional hidden charge patterns (DEC-013).
                 </div>
               </div>
 
@@ -916,11 +790,11 @@ export default function EventDashboardClient() {
                 <div className="text-xs font-semibold uppercase tracking-wider text-stone-500">
                   City Benchmark
                 </div>
-                <div className="text-2xl font-bold font-serif text-amber-600 dark:text-amber-400">
+                <div className="text-xl font-bold font-serif text-amber-600 dark:text-amber-400">
                   {eventData.city} ({eventData.city_tier.toUpperCase()})
                 </div>
                 <div className="text-xs text-stone-600 dark:text-stone-400">
-                  Quotes evaluated against live database benchmarks with full sample size transparency.
+                  Evaluated against live regional benchmarks with sample size transparency.
                 </div>
               </div>
             </div>
@@ -928,16 +802,16 @@ export default function EventDashboardClient() {
             <div className="p-8 rounded-3xl glass-card text-center space-y-4 border border-stone-200/80 dark:border-stone-800/80">
               <div className="text-3xl">📑</div>
               <h3 className="font-serif font-bold text-lg text-stone-900 dark:text-stone-100">
-                Ready to review vendor estimates?
+                Ready to upload vendor estimates?
               </h3>
               <p className="text-xs text-stone-600 dark:text-stone-300 max-w-md mx-auto leading-relaxed">
-                Run quotes side-by-side to identify discrepancy percentages and negotiate with AI-assisted WhatsApp templates.
+                Add PDF or photo quotes for catering, mandap, sound, or photography. The engine audits line items and benchmarks costs against {eventData.city}.
               </p>
               <Link
-                href="/dashboard/vendors/quotes"
+                href={`/dashboard/events/${currentEventId}/vendors/quotes`}
                 className="inline-block px-6 py-2.5 rounded-full bg-stone-900 text-white dark:bg-stone-100 dark:text-stone-900 text-xs font-semibold shadow-sm hover:opacity-90"
               >
-                Go to Quote Comparison Matrix →
+                Go to Scoped Quote Studio →
               </Link>
             </div>
           </div>
@@ -956,7 +830,7 @@ export default function EventDashboardClient() {
                 </p>
               </div>
               <Link
-                href={`/dashboard/events/${eventId}/vibe`}
+                href={`/dashboard/events/${currentEventId}/vibe`}
                 className="self-start sm:self-auto px-5 py-2.5 rounded-xl bg-purple-700 hover:bg-purple-800 text-white font-semibold text-xs shadow-md transition-all"
               >
                 Open Vibe-to-Plan Studio →
@@ -1037,13 +911,13 @@ export default function EventDashboardClient() {
               <div className="p-8 rounded-3xl glass-card text-center space-y-4 border border-stone-200/80 dark:border-stone-800/80">
                 <div className="text-3xl">🎨</div>
                 <h3 className="font-serif font-bold text-lg text-stone-900 dark:text-stone-100">
-                  No mood photos analyzed yet
+                  No mood photos analyzed yet for this celebration
                 </h3>
                 <p className="text-xs text-stone-600 dark:text-stone-300 max-w-md mx-auto leading-relaxed">
                   Upload up to 10 photos of mandaps, outfits, or decor you love. Real multimodal AI will translate them into an actionable decor proposal with cost bounds.
                 </p>
                 <Link
-                  href={`/dashboard/events/${eventId}/vibe`}
+                  href={`/dashboard/events/${currentEventId}/vibe`}
                   className="inline-block px-6 py-2.5 rounded-full bg-purple-700 hover:bg-purple-800 text-white text-xs font-semibold shadow-sm"
                 >
                   Launch Vibe-to-Plan Studio →
@@ -1109,8 +983,8 @@ export default function EventDashboardClient() {
               )}
 
               <div className="flex items-center justify-between pt-3 border-t border-stone-200/60 dark:border-stone-800/60 text-[11px] text-stone-500">
-                <span>City Tier: {selectedWhyThis.reasoning_spec?.city_tier || 'Tier-2'}</span>
-                <span>Guest Count: {selectedWhyThis.reasoning_spec?.guest_count || 350}</span>
+                <span>City Tier: {selectedWhyThis.reasoning_spec?.city_tier || eventData.city_tier}</span>
+                <span>Guest Count: {selectedWhyThis.reasoning_spec?.guest_count || eventData.guest_count}</span>
               </div>
             </div>
 

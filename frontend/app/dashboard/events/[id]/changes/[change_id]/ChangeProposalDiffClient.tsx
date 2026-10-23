@@ -59,19 +59,57 @@ export default function ChangeProposalDiffClient() {
   const [overrides, setOverrides] = useState<Record<string, number>>({});
   const [hasUnsavedOverrides, setHasUnsavedOverrides] = useState<boolean>(false);
 
+  // Event Context & Simulator State
+  const [eventData, setEventData] = useState<{ name: string; guest_count: number; total_budget: number; city: string } | null>(null);
+  const [existingProposals, setExistingProposals] = useState<ChangeProposal[]>([]);
+  const [isSimulating, setIsSimulating] = useState<boolean>(false);
+  const [customGuestCount, setCustomGuestCount] = useState<number>(300);
+
   useEffect(() => {
-    if (eventId && changeId && changeId !== 'default') {
-      fetchProposal();
+    if (!eventId || eventId === 'default') {
+      setLoading(false);
+      return;
+    }
+
+    // 1. Fetch Event Info
+    fetch(`${API_BASE_URL}/events/${eventId}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (data) {
+          setEventData({
+            name: data.name,
+            guest_count: data.guest_count,
+            total_budget: Number(data.total_budget),
+            city: data.city
+          });
+          setCustomGuestCount((data.guest_count || 250) + 50);
+        }
+      })
+      .catch((e) => console.warn('Could not fetch event context:', e));
+
+    // 2. Fetch Existing Proposals for this Event
+    fetch(`${API_BASE_URL}/events/${eventId}/changes`)
+      .then((r) => (r.ok ? r.json() : []))
+      .then((proposals) => {
+        if (Array.isArray(proposals)) {
+          setExistingProposals(proposals);
+        }
+      })
+      .catch(() => {});
+
+    // 3. Fetch specific proposal if changeId is valid
+    if (changeId && changeId !== 'default') {
+      fetchProposal(changeId);
     } else {
       setLoading(false);
     }
   }, [eventId, changeId]);
 
-  const fetchProposal = async () => {
+  const fetchProposal = async (targetChangeId: string) => {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`${API_BASE_URL}/events/${eventId}/changes/${changeId}`);
+      const res = await fetch(`${API_BASE_URL}/events/${eventId}/changes/${targetChangeId}`);
       if (!res.ok) {
         throw new Error(`Failed to load change proposal (${res.status})`);
       }
@@ -86,6 +124,37 @@ export default function ChangeProposalDiffClient() {
       setError(err.message || 'Error loading replanning diff');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSimulateScenario = async (changeType: string, payload: Record<string, any>) => {
+    setIsSimulating(true);
+    setError(null);
+    try {
+      const res = await fetch(`${API_BASE_URL}/events/${eventId}/changes`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          change_type: changeType,
+          payload: payload
+        })
+      });
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => ({}));
+        throw new Error(errJson.detail || `Replanning failed with status ${res.status}`);
+      }
+      const created: ChangeProposal = await res.json();
+      setProposal(created);
+      setExistingProposals((prev) => [created, ...prev.filter((p) => p.change_id !== created.change_id)]);
+      const initialOverrides: Record<string, number> = {};
+      created.budget_diff?.forEach((item) => {
+        initialOverrides[item.budget_item_id] = item.new_amount;
+      });
+      setOverrides(initialOverrides);
+    } catch (err: any) {
+      setError(err.message || 'Failed to simulate replanning scenario');
+    } finally {
+      setIsSimulating(false);
     }
   };
 
@@ -166,29 +235,234 @@ export default function ChangeProposalDiffClient() {
     );
   }
 
-  if (error || !proposal) {
+  if (!proposal) {
     return (
-      <div className="min-h-screen pb-16">
-        <Navbar badge="Plan B Engine" />
-        <div className="max-w-lg mx-auto mt-20 px-4">
-          <div className="glass-card rounded-3xl shadow-xl p-8 text-center">
-            <div className="w-14 h-14 bg-amber-100 dark:bg-amber-950/80 text-amber-700 dark:text-amber-400 rounded-2xl flex items-center justify-center mx-auto mb-4 font-bold text-2xl shadow-sm">
-              📋
-            </div>
-            <h2 className="text-2xl font-serif font-bold text-stone-900 dark:text-stone-50 mb-2">
-              Plan B Replanning Diff
-            </h2>
-            <p className="text-stone-600 dark:text-stone-300 text-sm mb-6 leading-relaxed">
-              {error || 'No active live replanning diff loaded. Specify an active event ID to review live change diffs.'}
-            </p>
+      <div className="min-h-screen pb-20">
+        <Navbar
+          badge="Plan B Engine"
+          rightAction={
             <Link
-              href="/onboarding"
-              className="px-6 py-3 bg-[#8B1E28] hover:bg-stone-900 text-white dark:bg-[#F4B41A] dark:hover:bg-amber-300 dark:text-stone-950 text-xs font-bold uppercase tracking-wider rounded-xl transition-all shadow-md active:scale-95 inline-block"
+              href={`/dashboard/events/${eventId}`}
+              className="text-xs font-semibold px-3 py-1.5 rounded-lg border border-stone-200 dark:border-stone-800 hover:bg-stone-100 dark:hover:bg-stone-800 text-stone-700 dark:text-stone-300 transition-colors"
             >
-              Go to Intake Studio
+              ← Back to Event
             </Link>
+          }
+        />
+
+        <main className="max-w-7xl mx-auto px-4 sm:px-6 pt-8 space-y-8">
+          {/* Breadcrumb Navigation */}
+          <div className="flex items-center gap-2 text-xs text-stone-500 dark:text-stone-400 font-medium">
+            <Link href="/" className="hover:text-stone-900 dark:hover:text-white transition-colors">
+              Home
+            </Link>
+            <span>/</span>
+            <Link href={`/dashboard/events/${eventId}`} className="hover:text-stone-900 dark:hover:text-white transition-colors">
+              {eventData?.name || 'Celebration'}
+            </Link>
+            <span>/</span>
+            <span className="text-stone-700 dark:text-stone-300">Plan B Replanning</span>
           </div>
-        </div>
+
+          {/* Header Hero */}
+          <div className="glass-card rounded-3xl p-6 sm:p-8 border border-stone-200 dark:border-stone-800 shadow-sm space-y-3">
+            <span className="text-xs font-bold uppercase tracking-wider text-amber-700 dark:text-amber-400">
+              Deterministic Replanning Studio
+            </span>
+            <h1 className="text-3xl font-serif font-bold text-stone-900 dark:text-stone-50">
+              Simulate Live Plan B Scenarios
+            </h1>
+            <p className="text-sm text-stone-600 dark:text-stone-300 max-w-3xl leading-relaxed">
+              Disruptions happen. Test schedule shifts, guest surges, or budget tightening with zero-LLM math.
+              Every rupee delta and task shift is computed strictly in deterministic Python code before requiring explicit human confirmation.
+            </p>
+            {eventData && (
+              <div className="flex flex-wrap gap-2 pt-2 text-xs font-mono text-stone-600 dark:text-stone-400">
+                <span className="px-2.5 py-1 rounded-md bg-stone-100 dark:bg-stone-800">
+                  Target Event: <strong>{eventData.name}</strong>
+                </span>
+                <span className="px-2.5 py-1 rounded-md bg-stone-100 dark:bg-stone-800">
+                  Current Headcount: {eventData.guest_count}
+                </span>
+                <span className="px-2.5 py-1 rounded-md bg-stone-100 dark:bg-stone-800">
+                  Total Budget: ₹{eventData.total_budget.toLocaleString('en-IN')}
+                </span>
+              </div>
+            )}
+          </div>
+
+          {error && (
+            <div className="p-4 rounded-2xl bg-rose-50 dark:bg-rose-950/60 border border-rose-300 dark:border-rose-800 text-rose-800 dark:text-rose-200 text-xs flex justify-between items-center shadow-sm">
+              <span>⚠️ {error}</span>
+              <button onClick={() => setError(null)} className="font-bold ml-2">✕</button>
+            </div>
+          )}
+
+          {/* Instant Scenario Trigger Cards */}
+          <div className="space-y-4">
+            <h2 className="text-base font-serif font-bold text-stone-900 dark:text-stone-100">
+              Select a Disruption Scenario to Compute Plan B Diff
+            </h2>
+
+            <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
+              {/* Scenario 1: Guest Surge */}
+              <div className="glass-card p-5 rounded-2xl border border-stone-200 dark:border-stone-800 hover:border-amber-400 dark:hover:border-amber-500 transition-all flex flex-col justify-between space-y-4 shadow-sm">
+                <div className="space-y-2">
+                  <div className="w-10 h-10 rounded-xl bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-300 flex items-center justify-center text-xl">
+                    👥
+                  </div>
+                  <h3 className="font-serif font-bold text-base text-stone-900 dark:text-stone-100">
+                    Guest Surge (+50)
+                  </h3>
+                  <p className="text-xs text-stone-600 dark:text-stone-400 leading-relaxed">
+                    Relatives arrive unexpectedly. Tests per-guest scaling on catering, seating, and venue capacity.
+                  </p>
+                </div>
+                <button
+                  onClick={() =>
+                    handleSimulateScenario('guest_count_changed', {
+                      from_guest_count: eventData?.guest_count || 250,
+                      to_guest_count: (eventData?.guest_count || 250) + 50
+                    })
+                  }
+                  disabled={isSimulating}
+                  className="w-full py-2.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-semibold text-xs transition-all shadow-xs disabled:opacity-50"
+                >
+                  {isSimulating ? 'Computing Diff...' : 'Simulate Guest Surge →'}
+                </button>
+              </div>
+
+              {/* Scenario 2: Emergency Budget Cut */}
+              <div className="glass-card p-5 rounded-2xl border border-stone-200 dark:border-stone-800 hover:border-amber-400 dark:hover:border-amber-500 transition-all flex flex-col justify-between space-y-4 shadow-sm">
+                <div className="space-y-2">
+                  <div className="w-10 h-10 rounded-xl bg-rose-100 dark:bg-rose-950 text-rose-700 dark:text-rose-300 flex items-center justify-center text-xl">
+                    📉
+                  </div>
+                  <h3 className="font-serif font-bold text-base text-stone-900 dark:text-stone-100">
+                    Budget Cut (-15%)
+                  </h3>
+                  <p className="text-xs text-stone-600 dark:text-stone-400 leading-relaxed">
+                    Envelope reduced by 15%. Rescales discretionary categories while protecting sacred rituals.
+                  </p>
+                </div>
+                <button
+                  onClick={() =>
+                    handleSimulateScenario('budget_cut', {
+                      new_budget: Math.round((eventData?.total_budget || 3500000) * 0.85)
+                    })
+                  }
+                  disabled={isSimulating}
+                  className="w-full py-2.5 rounded-xl bg-stone-900 text-white dark:bg-stone-100 dark:text-stone-900 font-semibold text-xs transition-all shadow-xs disabled:opacity-50"
+                >
+                  {isSimulating ? 'Computing Diff...' : 'Simulate Budget Cut →'}
+                </button>
+              </div>
+
+              {/* Scenario 3: Weather Delay */}
+              <div className="glass-card p-5 rounded-2xl border border-stone-200 dark:border-stone-800 hover:border-amber-400 dark:hover:border-amber-500 transition-all flex flex-col justify-between space-y-4 shadow-sm">
+                <div className="space-y-2">
+                  <div className="w-10 h-10 rounded-xl bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300 flex items-center justify-center text-xl">
+                    🌧️
+                  </div>
+                  <h3 className="font-serif font-bold text-base text-stone-900 dark:text-stone-100">
+                    Date Shift (+2 Days)
+                  </h3>
+                  <p className="text-xs text-stone-600 dark:text-stone-400 leading-relaxed">
+                    Severe rain or travel delay. Shifts DAG schedule while locking sacred muhurat anchors.
+                  </p>
+                </div>
+                <button
+                  onClick={() =>
+                    handleSimulateScenario('date_moved', {
+                      days_shifted: 2
+                    })
+                  }
+                  disabled={isSimulating}
+                  className="w-full py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs transition-all shadow-xs disabled:opacity-50"
+                >
+                  {isSimulating ? 'Computing Diff...' : 'Simulate Date Shift →'}
+                </button>
+              </div>
+
+              {/* Scenario 4: Vendor Cancellation */}
+              <div className="glass-card p-5 rounded-2xl border border-stone-200 dark:border-stone-800 hover:border-amber-400 dark:hover:border-amber-500 transition-all flex flex-col justify-between space-y-4 shadow-sm">
+                <div className="space-y-2">
+                  <div className="w-10 h-10 rounded-xl bg-purple-100 dark:bg-purple-950 text-purple-700 dark:text-purple-300 flex items-center justify-center text-xl">
+                    ❌
+                  </div>
+                  <h3 className="font-serif font-bold text-base text-stone-900 dark:text-stone-100">
+                    Caterer Cancelled
+                  </h3>
+                  <p className="text-xs text-stone-600 dark:text-stone-400 leading-relaxed">
+                    Primary vendor defaults 10 days before wedding. Triggers emergency RFP & re-quote workflow.
+                  </p>
+                </div>
+                <button
+                  onClick={() =>
+                    handleSimulateScenario('vendor_cancelled', {
+                      category: 'catering'
+                    })
+                  }
+                  disabled={isSimulating}
+                  className="w-full py-2.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-semibold text-xs transition-all shadow-xs disabled:opacity-50"
+                >
+                  {isSimulating ? 'Computing Diff...' : 'Simulate Cancellation →'}
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Past Change Proposals List */}
+          {existingProposals.length > 0 && (
+            <div className="space-y-3">
+              <h2 className="text-sm font-semibold uppercase tracking-wider text-stone-500">
+                Existing Change Proposals ({existingProposals.length})
+              </h2>
+              <div className="grid gap-3">
+                {existingProposals.map((p) => (
+                  <div
+                    key={p.change_id}
+                    onClick={() => {
+                      setProposal(p);
+                      const initialOverrides: Record<string, number> = {};
+                      p.budget_diff?.forEach((item) => {
+                        initialOverrides[item.budget_item_id] = item.new_amount;
+                      });
+                      setOverrides(initialOverrides);
+                    }}
+                    className="p-4 rounded-2xl glass-card border border-stone-200 dark:border-stone-800 hover:border-amber-400 flex items-center justify-between cursor-pointer transition-all shadow-xs"
+                  >
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-xs uppercase px-2 py-0.5 rounded-md bg-stone-100 dark:bg-stone-800 text-stone-700 dark:text-stone-300">
+                          {p.change_type.replace('_', ' ')}
+                        </span>
+                        <span
+                          className={`text-[10px] font-bold font-mono px-2 py-0.5 rounded-full ${
+                            p.status === 'applied'
+                              ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
+                              : p.status === 'rejected'
+                              ? 'bg-stone-100 text-stone-600 dark:bg-stone-800 dark:text-stone-400'
+                              : 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300'
+                          }`}
+                        >
+                          {p.status.toUpperCase()}
+                        </span>
+                      </div>
+                      <p className="text-xs text-stone-700 dark:text-stone-300 font-medium mt-1">
+                        {p.summary}
+                      </p>
+                    </div>
+
+                    <span className="text-xs font-bold text-amber-700 dark:text-amber-400">
+                      Review Diff →
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </main>
       </div>
     );
   }
@@ -202,12 +476,20 @@ export default function ChangeProposalDiffClient() {
       <Navbar
         badge="Plan B Engine"
         rightAction={
-          <Link
-            href="/onboarding"
-            className="text-xs font-semibold uppercase tracking-wider text-stone-600 dark:text-stone-300 hover:text-stone-900 dark:hover:text-white px-3 py-1.5 rounded-lg border border-stone-200 dark:border-stone-800 hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors"
-          >
-            ← Intake Studio
-          </Link>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setProposal(null)}
+              className="text-xs font-semibold px-3 py-1.5 rounded-lg border border-stone-200 dark:border-stone-800 hover:bg-stone-100 dark:hover:bg-stone-800 text-stone-700 dark:text-stone-300 transition-colors"
+            >
+              🔄 New Scenario
+            </button>
+            <Link
+              href={`/dashboard/events/${eventId}`}
+              className="text-xs font-semibold px-3 py-1.5 rounded-lg border border-stone-200 dark:border-stone-800 hover:bg-stone-100 dark:hover:bg-stone-800 text-stone-700 dark:text-stone-300 transition-colors"
+            >
+              ← Back to Event
+            </Link>
+          </div>
         }
       />
 

@@ -13,6 +13,25 @@ from backend.app.services.replanning_service import ReplanningService
 router = APIRouter(prefix="/events/{id}/changes", tags=["Replanning (Plan B)"])
 
 
+@router.get("", response_model=List[ChangeProposalResponseSchema])
+def list_change_proposals(
+    id: str,
+    db: Session = Depends(get_db)
+):
+    """
+    Lists all change proposals for the specified event.
+    """
+    from backend.app.models.models import ChangeEvent
+    changes = db.query(ChangeEvent).filter(ChangeEvent.event_id == id).order_by(ChangeEvent.created_at.desc()).all()
+    results = []
+    for c in changes:
+        try:
+            results.append(ReplanningService.get_change_proposal(db, event_id=id, change_id=c.id))
+        except Exception:
+            pass
+    return results
+
+
 @router.post("", response_model=ChangeProposalResponseSchema, status_code=status.HTTP_201_CREATED)
 def submit_change_event(
     id: str,
