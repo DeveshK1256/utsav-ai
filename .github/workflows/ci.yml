@@ -15,7 +15,7 @@ jobs:
       PYTHONPATH: .
       DATABASE_URL: sqlite:///./ci_test.db
       WHATSAPP_PROVIDER: mock
-      ENABLE_M4_WHATSAPP: "false"
+      ENABLE_M4_WHATSAPP: "true"
 
     steps:
       - name: Check out repository
