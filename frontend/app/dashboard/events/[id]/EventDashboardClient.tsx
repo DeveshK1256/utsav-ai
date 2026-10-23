@@ -109,19 +109,28 @@ export default function EventDashboardClient() {
     setIsLoading(true);
     setErrorMessage(null);
 
-    // Guard: If rawEventId is 'default' or empty, check if we have a saved ID, else reject immediately
+    // Resolve real event ID from URL pathname, rawEventId, or localStorage without router loop
     let targetId = rawEventId;
+    if (typeof window !== 'undefined') {
+      const segments = window.location.pathname.split('/').filter(Boolean);
+      const lastSeg = segments[segments.length - 1];
+      if (lastSeg && lastSeg !== 'events' && lastSeg !== 'default') {
+        targetId = lastSeg;
+      }
+    }
+
     if (!targetId || targetId === 'default') {
       try {
         const saved = localStorage.getItem('utsav_last_event_id');
         if (saved && saved !== 'default') {
           targetId = saved;
-          router.replace(`/dashboard/events/${saved}`);
-          return;
         }
       } catch (e) {
         // ignore
       }
+    }
+
+    if (!targetId || targetId === 'default') {
       setIsLoading(false);
       setErrorMessage('No celebration event selected. Please create your plan via the intake wizard to launch your real workspace.');
       return;
