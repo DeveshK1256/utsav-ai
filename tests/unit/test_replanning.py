@@ -508,6 +508,13 @@ def test_intake_generated_event_fixed_category_scaling_regression():
         assert diffs["decor"]["old_amount"] == diffs["decor"]["new_amount"]
         assert diffs["decor"]["difference"] == 0.0
 
+        # Assert user-friendly decor formula string
+        decor_formula = diffs["decor"]["formula"]
+        assert "Remains in 'Large Lawn / Ballroom (251-500 guests)'" in decor_formula
+        assert "280→330 guests" in decor_formula
+        assert "no change" in decor_formula
+        assert "1.40/1.40" not in decor_formula
+
     finally:
         # Cleanup
         client.delete(f"/api/v1/events/{event_id}")

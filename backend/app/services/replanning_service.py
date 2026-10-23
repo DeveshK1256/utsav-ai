@@ -378,10 +378,13 @@ class ReplanningService:
         for item_diff in payload.get("budget_diff", []):
             b_id = item_diff.get("budget_item_id")
             new_amt = item_diff.get("new_amount")
+            rule = item_diff.get("scaling_rule")
             if b_id and new_amt is not None:
                 b_item = db.query(BudgetItem).filter(BudgetItem.id == b_id, BudgetItem.event_id == event_id).first()
                 if b_item:
                     b_item.planned_amount = new_amt
+                    if rule and b_item.scaling_rule != rule:
+                        b_item.scaling_rule = rule
 
         # 2. Mutate Tasks
         task_diff = payload.get("task_diff", {})

@@ -118,9 +118,15 @@ class BudgetRescalingEngine:
                 step_ratio = new_mult / old_mult if old_mult > 0 else 1.0
                 new_amt = round(old_amt * step_ratio, 2)
                 if old_tier != new_tier:
-                    formula = f"{cat}: {old_amt:.2f} * ({new_mult:.2f}/{old_mult:.2f}) = {new_amt:.2f} (Stepped from '{old_tier}' to '{new_tier}')"
+                    formula = (
+                        f"{cat}: Stepped from '{old_tier}' to '{new_tier}' "
+                        f"({old_guest_count}→{new_guest_count} guests, {old_mult:.2f}x→{new_mult:.2f}x) = ₹{new_amt:,.2f}"
+                    )
                 else:
-                    formula = f"{cat}: {old_amt:.2f} * ({new_mult:.2f}/{old_mult:.2f}) = {new_amt:.2f} (Remains in '{old_tier}')"
+                    formula = (
+                        f"{cat}: Remains in '{old_tier}' "
+                        f"({old_guest_count}→{new_guest_count} guests), no change (₹{new_amt:,.2f})"
+                    )
             else:  # fixed or unknown
                 new_amt = old_amt
                 formula = f"{cat}: {old_amt:.2f} * (Fixed contract rate) = {new_amt:.2f}"

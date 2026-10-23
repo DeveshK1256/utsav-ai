@@ -32,6 +32,32 @@ app.include_router(replanning_router, prefix=settings.API_V1_STR)
 app.include_router(vibe_router, prefix=settings.API_V1_STR)
 
 
+@app.on_event("startup")
+def run_db_backfill_on_startup():
+    """
+    Idempotent data integrity safeguard: ensure all existing budget_items rows
+    in the active database conform to canonical DEC-018 scaling rules.
+    """
+    try:
+        from backend.app.db.session import engine
+        from sqlalchemy import text
+        with engine.begin() as conn:
+            conn.execute(text("""
+                UPDATE budget_items
+                SET scaling_rule = CASE
+                    WHEN lower(category) IN ('venue', 'photography', 'entertainment', 'rituals', 'ritual_priest') THEN 'fixed'
+                    WHEN lower(category) IN ('decor', 'sound_light', 'sound_and_lighting') THEN 'tiered'
+                    WHEN lower(category) IN ('catering', 'rentals', 'wardrobe', 'gifts_favors', 'invitations', 'logistics', 'contingency') THEN 'per_guest'
+                    ELSE 'per_guest'
+                END
+                WHERE scaling_rule IS NULL 
+                   OR (scaling_rule = 'per_guest' AND lower(category) IN ('venue', 'photography', 'entertainment', 'rituals', 'ritual_priest', 'decor', 'sound_light', 'sound_and_lighting'))
+                   OR (scaling_rule = 'fixed' AND lower(category) IN ('decor', 'sound_light', 'sound_and_lighting', 'catering', 'rentals', 'wardrobe', 'gifts_favors', 'invitations', 'logistics', 'contingency'));
+            """))
+    except Exception:
+        pass
+
+
 @app.get("/health")
 def health_check():
     gemini_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
