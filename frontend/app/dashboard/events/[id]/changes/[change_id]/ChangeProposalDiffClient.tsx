@@ -3,8 +3,13 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
+import { Navbar } from '@/components/ui/Navbar';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'https://utsav-ai-ycg2.onrender.com/api/v1';
+const API_BASE_URL =
+  process.env.NEXT_PUBLIC_API_BASE_URL ||
+  (typeof window !== 'undefined' && window.location.hostname.includes('netlify.app')
+    ? '/api/v1'
+    : 'https://utsav-ai-ycg2.onrender.com/api/v1');
 
 interface BudgetItemDiff {
   budget_item_id: string;
@@ -78,72 +83,67 @@ export default function ChangeProposalDiffClient() {
       });
       setOverrides(initialOverrides);
     } catch (err: any) {
-      setError(err.message || 'Error fetching change proposal');
+      setError(err.message || 'Error loading replanning diff');
     } finally {
       setLoading(false);
     }
   };
 
   const handleAccept = async () => {
-    if (!confirm('Are you sure you want to accept and apply these changes to the master plan?')) return;
+    if (!proposal) return;
     setActionLoading(true);
     try {
       const res = await fetch(`${API_BASE_URL}/events/${eventId}/changes/${changeId}/accept`, {
-        method: 'POST'
+        method: 'POST',
       });
       if (!res.ok) {
-        const errData = await res.json();
-        throw new Error(errData.detail || 'Failed to accept proposal');
+        throw new Error(`Failed to apply proposal (${res.status})`);
       }
-      const updated = await res.json();
+      const updated: ChangeProposal = await res.json();
       setProposal(updated);
-      alert('Plan B changes successfully applied to your master budget and schedule!');
     } catch (err: any) {
-      alert(`Acceptance error: ${err.message}`);
+      alert(`Error accepting proposal: ${err.message}`);
     } finally {
       setActionLoading(false);
     }
   };
 
   const handleReject = async () => {
-    if (!confirm('Reject this proposal? The master budget and schedule will remain unchanged.')) return;
+    if (!proposal) return;
     setActionLoading(true);
     try {
       const res = await fetch(`${API_BASE_URL}/events/${eventId}/changes/${changeId}/reject`, {
-        method: 'POST'
+        method: 'POST',
       });
       if (!res.ok) {
-        const errData = await res.json();
-        throw new Error(errData.detail || 'Failed to reject proposal');
+        throw new Error(`Failed to reject proposal (${res.status})`);
       }
-      const updated = await res.json();
+      const updated: ChangeProposal = await res.json();
       setProposal(updated);
-      alert('Change proposal rejected. Master plan untouched.');
     } catch (err: any) {
-      alert(`Rejection error: ${err.message}`);
+      alert(`Error rejecting proposal: ${err.message}`);
     } finally {
       setActionLoading(false);
     }
   };
 
   const handleSaveOverrides = async () => {
+    if (!proposal) return;
     setActionLoading(true);
     try {
-      const res = await fetch(`${API_BASE_URL}/events/${eventId}/changes/${changeId}`, {
+      const res = await fetch(`${API_BASE_URL}/events/${eventId}/changes/${changeId}/overrides`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ budget_overrides: overrides })
+        body: JSON.stringify({ item_overrides: overrides }),
       });
       if (!res.ok) {
-        const errData = await res.json();
-        throw new Error(errData.detail || 'Failed to patch proposal');
+        throw new Error(`Failed to save overrides (${res.status})`);
       }
-      const updated = await res.json();
+      const updated: ChangeProposal = await res.json();
       setProposal(updated);
       setHasUnsavedOverrides(false);
-      alert('Manual overrides saved to proposal!');
     } catch (err: any) {
-      alert(`Override error: ${err.message}`);
+      alert(`Error saving overrides: ${err.message}`);
     } finally {
       setActionLoading(false);
     }
@@ -157,10 +157,10 @@ export default function ChangeProposalDiffClient() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-stone-50 flex items-center justify-center p-6">
+      <div className="min-h-screen flex items-center justify-center p-6">
         <div className="text-center">
-          <div className="w-12 h-12 border-4 border-amber-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-stone-600 font-medium">Evaluating plan modifications & deterministic impact...</p>
+          <div className="w-12 h-12 border-4 border-amber-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-stone-600 dark:text-stone-300 font-medium">Evaluating plan modifications & deterministic impact...</p>
         </div>
       </div>
     );
@@ -168,14 +168,26 @@ export default function ChangeProposalDiffClient() {
 
   if (error || !proposal) {
     return (
-      <div className="min-h-screen bg-stone-50 p-6 flex items-center justify-center">
-        <div className="bg-white rounded-xl shadow p-8 max-w-lg text-center border border-stone-200">
-          <div className="w-12 h-12 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-4 font-bold text-xl">!</div>
-          <h2 className="text-xl font-bold text-stone-800 mb-2">Plan B Replanning Diff</h2>
-          <p className="text-stone-600 mb-6">{error || 'Enter an active event and change ID to view the proposal diff.'}</p>
-          <Link href="/dashboard" className="px-5 py-2.5 bg-stone-800 text-white rounded-lg hover:bg-stone-900 transition">
-            Back to Dashboard
-          </Link>
+      <div className="min-h-screen pb-16">
+        <Navbar badge="Plan B Engine" />
+        <div className="max-w-lg mx-auto mt-20 px-4">
+          <div className="glass-card rounded-3xl shadow-xl p-8 text-center">
+            <div className="w-14 h-14 bg-amber-100 dark:bg-amber-950/80 text-amber-700 dark:text-amber-400 rounded-2xl flex items-center justify-center mx-auto mb-4 font-bold text-2xl shadow-sm">
+              📋
+            </div>
+            <h2 className="text-2xl font-serif font-bold text-stone-900 dark:text-stone-50 mb-2">
+              Plan B Replanning Diff
+            </h2>
+            <p className="text-stone-600 dark:text-stone-300 text-sm mb-6 leading-relaxed">
+              {error || 'No active live replanning diff loaded. Specify an active event ID to review live change diffs.'}
+            </p>
+            <Link
+              href="/onboarding"
+              className="px-6 py-3 bg-[#8B1E28] hover:bg-stone-900 text-white dark:bg-[#F4B41A] dark:hover:bg-amber-300 dark:text-stone-950 text-xs font-bold uppercase tracking-wider rounded-xl transition-all shadow-md active:scale-95 inline-block"
+            >
+              Go to Intake Studio
+            </Link>
+          </div>
         </div>
       </div>
     );
@@ -185,45 +197,57 @@ export default function ChangeProposalDiffClient() {
   const isInfeasible = proposal.status === 'blocked_infeasible';
 
   return (
-    <div className="min-h-screen bg-stone-50 text-stone-900 pb-16">
-      {/* Header bar */}
-      <header className="bg-white border-b border-stone-200 sticky top-0 z-30">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 flex flex-wrap items-center justify-between gap-4">
+    <div className="min-h-screen pb-20">
+      {/* Universal Top Navigation */}
+      <Navbar
+        badge="Plan B Engine"
+        rightAction={
+          <Link
+            href="/onboarding"
+            className="text-xs font-semibold uppercase tracking-wider text-stone-600 dark:text-stone-300 hover:text-stone-900 dark:hover:text-white px-3 py-1.5 rounded-lg border border-stone-200 dark:border-stone-800 hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors"
+          >
+            ← Intake Studio
+          </Link>
+        }
+      />
+
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 pt-8 space-y-6">
+        {/* Proposal Header Banner */}
+        <div className="glass-card rounded-3xl p-6 sm:p-7 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
-            <div className="flex items-center gap-3">
-              <Link href="/dashboard" className="text-stone-500 hover:text-stone-800 text-sm font-medium">
-                &larr; Event Plan
-              </Link>
-              <span className="text-stone-300">/</span>
-              <span className="text-sm font-semibold text-amber-700 uppercase tracking-wider">Plan B Replanning</span>
+            <div className="flex items-center gap-2.5 mb-1.5">
+              <span className="text-xs font-bold uppercase tracking-wider text-amber-700 dark:text-amber-400 font-mono">
+                Proposal ID: {proposal.change_id.slice(0, 8)}
+              </span>
+              <span
+                className={`px-3 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider border ${
+                  proposal.status === 'applied'
+                    ? 'bg-emerald-100 dark:bg-emerald-950/80 border-emerald-300 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300'
+                    : proposal.status === 'rejected'
+                    ? 'bg-stone-200 dark:bg-stone-800 border-stone-300 dark:border-stone-700 text-stone-700 dark:text-stone-300'
+                    : proposal.status === 'blocked_infeasible'
+                    ? 'bg-rose-100 dark:bg-rose-950/80 border-rose-300 dark:border-rose-800 text-rose-800 dark:text-rose-300'
+                    : proposal.status === 'queued'
+                    ? 'bg-amber-100 dark:bg-amber-950/80 border-amber-300 dark:border-amber-800 text-amber-800 dark:text-amber-300'
+                    : 'bg-blue-100 dark:bg-blue-950/80 border-blue-300 dark:border-blue-800 text-blue-800 dark:text-blue-300'
+                }`}
+              >
+                {proposal.status.replace('_', ' ')}
+              </span>
             </div>
-            <h1 className="text-2xl font-bold text-stone-900 mt-1">{proposal.summary}</h1>
+            <h1 className="text-2xl font-serif font-bold text-stone-900 dark:text-stone-50">
+              {proposal.summary}
+            </h1>
           </div>
 
-          <div className="flex items-center gap-3">
-            <span
-              className={`px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wider ${
-                proposal.status === 'applied'
-                  ? 'bg-emerald-100 text-emerald-800'
-                  : proposal.status === 'rejected'
-                  ? 'bg-stone-200 text-stone-700'
-                  : proposal.status === 'blocked_infeasible'
-                  ? 'bg-rose-100 text-rose-800'
-                  : proposal.status === 'queued'
-                  ? 'bg-amber-100 text-amber-800'
-                  : 'bg-blue-100 text-blue-800'
-              }`}
-            >
-              Status: {proposal.status.replace('_', ' ')}
-            </span>
-
+          <div className="flex flex-wrap items-center gap-3">
             {isPending && (
               <>
                 {hasUnsavedOverrides && (
                   <button
                     onClick={handleSaveOverrides}
                     disabled={actionLoading}
-                    className="px-4 py-2 text-sm font-medium bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition"
+                    className="px-4 py-2 text-xs font-bold uppercase tracking-wider bg-amber-600 hover:bg-amber-700 text-white rounded-xl shadow-sm transition active:scale-95"
                   >
                     Save Custom Overrides
                   </button>
@@ -231,32 +255,35 @@ export default function ChangeProposalDiffClient() {
                 <button
                   onClick={handleReject}
                   disabled={actionLoading}
-                  className="px-4 py-2 text-sm font-medium border border-stone-300 text-stone-700 rounded-lg hover:bg-stone-100 transition"
+                  className="px-4 py-2 text-xs font-bold uppercase tracking-wider border border-stone-300 dark:border-stone-700 text-stone-700 dark:text-stone-300 hover:bg-stone-100 dark:hover:bg-stone-800 rounded-xl transition active:scale-95"
                 >
                   Reject Proposal
                 </button>
                 <button
                   onClick={handleAccept}
                   disabled={actionLoading}
-                  className="px-5 py-2 text-sm font-semibold bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 shadow-sm transition"
+                  className="px-5 py-2 text-xs font-bold uppercase tracking-wider bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl shadow-md transition active:scale-95 flex items-center space-x-1.5"
                 >
-                  Accept & Apply to Plan
+                  <span>✓</span>
+                  <span>Accept & Apply</span>
                 </button>
               </>
             )}
           </div>
         </div>
-      </header>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-8 space-y-6">
         {/* Capacity Warning Banner */}
         {proposal.capacity_warning && (
-          <div className="bg-amber-50 border-l-4 border-amber-500 p-4 rounded-r-lg shadow-sm">
+          <div className="bg-amber-50 dark:bg-amber-950/50 border-l-4 border-amber-500 p-4 rounded-2xl shadow-sm">
             <div className="flex items-start">
-              <span className="text-amber-600 text-xl font-bold mr-3">⚠️</span>
+              <span className="text-amber-600 dark:text-amber-400 text-xl font-bold mr-3">⚠️</span>
               <div>
-                <h3 className="text-amber-900 font-bold text-sm uppercase tracking-wide">Capacity Constraint Exceeded</h3>
-                <p className="text-amber-800 text-sm mt-1">{proposal.capacity_warning}</p>
+                <h3 className="text-amber-900 dark:text-amber-200 font-bold text-sm uppercase tracking-wide">
+                  Capacity Constraint Exceeded
+                </h3>
+                <p className="text-amber-800 dark:text-amber-300 text-xs sm:text-sm mt-0.5 leading-relaxed">
+                  {proposal.capacity_warning}
+                </p>
               </div>
             </div>
           </div>
@@ -264,27 +291,37 @@ export default function ChangeProposalDiffClient() {
 
         {/* Infeasibility Alert Banner */}
         {isInfeasible && proposal.infeasibility_reason && (
-          <div className="bg-rose-50 border-l-4 border-rose-500 p-4 rounded-r-lg shadow-sm">
+          <div className="bg-rose-50 dark:bg-rose-950/60 border-l-4 border-rose-500 p-4 rounded-2xl shadow-sm">
             <div className="flex items-start">
-              <span className="text-rose-600 text-xl font-bold mr-3">🚫</span>
+              <span className="text-rose-600 dark:text-rose-400 text-xl font-bold mr-3">🚫</span>
               <div>
-                <h3 className="text-rose-900 font-bold text-sm uppercase tracking-wide">Proposal Blocked as Infeasible</h3>
-                <p className="text-rose-800 text-sm mt-1">{proposal.infeasibility_reason}</p>
+                <h3 className="text-rose-900 dark:text-rose-200 font-bold text-sm uppercase tracking-wide">
+                  Proposal Blocked as Infeasible
+                </h3>
+                <p className="text-rose-800 dark:text-rose-300 text-xs sm:text-sm mt-0.5 leading-relaxed">
+                  {proposal.infeasibility_reason}
+                </p>
               </div>
             </div>
           </div>
         )}
 
         {/* Impact Summary & Plain-Language Explanation */}
-        <section className="bg-white rounded-xl shadow-sm border border-stone-200 p-6">
-          <h2 className="text-xs font-semibold text-stone-500 uppercase tracking-wider mb-2">Replanning Assessment</h2>
-          <p className="text-stone-800 text-base leading-relaxed">{proposal.explanation || proposal.summary}</p>
+        <section className="glass-card rounded-3xl p-6 sm:p-8 shadow-sm space-y-4">
+          <h2 className="text-xs font-bold text-amber-700 dark:text-amber-400 uppercase tracking-wider">
+            Deterministic Replanning Assessment
+          </h2>
+          <p className="text-stone-800 dark:text-stone-200 text-sm sm:text-base leading-relaxed">
+            {proposal.explanation || proposal.summary}
+          </p>
 
           {/* Mitigation Suggestions */}
           {proposal.mitigation_suggestions && proposal.mitigation_suggestions.length > 0 && (
-            <div className="mt-4 pt-4 border-t border-stone-100">
-              <h4 className="text-xs font-semibold text-amber-800 uppercase tracking-wider mb-2">Recommended Mitigations:</h4>
-              <ul className="list-disc pl-5 text-sm text-stone-700 space-y-1">
+            <div className="mt-4 pt-4 border-t border-stone-200 dark:border-stone-800">
+              <h4 className="text-xs font-bold text-stone-700 dark:text-stone-300 uppercase tracking-wider mb-2.5">
+                Recommended Mitigations:
+              </h4>
+              <ul className="list-disc pl-5 text-xs sm:text-sm text-stone-600 dark:text-stone-300 space-y-1.5">
                 {proposal.mitigation_suggestions.map((sug, idx) => (
                   <li key={idx}>{sug}</li>
                 ))}
@@ -294,139 +331,174 @@ export default function ChangeProposalDiffClient() {
         </section>
 
         {/* Budget Items Diff Table */}
-        <section className="bg-white rounded-xl shadow-sm border border-stone-200 overflow-hidden">
-          <div className="px-6 py-4 border-b border-stone-100 flex items-center justify-between">
+        <section className="glass-card rounded-3xl shadow-sm overflow-hidden">
+          <div className="px-6 py-5 border-b border-stone-200 dark:border-stone-800 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
             <div>
-              <h2 className="text-lg font-bold text-stone-800">Budget Impact Breakdown</h2>
-              <p className="text-xs text-stone-500 mt-0.5">Calculated strictly via deterministic scaling rules — zero hallucinated math</p>
+              <h2 className="text-lg font-serif font-bold text-stone-900 dark:text-stone-50">
+                Budget Impact Breakdown
+              </h2>
+              <p className="text-xs text-stone-500 dark:text-stone-400 mt-0.5">
+                Calculated strictly in Python via BudgetScalingEngine (Zero LLM math)
+              </p>
             </div>
             <div className="text-right">
-              <div className="text-xs text-stone-500 uppercase">Net Budget Shift</div>
-              <div
-                className={`text-lg font-bold ${
+              <span className="text-xs text-stone-500 dark:text-stone-400 mr-2">Total Delta:</span>
+              <span
+                className={`font-mono font-bold text-base ${
                   proposal.budget_total_delta > 0
-                    ? 'text-rose-600'
+                    ? 'text-rose-600 dark:text-rose-400'
                     : proposal.budget_total_delta < 0
-                    ? 'text-emerald-600'
-                    : 'text-stone-700'
+                    ? 'text-emerald-600 dark:text-emerald-400'
+                    : 'text-stone-700 dark:text-stone-300'
                 }`}
               >
                 {proposal.budget_total_delta >= 0 ? '+' : ''}₹{proposal.budget_total_delta.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
-              </div>
+              </span>
             </div>
           </div>
 
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm text-stone-600">
-              <thead className="bg-stone-100 text-stone-700 text-xs uppercase font-semibold border-b border-stone-200">
+            <table className="w-full text-left text-xs">
+              <thead className="bg-stone-100 dark:bg-stone-800/80 text-stone-600 dark:text-stone-300 uppercase tracking-wider border-b border-stone-200 dark:border-stone-800 font-semibold">
                 <tr>
-                  <th className="px-6 py-3">Category & Item</th>
-                  <th className="px-4 py-3">Rule</th>
-                  <th className="px-4 py-3 text-right">Old Budget</th>
-                  <th className="px-4 py-3 text-right">Revised Proposal</th>
+                  <th className="px-6 py-3">Category</th>
+                  <th className="px-4 py-3">Scaling Rule</th>
+                  <th className="px-4 py-3 text-right">Current Amount</th>
+                  <th className="px-4 py-3 text-right">Proposed Amount</th>
                   <th className="px-4 py-3 text-right">Delta</th>
-                  <th className="px-6 py-3">Transparent Formula</th>
+                  <th className="px-6 py-3">Calculation Formula</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-stone-100">
+              <tbody className="divide-y divide-stone-200 dark:divide-stone-800">
                 {proposal.budget_diff && proposal.budget_diff.length > 0 ? (
-                  proposal.budget_diff.map((item) => {
-                    return (
-                      <tr key={item.budget_item_id} className="hover:bg-stone-50/80 transition">
-                        <td className="px-6 py-4 font-medium text-stone-900">
-                          <div>{item.name}</div>
-                          <span className="text-xs text-stone-500 uppercase tracking-wider">{item.category}</span>
-                        </td>
-                        <td className="px-4 py-4">
-                          <span
-                            className={`px-2 py-0.5 rounded text-xs font-semibold ${
-                              item.scaling_rule === 'per_guest'
-                                ? 'bg-blue-50 text-blue-700 border border-blue-200'
-                                : item.scaling_rule === 'tiered'
-                                ? 'bg-purple-50 text-purple-700 border border-purple-200'
-                                : 'bg-stone-100 text-stone-700'
-                            }`}
-                          >
-                            {item.scaling_rule}
+                  proposal.budget_diff.map((item) => (
+                    <tr key={item.budget_item_id} className="hover:bg-stone-50/60 dark:hover:bg-stone-800/40 transition-colors">
+                      <td className="px-6 py-4 font-semibold text-stone-900 dark:text-stone-100">
+                        {item.name}
+                      </td>
+                      <td className="px-4 py-4">
+                        <span className="text-[11px] font-mono px-2 py-0.5 rounded bg-stone-100 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 text-stone-700 dark:text-stone-300 uppercase">
+                          {item.scaling_rule}
+                        </span>
+                      </td>
+                      <td className="px-4 py-4 text-right font-mono text-stone-600 dark:text-stone-300">
+                        ₹{item.old_amount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                      </td>
+                      <td className="px-4 py-4 text-right">
+                        {isPending ? (
+                          <input
+                            type="number"
+                            value={overrides[item.budget_item_id] ?? item.new_amount}
+                            onChange={(e) => handleAmountChange(item.budget_item_id, e.target.value)}
+                            className="w-32 px-2.5 py-1 text-right font-mono text-stone-900 dark:text-stone-100 bg-white dark:bg-stone-900 border border-stone-300 dark:border-stone-700 rounded-lg focus:ring-2 focus:ring-amber-500 focus:outline-none transition-colors"
+                          />
+                        ) : (
+                          <span className="font-mono text-stone-900 dark:text-stone-100 font-bold">
+                            ₹{item.new_amount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                           </span>
-                        </td>
-                        <td className="px-4 py-4 text-right font-mono text-stone-600">
-                          ₹{item.old_amount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
-                        </td>
-                        <td className="px-4 py-4 text-right">
-                          {isPending ? (
-                            <input
-                              type="number"
-                              value={overrides[item.budget_item_id] ?? item.new_amount}
-                              onChange={(e) => handleAmountChange(item.budget_item_id, e.target.value)}
-                              className="w-32 px-2 py-1 text-right font-mono text-stone-900 border border-stone-300 rounded focus:ring-1 focus:ring-amber-500 focus:outline-none"
-                            />
-                          ) : (
-                            <span className="font-mono text-stone-900 font-semibold">
-                              ₹{item.new_amount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
-                            </span>
-                          )}
-                        </td>
-                        <td
-                          className={`px-4 py-4 text-right font-mono font-bold ${
-                            item.difference > 0 ? 'text-rose-600' : item.difference < 0 ? 'text-emerald-600' : 'text-stone-400'
-                          }`}
-                        >
-                          {item.difference >= 0 ? '+' : ''}₹{item.difference.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
-                        </td>
-                        <td className="px-6 py-4 font-mono text-xs text-stone-500 bg-stone-50/50">
-                          {item.formula}
-                        </td>
-                      </tr>
-                    );
-                  })
+                        )}
+                      </td>
+                      <td
+                        className={`px-4 py-4 text-right font-mono font-bold ${
+                          item.difference > 0 ? 'text-rose-600 dark:text-rose-400' : item.difference < 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-stone-400'
+                        }`}
+                      >
+                        {item.difference >= 0 ? '+' : ''}₹{item.difference.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                      </td>
+                      <td className="px-6 py-4 font-mono text-[11px] text-stone-500 dark:text-stone-400">
+                        {item.formula}
+                      </td>
+                    </tr>
+                  ))
                 ) : (
                   <tr>
-                    <td colSpan={6} className="px-6 py-6 text-center text-stone-500">
+                    <td colSpan={6} className="px-6 py-8 text-center text-stone-500 dark:text-stone-400">
                       No budget items altered in this proposal.
                     </td>
                   </tr>
                 )}
               </tbody>
-              <tfoot className="bg-stone-50 font-semibold border-t-2 border-stone-200">
+              <tfoot className="bg-stone-100/70 dark:bg-stone-800/60 font-semibold border-t-2 border-stone-200 dark:border-stone-800">
                 <tr>
-                  <td colSpan={2} className="px-6 py-3 text-stone-800">Total Budget Summary</td>
-                  <td className="px-4 py-3 text-right font-mono text-stone-700">
+                  <td colSpan={2} className="px-6 py-3.5 text-stone-900 dark:text-stone-100 font-serif">
+                    Total Budget Summary
+                  </td>
+                  <td className="px-4 py-3.5 text-right font-mono text-stone-700 dark:text-stone-300">
                     ₹{proposal.budget_total_old.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                   </td>
-                  <td className="px-4 py-3 text-right font-mono text-stone-900 font-bold">
+                  <td className="px-4 py-3.5 text-right font-mono text-stone-900 dark:text-stone-100 font-bold text-sm">
                     ₹{proposal.budget_total_new.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                   </td>
                   <td
-                    className={`px-4 py-3 text-right font-mono font-bold ${
-                      proposal.budget_total_delta > 0 ? 'text-rose-600' : proposal.budget_total_delta < 0 ? 'text-emerald-600' : 'text-stone-700'
+                    className={`px-4 py-3.5 text-right font-mono font-bold text-sm ${
+                      proposal.budget_total_delta > 0
+                        ? 'text-rose-600 dark:text-rose-400'
+                        : proposal.budget_total_delta < 0
+                        ? 'text-emerald-600 dark:text-emerald-400'
+                        : 'text-stone-700 dark:text-stone-300'
                     }`}
                   >
                     {proposal.budget_total_delta >= 0 ? '+' : ''}₹{proposal.budget_total_delta.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                   </td>
-                  <td className="px-6 py-3"></td>
+                  <td className="px-6 py-3.5"></td>
                 </tr>
               </tfoot>
             </table>
           </div>
         </section>
 
-        {/* Task & Schedule Shifts */}
-        {((proposal.task_diff?.moved_tasks && proposal.task_diff.moved_tasks.length > 0) ||
-          (proposal.task_diff?.added_tasks && proposal.task_diff.added_tasks.length > 0)) && (
-          <section className="bg-white rounded-xl shadow-sm border border-stone-200 p-6">
-            <h2 className="text-lg font-bold text-stone-800 mb-4">Schedule & Task Adjustments</h2>
+        {/* Task Timeline Modifications */}
+        {proposal.task_diff && (
+          <section className="glass-card rounded-3xl p-6 sm:p-8 shadow-sm space-y-5">
+            <h2 className="text-lg font-serif font-bold text-stone-900 dark:text-stone-50">
+              Task Schedule & Vendor Re-Engagement
+            </h2>
 
             {/* Moved Tasks */}
-            {proposal.task_diff.moved_tasks?.length > 0 && (
-              <div className="mb-4">
-                <h3 className="text-xs font-semibold text-stone-500 uppercase tracking-wider mb-2">Shifted Tasks</h3>
+            {proposal.task_diff.moved_tasks && proposal.task_diff.moved_tasks.length > 0 && (
+              <div>
+                <h3 className="text-xs font-bold uppercase tracking-wider text-amber-700 dark:text-amber-400 mb-2.5">
+                  Shifted Milestones
+                </h3>
                 <div className="space-y-2">
-                  {proposal.task_diff.moved_tasks.map((t, idx) => (
-                    <div key={idx} className="flex items-center justify-between p-3 bg-stone-50 rounded-lg border border-stone-200 text-sm">
-                      <span className="font-medium text-stone-800">{t.title}</span>
-                      <span className="font-mono text-xs text-stone-600">
-                        Shifted {t.days_shifted && t.days_shifted > 0 ? `+${t.days_shifted}` : t.days_shifted} days ({t.new_start ? t.new_start.split('T')[0] : ''})
+                  {proposal.task_diff.moved_tasks.map((task) => (
+                    <div
+                      key={task.task_id}
+                      className="p-3.5 rounded-xl bg-stone-50 dark:bg-stone-900/60 border border-stone-200 dark:border-stone-800 flex items-center justify-between text-xs"
+                    >
+                      <span className="font-semibold text-stone-900 dark:text-stone-100">{task.title}</span>
+                      <div className="flex items-center space-x-3 text-stone-600 dark:text-stone-300 font-mono">
+                        <span className="line-through text-stone-400">{task.old_start}</span>
+                        <span>&rarr;</span>
+                        <span className="font-bold text-amber-700 dark:text-amber-400">{task.new_start}</span>
+                        <span className="px-2 py-0.5 rounded bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 font-bold">
+                          {task.days_shifted && task.days_shifted > 0 ? `+${task.days_shifted}d` : `${task.days_shifted}d`}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Added Tasks */}
+            {proposal.task_diff.added_tasks && proposal.task_diff.added_tasks.length > 0 && (
+              <div className="pt-2">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-400 mb-2.5">
+                  Newly Inserted Verification Tasks
+                </h3>
+                <div className="space-y-2">
+                  {proposal.task_diff.added_tasks.map((task, idx) => (
+                    <div
+                      key={idx}
+                      className="p-3.5 rounded-xl bg-emerald-50/70 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-xs flex justify-between items-center"
+                    >
+                      <div>
+                        <h4 className="font-semibold text-emerald-950 dark:text-emerald-200">{task.title}</h4>
+                        {task.description && <p className="text-emerald-800/80 dark:text-emerald-300 text-[11px] mt-0.5">{task.description}</p>}
+                      </div>
+                      <span className="font-mono text-emerald-800 dark:text-emerald-300 px-2.5 py-0.5 rounded bg-emerald-100 dark:bg-emerald-900/60 font-semibold">
+                        {task.assigned_role}
                       </span>
                     </div>
                   ))}
@@ -434,19 +506,20 @@ export default function ChangeProposalDiffClient() {
               </div>
             )}
 
-            {/* Added Emergency Sourcing Tasks */}
-            {proposal.task_diff.added_tasks?.length > 0 && (
-              <div>
-                <h3 className="text-xs font-semibold text-amber-800 uppercase tracking-wider mb-2">Emergency Sourcing & Procurement Tasks</h3>
-                <div className="space-y-2">
-                  {proposal.task_diff.added_tasks.map((t, idx) => (
-                    <div key={idx} className="p-3 bg-amber-50 rounded-lg border border-amber-200 text-sm">
-                      <div className="flex items-center justify-between font-medium text-amber-950">
-                        <span>{t.title}</span>
-                        <span className="text-xs bg-amber-200/80 px-2 py-0.5 rounded text-amber-900">{t.assigned_role || 'Lead'}</span>
-                      </div>
-                      {t.description && <p className="text-xs text-amber-800 mt-1">{t.description}</p>}
-                    </div>
+            {/* Vendor Re-Quote Flags */}
+            {proposal.vendor_re_quote_categories && proposal.vendor_re_quote_categories.length > 0 && (
+              <div className="pt-2">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-rose-700 dark:text-rose-400 mb-2">
+                  Vendors Requiring Re-Quote / Capacity Check
+                </h3>
+                <div className="flex flex-wrap gap-2">
+                  {proposal.vendor_re_quote_categories.map((cat, idx) => (
+                    <span
+                      key={idx}
+                      className="px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-rose-100 dark:bg-rose-950/80 border border-rose-300 dark:border-rose-900 text-rose-800 dark:text-rose-300"
+                    >
+                      ⚠️ {cat}
+                    </span>
                   ))}
                 </div>
               </div>
