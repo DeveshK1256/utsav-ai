@@ -238,6 +238,33 @@ export const RitualIntelligenceHub: React.FC<RitualHubProps> = ({
 
   return (
     <div className="space-y-8">
+      {/* 0. MANDATORY CEREMONY CONTENT ACCURACY & UNREVIEWED STATUS BANNER */}
+      <div className="rounded-2xl bg-rose-500/10 dark:bg-rose-500/5 border-2 border-rose-500/50 dark:border-rose-500/40 p-6 shadow-md relative overflow-hidden">
+        <div className="flex items-start gap-4">
+          <div className="p-3 bg-rose-500/20 text-rose-700 dark:text-rose-300 rounded-xl text-2xl flex-shrink-0">
+            ⚠️
+          </div>
+          <div className="flex-1 space-y-2">
+            <div className="flex items-center gap-2 flex-wrap">
+              <h3 className="text-base font-bold text-rose-950 dark:text-rose-100 uppercase tracking-wide">
+                Mandatory Priest & Elder Review Required — AI-Drafted Baseline
+              </h3>
+              <span className="px-2 py-0.5 text-xs font-semibold rounded bg-rose-200/80 dark:bg-rose-900/60 text-rose-900 dark:text-rose-200">
+                Unreviewed Content
+              </span>
+            </div>
+            <p className="text-sm text-rose-900 dark:text-rose-200 leading-relaxed font-serif">
+              This ceremonial sequence and ritual item list was <strong>AI-drafted as a starting point</strong> based on general knowledge of cultural customs. It has <strong>NOT been reviewed by a priest, pandit, community elder, or religious authority</strong> and may contain errors, omissions, or regionally inappropriate details.
+            </p>
+            <div className="p-3 bg-rose-100/70 dark:bg-rose-900/30 rounded-xl border border-rose-300/60 dark:border-rose-700/60 text-xs text-rose-950 dark:text-rose-200 font-medium flex items-center gap-2">
+              <span>
+                <strong>Action Required:</strong> Please review this timeline, ritual order, and samagri list carefully with your family elders and officiating priest before finalizing dates, booking venues, or printing invitation cards.
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* 1. ELEVATED AUSTERE MUHURAT & PANCHANG MANDATE BANNER */}
       <div className="rounded-2xl bg-amber-500/10 dark:bg-amber-500/5 border-2 border-amber-500/40 dark:border-amber-500/30 p-6 shadow-md relative overflow-hidden">
         <div className="flex items-start gap-4">
@@ -379,7 +406,7 @@ export const RitualIntelligenceHub: React.FC<RitualHubProps> = ({
             >
               {traditions.map((t) => (
                 <option key={t.code} value={t.code}>
-                  {t.regional_name} {t.is_verified ? '✓ (Verified)' : '(Contemporary)'}
+                  {t.regional_name} (AI-Drafted Baseline — Unreviewed)
                 </option>
               ))}
             </select>
@@ -397,7 +424,7 @@ export const RitualIntelligenceHub: React.FC<RitualHubProps> = ({
             >
               {traditions.map((t) => (
                 <option key={t.code} value={t.code}>
-                  {t.regional_name} {t.is_verified ? '✓ (Verified)' : '(Contemporary)'}
+                  {t.regional_name} (AI-Drafted Baseline — Unreviewed)
                 </option>
               ))}
             </select>
@@ -497,7 +524,7 @@ export const RitualIntelligenceHub: React.FC<RitualHubProps> = ({
               Integrate into Master DAG Execution Graph
             </h5>
             <p className="text-xs text-neutral-500">
-              Converts verified samagri checklists into scheduled procurement tasks assigned to elders.
+              Converts AI-drafted samagri checklists into scheduled procurement tasks assigned to elders for review.
             </p>
           </div>
           <div className="flex items-center gap-3">

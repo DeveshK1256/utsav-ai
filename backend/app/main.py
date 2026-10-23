@@ -85,6 +85,11 @@ def run_db_backfill_on_startup():
                    OR (scaling_rule = 'fixed' AND lower(category) IN ('decor', 'sound_light', 'sound_and_lighting', 'catering', 'rentals', 'wardrobe', 'gifts_favors', 'invitations', 'logistics', 'contingency'));
             """))
 
+            # Enforce truthfulness in cultural verification status: All traditions and ritual items
+            # are AI-drafted starting baselines and MUST be marked is_verified = FALSE pending real community review.
+            conn.execute(text("UPDATE traditions SET is_verified = FALSE, verification_source = 'AI-drafted baseline, pending community/priest review';"))
+            conn.execute(text("UPDATE ritual_items SET is_verified = FALSE;"))
+
         # Seed curated cultural traditions & ritual items if needed
         from backend.app.db.seed_traditions import seed_cultural_traditions
         seed_cultural_traditions()

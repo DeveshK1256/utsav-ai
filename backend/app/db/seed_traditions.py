@@ -1,22 +1,29 @@
 """
 Seed data for M5 Cultural Intelligence: Curated traditions and ritual items.
-Fulfills the exact 8 traditions per UTSAV spec:
+Fulfills the 8 traditions per UTSAV spec:
 Maharashtrian, Punjabi, Bengali, Tamil, Gujarati, Muslim Nikah, Christian, Telugu.
-Each explicitly marked is_verified: True/False with verification_source.
+
+CRITICAL INTEGRITY INVARIANT:
+All traditions and ritual items are marked is_verified: False with
+verification_source: "AI-drafted baseline, pending community/priest review".
+No liturgical texts or scholarly directories were consulted in sandbox isolation.
+Content represents unverified algorithmic draft baselines requiring mandatory human elder/officiant review.
 """
 
 from typing import List, Dict, Any
 from backend.app.db.session import SessionLocal
 from backend.app.models.models import Tradition, RitualItem
 
+UNVERIFIED_SOURCE_LABEL = "AI-drafted baseline, pending community/priest review"
+
 CURATED_TRADITIONS: List[Dict[str, Any]] = [
     {
         "code": "maharashtrian_vedic",
         "regional_name": "Maharashtrian Vedic Lagna",
-        "description": "Traditional Maharashtrian Hindu wedding following Ashvalayana/Baudhayana Grhya Sutras.",
+        "description": "Traditional Maharashtrian Hindu wedding customs based on common cultural knowledge.",
         "cultural_notes": "Key customs include Sakhar Puda, Kelvan, Antarpat separation, Mundavalya adornment, and Saptapadi.",
-        "is_verified": True,
-        "verification_source": "Maharashtra Purohit Parishad Manual & Vedic Grhya Sutra",
+        "is_verified": False,
+        "verification_source": UNVERIFIED_SOURCE_LABEL,
         "items": [
             ("Mundavalya (Forehead Ornaments)", "मुंडावळ्या", "2 pairs (Pearl/Bead strings)", "bridal_adornment", "Worn across bride and groom forehead to ward off negative gaze and signify readiness for vivah", "Vivah Muhurat"),
             ("Antarpat (Separation Cloth)", "अंतरपाट", "1 silk cloth with Swastika print", "ceremonial_fabrics", "Held between bride and groom until the Mangalashtaka shlokas culminate at exact Muhurat", "Mangalashtaka"),
@@ -34,10 +41,10 @@ CURATED_TRADITIONS: List[Dict[str, Any]] = [
     {
         "code": "punjabi_traditional",
         "regional_name": "Punjabi Traditional Vivah / Anand Karaj",
-        "description": "Vibrant Punjabi celebration featuring Anand Karaj / Vedic Vivah, Maiyan, Jaggo, and Milni.",
+        "description": "Vibrant Punjabi celebration featuring Anand Karaj / Vedic Vivah, Maiyan, Jaggo, and Milni customs.",
         "cultural_notes": "Characterized by Chooda ceremony, Kalire tying, energetic Jaggo night, Milni elder embrace, and 4 Laavan/Pheras.",
-        "is_verified": True,
-        "verification_source": "Punjabi Purohit Sabha & Sikh Rehat Maryada",
+        "is_verified": False,
+        "verification_source": UNVERIFIED_SOURCE_LABEL,
         "items": [
             ("Chooda & Kalire Set", "ਚੂੜਾ ਅਤੇ ਕਲੀਰੇ", "1 set red/ivory bangles + 2 umbrella kalire", "bridal_adornment", "Given by maternal uncles and sisters, blessing the bride with joy and prosperity", "Chooda Ceremony"),
             ("Vatna Ubtan Paste", "ਵਟਣਾ", "500 grams mustard oil, besan, haldi, rosewater", "cleansing_pastes", "Applied by loved ones for ceremonial bridal and groom glow", "Maiyan"),
@@ -53,10 +60,10 @@ CURATED_TRADITIONS: List[Dict[str, Any]] = [
     {
         "code": "bengali_vedic",
         "regional_name": "Bengali Vedic Bibaho",
-        "description": "Lyrical Bengali Hindu wedding rituals blending Shakta, Vaishnava, and Vedic streams.",
+        "description": "Lyrical Bengali Hindu wedding customs based on common cultural knowledge.",
         "cultural_notes": "Noted for Gaye Holud, Boron welcoming, Saat Paake Ghomar, Shubho Drishti eye-contact, Mala Badal, and Sindoor Daan.",
-        "is_verified": True,
-        "verification_source": "Bhattacharya Purohit Darpan & Bengal Purohit Samhita",
+        "is_verified": False,
+        "verification_source": UNVERIFIED_SOURCE_LABEL,
         "items": [
             ("Topor & Mukut Set", "টোপোর ও মুকুট", "1 white sholapith topor + 1 bride mukut", "bridal_adornment", "Conical white headdresses symbolizing dignity, grace, and purity", "Bibaho Arrival"),
             ("Paan Leaves (Betel Leaves)", "পানের পাতা", "21 large, flawless betel leaves", "ceremonial_props", "Bride covers her face with two leaves until the dramatic Shubho Drishti reveal", "Shubho Drishti"),
@@ -72,10 +79,10 @@ CURATED_TRADITIONS: List[Dict[str, Any]] = [
     {
         "code": "tamil_brahmin_hindu",
         "regional_name": "Tamil Brahmin Iyer Kalyanam",
-        "description": "Vedic Tamil Brahmin marriage rites adhering to Apastamba Grihya Sutra.",
+        "description": "Tamil Brahmin marriage customs based on common cultural knowledge.",
         "cultural_notes": "Highlights include Vratham, Kasi Yatra, Oonjal swing songs, Kanyadaanam on father's lap, Mangalya Dharanam, and Nalangu.",
-        "is_verified": True,
-        "verification_source": "Apastamba Grihya Sutra & Vadhyar Vidhi Manual",
+        "is_verified": False,
+        "verification_source": UNVERIFIED_SOURCE_LABEL,
         "items": [
             ("Kasi Yatra Set", "காசி யாத்திரை செட்", "1 umbrella, walking stick, fan, Gita book", "custom_props", "Mock bachelor pilgrimage halted by bride's father offering grihastha life", "Kasi Yatra"),
             ("Koora Pudavai (Madisar Saree)", "கூறைப் புடவை", "1 nine-yard silk saree in turmeric red", "bridal_adornment", "Sacred bridal attire worn for the core Mangalya Dharanam moment", "Mangalya Dharanam"),
@@ -94,8 +101,8 @@ CURATED_TRADITIONS: List[Dict[str, Any]] = [
         "regional_name": "Gujarati Hindu Vivah",
         "description": "Joyous Gujarati Vivah customs celebrating familial bond, Grah Shanti, and Pokhana groom welcome.",
         "cultural_notes": "Distinguished by Gol Dhana, Mandap Mahurat, Mameru/Mosalu gifts, Pokhana, and 4 Mangal Pheras.",
-        "is_verified": True,
-        "verification_source": "Gujarat Brahmin Sabha Ritual Compendium",
+        "is_verified": False,
+        "verification_source": UNVERIFIED_SOURCE_LABEL,
         "items": [
             ("Gol Dhana (Jaggery & Coriander Seeds)", "ગોળ ધાણા", "1 kg jaggery + 500g coriander seeds", "auspicious_edibles", "Distributed to celebrate commitment and sweet harmony between families", "Gol Dhana"),
             ("Pokhana Welcome Kit (Raval)", "પોંખણું", "1 set (mini mortar, pestle, churner, yoke)", "welcome_customs", "Mother-in-law playful test to groom to remind him of patience and domestic responsibility", "Pokhana"),
@@ -112,10 +119,10 @@ CURATED_TRADITIONS: List[Dict[str, Any]] = [
     {
         "code": "muslim_nikah",
         "regional_name": "Muslim Traditional Nikah",
-        "description": "Solemn Islamic marriage covenant governed by the Shariah and rich South Asian cultural customs.",
+        "description": "Solemn Islamic marriage customs and rich South Asian cultural traditions based on common knowledge.",
         "cultural_notes": "Distinguished by Manjha (Haldi), Istiqbal welcome, Ijab-o-Qubool (offer and acceptance), Mehr settlement, Arsi Mushaf, and Walima reception.",
-        "is_verified": True,
-        "verification_source": "All India Muslim Personal Law Board & Islamic Nikahnama Guidelines",
+        "is_verified": False,
+        "verification_source": UNVERIFIED_SOURCE_LABEL,
         "items": [
             ("Nikahnama Document & Presentation Quill", "نکاح نامہ", "1 official marriage contract ledger + calligraphic pen", "legal_sacred_document", "Signed by the couple, Qazi, and two male witnesses formalizing the marriage covenant", "Nikah Ijab-o-Qubool"),
             ("Mehr Settlement Protocol & Envelope", "مہر", "Formal dower declaration ledger + velvet presentation case", "marital_covenant", "Mandatory financial security gifted directly by the groom to the bride", "Nikah"),
@@ -129,10 +136,10 @@ CURATED_TRADITIONS: List[Dict[str, Any]] = [
     {
         "code": "christian_traditional",
         "regional_name": "Indian Christian Traditional Wedding",
-        "description": "Reverent Christian Holy Matrimony integrating church liturgy with Indian cultural motifs (Minnu/Manthrakodi).",
+        "description": "Christian Holy Matrimony integrating church order with Indian cultural motifs (Minnu/Manthrakodi) based on common knowledge.",
         "cultural_notes": "Features Church Nuptial Blessing, Exchange of Vows and Rings, Minnu (Thali) tying, Manthrakodi bridal gifting, and Gala Reception.",
-        "is_verified": True,
-        "verification_source": "Church Liturgical Commission & Catholic/CSI Holy Matrimony Order",
+        "is_verified": False,
+        "verification_source": UNVERIFIED_SOURCE_LABEL,
         "items": [
             ("Blessed Wedding Rings", "Blessed Rings", "2 engraved gold/platinum rings in velvet box", "sacred_symbols", "Blessed by officiating priest/pastor symbolizing eternal fidelity and covenant", "Exchange of Rings"),
             ("Minnu / Christian Thali & 7-Thread Cord", "മിന്ന് / தாலி", "1 gold tear-drop pendant with cross + thread woven from Manthrakodi saree", "sacred_ornaments", "Tied around bride's neck by groom representing cultural and spiritual union", "Solemnization"),
@@ -146,10 +153,10 @@ CURATED_TRADITIONS: List[Dict[str, Any]] = [
     {
         "code": "telugu_hindu",
         "regional_name": "Telugu Vaidika Kalyanam",
-        "description": "Graceful Telugu Hindu marriage rituals focused on mutual equality and Vedic vows.",
+        "description": "Telugu Hindu marriage customs based on common cultural knowledge.",
         "cultural_notes": "Characterized by Pellikuthuru, Snathakam, Jeelakarra Bellam at exact muhurat, Mangalsutra Dharana, and celebratory Talambralu.",
-        "is_verified": True,
-        "verification_source": "Telugu Vaidika Dharma Shastra & Kalyana Vidhanam",
+        "is_verified": False,
+        "verification_source": UNVERIFIED_SOURCE_LABEL,
         "items": [
             ("Jeelakarra & Bellam Paste", "జీలకర్ర మరియు బెల్లం", "1 paste of cumin seeds and jaggery", "auspicious_edibles", "Placed on each other's head at the exact auspicious Muhurat fraction of a second", "Jeelakarra Bellam"),
             ("Talambralu Sacred Rice / Pearls", "తలంబ్రాలు", "5 kg rice mixed with turmeric, rosewater, pearls", "puja_samagri", "Joyously showered over each other's heads by bride and groom", "Talambralu"),

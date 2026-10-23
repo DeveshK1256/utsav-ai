@@ -102,6 +102,11 @@ def get_tradition_samagri(code: str, db: Session = Depends(get_db)):
             "is_verified": tradition.is_verified,
             "verification_source": tradition.verification_source,
         },
+        "content_accuracy_disclaimer": (
+            f"This samagri list was AI-drafted as a starting point based on general knowledge of {tradition.regional_name} customs. "
+            "It has not been reviewed by a priest or community elder and may contain errors, omissions, or regionally inappropriate details. "
+            "Please review carefully with your family and officiant before finalizing."
+        ),
         "total_items": len(items),
         "items": [
             {
@@ -354,6 +359,11 @@ def generate_pandit_guide(event_id: str, db: Session = Depends(get_db)):
         "priest_notes": (
             "This document is prepared for the officiating Panditji / Guruji / Vadhyar. "
             "Please review all samagri quantities against local family kul-parampara."
+        ),
+        "content_accuracy_disclaimer": (
+            f"This ceremonial sequence and samagri list were AI-drafted as a starting point based on general cultural knowledge of {tradition_summary} customs. "
+            "It has NOT been reviewed by any priest, pandit, community elder, or religious authority and may contain errors, omissions, or regionally inappropriate details. "
+            "Please review carefully with your family elders and officiant before finalizing."
         ),
         "disclaimer": panchang["priest_disclaimer"],
     }

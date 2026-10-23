@@ -83,7 +83,7 @@ def test_panchang_api_bounds_validation(client):
 
 
 def test_all_8_curated_traditions_per_spec(client):
-    """Verifies that all 8 traditions from original spec exist and have verified flags set."""
+    """Verifies that all 8 traditions from original spec exist and are truthfully marked is_verified: False."""
     resp = client.get("/api/v1/rituals/traditions")
     assert resp.status_code == 200
     data = resp.json()
@@ -104,8 +104,9 @@ def test_all_8_curated_traditions_per_spec(client):
     tradition_map = {t["code"]: t for t in data}
     for code in expected_8:
         t = tradition_map[code]
-        assert t["is_verified"] is True
-        assert t["verification_source"] is not None
+        # Truthfulness check: all AI-drafted traditions must be unverified
+        assert t["is_verified"] is False, f"Tradition {code} must be is_verified: False pending human review"
+        assert t["verification_source"] == "AI-drafted baseline, pending community/priest review"
         assert t["item_count"] >= 7
 
 
@@ -115,6 +116,9 @@ def test_tradition_samagri_checklist_endpoint(client):
     assert resp.status_code == 200
     data = resp.json()
     assert data["tradition"]["code"] == "maharashtrian_vedic"
+    assert data["tradition"]["is_verified"] is False
+    assert data["tradition"]["verification_source"] == "AI-drafted baseline, pending community/priest review"
+    assert "content_accuracy_disclaimer" in data
     assert data["total_items"] >= 10
 
     item_names = [i["item_name"] for i in data["items"]]
@@ -144,6 +148,15 @@ def test_spec_acceptance_scenario_maharashtrian_x_punjabi(client):
     assert data["status"] == "success"
     assert "Maharashtrian" in data["fusion_title"]
     assert "Punjabi" in data["fusion_title"]
+
+    # Verification integrity check
+    assert data["primary_tradition"]["is_verified"] is False
+    assert data["secondary_tradition"]["is_verified"] is False
+    assert data["primary_tradition"]["verification_source"] == "AI-drafted baseline, pending community/priest review"
+    assert data["secondary_tradition"]["verification_source"] == "AI-drafted baseline, pending community/priest review"
+    assert "content_accuracy_disclaimer" in data
+    assert "AI-drafted as a starting point" in data["content_accuracy_disclaimer"]
+    assert "NOT been reviewed by any priest" in data["content_accuracy_disclaimer"]
 
     # 1. Run-of-show verification
     ceremonies = data["run_of_show"]

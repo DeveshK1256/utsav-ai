@@ -35,6 +35,13 @@ class CeremonyItemSchema(BaseModel):
     family_guidance: Optional[str] = Field(None, description="Actionable elder alignment note")
 
 
+CEREMONY_CONTENT_ACCURACY_DISCLAIMER = (
+    "This sequence was AI-drafted as a starting point based on general knowledge of customs. "
+    "It has not been reviewed by a priest or community elder and may contain errors, omissions, or "
+    "regionally inappropriate details. Please review carefully with your family and officiant before finalizing."
+)
+
+
 class FamilyAlignmentPointSchema(BaseModel):
     issue: str
     description: str
@@ -47,7 +54,11 @@ class MergedRunOfShowSchema(BaseModel):
     secondary_tradition: str
     ceremonies: List[CeremonyItemSchema]
     family_alignment_points: List[FamilyAlignmentPointSchema]
-    disclaimer: str
+    content_accuracy_disclaimer: str = Field(default=CEREMONY_CONTENT_ACCURACY_DISCLAIMER)
+    timing_disclaimer: str = Field(
+        default="Panchang calculations are astronomical estimates based on Drik Ganita and Ephemeris models. Muhurat dates and ritual sequences must always be confirmed with your family's trusted priest, pandit, or religious officiant."
+    )
+    disclaimer: str = Field(default=CEREMONY_CONTENT_ACCURACY_DISCLAIMER)
 
 
 class BaseTraditionMergeAgent(ABC):
@@ -233,13 +244,21 @@ class DeterministicStubTraditionMergeAgent(BaseTraditionMergeAgent):
                 )
             ]
 
+        custom_accuracy_disclaimer = (
+            f"This sequence was AI-drafted as a starting point based on general knowledge of {primary.regional_name} and {secondary.regional_name} customs. "
+            f"It has not been reviewed by a priest or community elder and may contain errors, omissions, or "
+            f"regionally inappropriate details. Please review carefully with your family and officiant before finalizing."
+        )
+
         return MergedRunOfShowSchema(
             fusion_title=title,
             primary_tradition=primary.regional_name,
             secondary_tradition=secondary.regional_name,
             ceremonies=ceremonies,
             family_alignment_points=alignment_points,
-            disclaimer="Auspicious timings & ritual sequences are algorithmic estimates. Please verify with your family Guruji or elders."
+            content_accuracy_disclaimer=custom_accuracy_disclaimer,
+            timing_disclaimer="Panchang calculations are astronomical estimates based on Drik Ganita and Ephemeris models. Muhurat dates and ritual sequences must always be confirmed with your family's trusted priest, pandit, or religious officiant.",
+            disclaimer=custom_accuracy_disclaimer
         )
 
 
@@ -306,7 +325,7 @@ JSON SCHEMA:
       "recommendation": "string"
     }}
   ],
-  "disclaimer": "Auspicious timings & ritual sequences are algorithmic estimates. Please verify with your family Guruji or elders."
+  "disclaimer": "This sequence was AI-drafted as a starting point based on general knowledge of customs. It has not been reviewed by a priest or community elder and may contain errors, omissions, or regionally inappropriate details. Please review carefully with your family and officiant before finalizing."
 }}
 """
             response = model.generate_content(
@@ -315,6 +334,17 @@ JSON SCHEMA:
             )
             raw_text = response.text
             parsed = json.loads(raw_text)
+            if "content_accuracy_disclaimer" not in parsed:
+                parsed["content_accuracy_disclaimer"] = (
+                    f"This sequence was AI-drafted as a starting point based on general knowledge of {primary.regional_name} and {secondary.regional_name} customs. "
+                    "It has not been reviewed by a priest or community elder and may contain errors, omissions, or regionally inappropriate details. "
+                    "Please review carefully with your family and officiant before finalizing."
+                )
+            if "timing_disclaimer" not in parsed:
+                parsed["timing_disclaimer"] = (
+                    "Panchang calculations are astronomical estimates based on Drik Ganita and Ephemeris models. "
+                    "Muhurat dates and ritual sequences must always be confirmed with your family's trusted priest, pandit, or religious officiant."
+                )
             return MergedRunOfShowSchema(**parsed)
         except Exception as e:
             logger.warning("Gemini multi-tradition merge agent failed, using deterministic stub fallback: %s", e)
@@ -481,7 +511,18 @@ class TraditionMergeService:
                 f"Priests from both sides ({primary.regional_name} and {secondary.regional_name}) "
                 f"should review the flagged alignment points together 2 weeks before the ceremony."
             ),
-            "disclaimer": run_of_show.disclaimer
+            "content_accuracy_disclaimer": (
+                f"This ceremonial sequence and ritual items list were AI-drafted as a starting point based on general cultural knowledge of "
+                f"{primary.regional_name} and {secondary.regional_name} customs. "
+                f"It has NOT been reviewed by any priest, pandit, community elder, or religious authority and may contain errors, omissions, or "
+                f"regionally inappropriate details. Please review carefully with your family elders and officiant before finalizing."
+            ),
+            "timing_disclaimer": "Panchang calculations are astronomical estimates based on Drik Ganita and Ephemeris models. Muhurat dates and ritual sequences must always be confirmed with your family's trusted priest, pandit, or religious officiant.",
+            "disclaimer": (
+                f"This sequence was AI-drafted as a starting point based on general knowledge of {primary.regional_name} and {secondary.regional_name} customs. "
+                f"It has not been reviewed by a priest or community elder and may contain errors, omissions, or regionally inappropriate details. "
+                f"Please review carefully with your family and officiant before finalizing."
+            )
         }
 
     def _detect_shared_key(self, item_name: str) -> Optional[str]:
