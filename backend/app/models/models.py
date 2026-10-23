@@ -34,9 +34,11 @@ class Tradition(Base):
     regional_name = Column(String(150), nullable=False)
     description = Column(Text, nullable=True)
     cultural_notes = Column(Text, nullable=True)
+    is_verified = Column(Boolean, default=False, nullable=False)
+    verification_source = Column(String(255), nullable=True)
 
     ritual_items = relationship("RitualItem", back_populates="tradition", cascade="all, delete-orphan")
-    events = relationship("Event", back_populates="tradition")
+    events = relationship("Event", back_populates="tradition", foreign_keys="Event.tradition_code")
 
 
 class RitualItem(Base):
@@ -44,10 +46,13 @@ class RitualItem(Base):
 
     id = Column(String(36), primary_key=True, default=generate_uuid)
     tradition_code = Column(String(50), ForeignKey("traditions.code"), nullable=False, index=True)
+    ritual_name = Column(String(100), nullable=True)
+    category = Column(String(50), default="puja_samagri", nullable=True)
     item_name = Column(String(150), nullable=False)
     regional_name = Column(String(150), nullable=True)
     standard_quantity = Column(String(100), nullable=False)
     spiritual_purpose = Column(Text, nullable=True)
+    is_verified = Column(Boolean, default=False, nullable=False)
 
     tradition = relationship("Tradition", back_populates="ritual_items")
 
@@ -60,6 +65,7 @@ class Event(Base):
     name = Column(String(255), nullable=False)
     event_type = Column(String(50), nullable=False)  # wedding, puja, community_festival, etc.
     tradition_code = Column(String(50), ForeignKey("traditions.code"), nullable=True)
+    secondary_tradition_code = Column(String(50), ForeignKey("traditions.code"), nullable=True)
     guest_count = Column(Integer, nullable=False)
     total_budget = Column(Numeric(14, 2), nullable=False)
     city = Column(String(100), nullable=False)
@@ -78,7 +84,8 @@ class Event(Base):
     )
 
     owner = relationship("User", back_populates="events")
-    tradition = relationship("Tradition", back_populates="events")
+    tradition = relationship("Tradition", foreign_keys=[tradition_code], back_populates="events")
+    secondary_tradition = relationship("Tradition", foreign_keys=[secondary_tradition_code])
     sub_events = relationship("SubEvent", back_populates="event", cascade="all, delete-orphan", order_by="SubEvent.sort_order")
     budget_items = relationship("BudgetItem", back_populates="event", cascade="all, delete-orphan")
     tasks = relationship("Task", back_populates="event", cascade="all, delete-orphan")

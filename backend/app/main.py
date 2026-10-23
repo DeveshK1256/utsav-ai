@@ -8,8 +8,7 @@ from backend.app.api.v1.events import router as events_router
 from backend.app.api.v1.quotes import router as quotes_router
 from backend.app.api.v1.replanning import router as replanning_router
 from backend.app.api.v1.vibe import router as vibe_router
-from backend.app.api.v1.guests import router as guests_router
-from backend.app.api.v1.webhooks import router as webhooks_router
+from backend.app.api.v1.rituals import router as rituals_router
 
 app = FastAPI(
     title=f"{settings.PROJECT_NAME} API Engine",
@@ -32,8 +31,21 @@ app.include_router(events_router, prefix=settings.API_V1_STR)
 app.include_router(quotes_router, prefix=settings.API_V1_STR)
 app.include_router(replanning_router, prefix=settings.API_V1_STR)
 app.include_router(vibe_router, prefix=settings.API_V1_STR)
-app.include_router(guests_router, prefix=settings.API_V1_STR)
-app.include_router(webhooks_router, prefix=settings.API_V1_STR)
+app.include_router(rituals_router, prefix=settings.API_V1_STR)
+
+# M4 WhatsApp guest coordination (feature-flagged and defensively isolated per pause guidelines)
+ENABLE_M4_WHATSAPP = os.getenv("ENABLE_M4_WHATSAPP", "true").lower() in ("true", "1", "yes")
+if ENABLE_M4_WHATSAPP:
+    try:
+        from backend.app.api.v1.guests import router as guests_router
+        from backend.app.api.v1.webhooks import router as webhooks_router
+        app.include_router(guests_router, prefix=settings.API_V1_STR)
+        app.include_router(webhooks_router, prefix=settings.API_V1_STR)
+    except Exception as exc:
+        import logging
+        logging.getLogger("uvicorn.error").error(
+            "Failed to conditionally register M4 WhatsApp router, skipping: %s", exc
+        )
 
 
 @app.on_event("startup")
@@ -63,6 +75,10 @@ def run_db_backfill_on_startup():
                    OR (scaling_rule = 'per_guest' AND lower(category) IN ('venue', 'photography', 'entertainment', 'rituals', 'ritual_priest', 'decor', 'sound_light', 'sound_and_lighting'))
                    OR (scaling_rule = 'fixed' AND lower(category) IN ('decor', 'sound_light', 'sound_and_lighting', 'catering', 'rentals', 'wardrobe', 'gifts_favors', 'invitations', 'logistics', 'contingency'));
             """))
+
+        # Seed curated cultural traditions & ritual items if needed
+        from backend.app.db.seed_traditions import seed_cultural_traditions
+        seed_cultural_traditions()
     except Exception:
         pass
 

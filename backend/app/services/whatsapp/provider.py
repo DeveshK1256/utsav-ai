@@ -4,7 +4,7 @@ import logging
 from abc import ABC, abstractmethod
 from typing import Optional, List, Dict, Any
 from pydantic import BaseModel
-import requests
+import httpx
 
 from backend.app.core.config import settings
 
@@ -180,7 +180,7 @@ class MetaCloudWhatsAppProvider(WhatsAppProvider):
         }
 
         try:
-            res = requests.post(self.base_url, json=payload, headers=self._headers(), timeout=10)
+            res = httpx.post(self.base_url, json=payload, headers=self._headers(), timeout=10.0)
             data = res.json()
             if res.status_code == 200 and "messages" in data and len(data["messages"]) > 0:
                 msg_id = data["messages"][0]["id"]
@@ -222,7 +222,7 @@ class MetaCloudWhatsAppProvider(WhatsAppProvider):
             "text": {"preview_url": False, "body": body}
         }
         try:
-            res = requests.post(self.base_url, json=payload, headers=self._headers(), timeout=10)
+            res = httpx.post(self.base_url, json=payload, headers=self._headers(), timeout=10.0)
             data = res.json()
             if res.status_code == 200 and "messages" in data and len(data["messages"]) > 0:
                 return WhatsAppSendResult(
@@ -278,7 +278,7 @@ class MetaCloudWhatsAppProvider(WhatsAppProvider):
             }
         }
         try:
-            res = requests.post(self.base_url, json=payload, headers=self._headers(), timeout=10)
+            res = httpx.post(self.base_url, json=payload, headers=self._headers(), timeout=10.0)
             data = res.json()
             if res.status_code == 200 and "messages" in data and len(data["messages"]) > 0:
                 return WhatsAppSendResult(
