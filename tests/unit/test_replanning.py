@@ -433,3 +433,81 @@ def test_tiered_decor_scaling_stepping_to_large_tier(replanning_event):
     assert decor["new_amount"] == 280000.0
     assert "Stepped from" in decor["formula"]
     assert "Large Lawn / Ballroom" in decor["formula"]
+
+
+def test_intake_generated_event_fixed_category_scaling_regression():
+    """
+    REGRESSION TEST: Events synthesized through the intake wizard (/intake/generate)
+    must preserve DEC-018 scaling rules on budget items.
+    Specifically asserts that fixed categories (venue, photography, entertainment, rituals)
+    do NOT scale under guest-count changes when invoked through /events/{id}/changes.
+    """
+    import random
+    unique_phone = f"+9198{random.randint(10000000, 99999999)}"
+    intake_payload = {
+        "name": "Regression Test Royal Vivah",
+        "host_name": "Test Host",
+        "phone_number": unique_phone,
+        "event_type": "wedding",
+        "tradition_code": "marwari_traditional",
+        "guest_count": 280,
+        "total_budget": 5200000.0,
+        "city": "Jaipur",
+        "pincode": "302001",
+        "start_date": (date.today() + timedelta(days=60)).isoformat(),
+        "end_date": (date.today() + timedelta(days=62)).isoformat()
+    }
+
+    # 1. Generate master plan via real intake endpoint
+    gen_res = client.post("/api/v1/intake/generate", json=intake_payload)
+    assert gen_res.status_code == 201
+    event_id = gen_res.json()["event_id"]
+
+    try:
+        # 2. Trigger Guest Surge (280 -> 330 guests) via the exact Live Scenario Simulator endpoint
+        sim_res = client.post(
+            f"/api/v1/events/{event_id}/changes",
+            json={
+                "change_type": "guest_count_changed",
+                "payload": {
+                    "from_guest_count": 280,
+                    "to_guest_count": 330
+                }
+            }
+        )
+        assert sim_res.status_code == 201
+        proposal = sim_res.json()
+        diffs = {d["category"]: d for d in proposal["budget_diff"]}
+
+        # Assert fixed categories do NOT scale
+        assert diffs["venue"]["scaling_rule"] == "fixed"
+        assert diffs["venue"]["old_amount"] == diffs["venue"]["new_amount"]
+        assert diffs["venue"]["difference"] == 0.0
+        assert "Fixed contract rate" in diffs["venue"]["formula"]
+
+        assert diffs["photography"]["scaling_rule"] == "fixed"
+        assert diffs["photography"]["old_amount"] == diffs["photography"]["new_amount"]
+        assert diffs["photography"]["difference"] == 0.0
+
+        assert diffs["entertainment"]["scaling_rule"] == "fixed"
+        assert diffs["entertainment"]["old_amount"] == diffs["entertainment"]["new_amount"]
+        assert diffs["entertainment"]["difference"] == 0.0
+
+        assert diffs["rituals"]["scaling_rule"] == "fixed"
+        assert diffs["rituals"]["old_amount"] == diffs["rituals"]["new_amount"]
+        assert diffs["rituals"]["difference"] == 0.0
+
+        # Assert catering scales linearly
+        assert diffs["catering"]["scaling_rule"] == "per_guest"
+        expected_catering = round(diffs["catering"]["old_amount"] * (330 / 280), 2)
+        assert diffs["catering"]["new_amount"] == expected_catering
+        assert diffs["catering"]["difference"] > 0
+
+        # Assert decor (280 -> 330 guests) remains in the 251-500 tier (multiplier 1.40)
+        assert diffs["decor"]["scaling_rule"] == "tiered"
+        assert diffs["decor"]["old_amount"] == diffs["decor"]["new_amount"]
+        assert diffs["decor"]["difference"] == 0.0
+
+    finally:
+        # Cleanup
+        client.delete(f"/api/v1/events/{event_id}")

@@ -11,6 +11,7 @@ from backend.app.schemas.intake import (
     TaskResponseSchema
 )
 from backend.app.services.budget_engine import BudgetScalingEngine
+from backend.app.services.budget_rescaling_engine import BudgetRescalingEngine
 from backend.app.services.dag_scheduler import DAGScheduler
 
 
@@ -114,6 +115,7 @@ class IntakeService:
         )
         created_budget_items = []
         for alloc in budget_allocations:
+            rule = BudgetRescalingEngine.resolve_scaling_rule(alloc["category"])
             b_item = BudgetItem(
                 event_id=event.id,
                 category=alloc["category"],
@@ -121,6 +123,7 @@ class IntakeService:
                 planned_amount=alloc["planned_amount"],
                 actual_amount=0.00,
                 is_paid=False,
+                scaling_rule=rule,
                 reasoning_spec=alloc["reasoning_spec"]
             )
             db.add(b_item)

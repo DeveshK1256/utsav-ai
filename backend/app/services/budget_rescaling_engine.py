@@ -43,6 +43,21 @@ class BudgetRescalingEngine:
         return cls._tiers_cache
 
     @classmethod
+    def resolve_scaling_rule(cls, category: str) -> str:
+        """
+        Canonical mapping of event budget categories to deterministic scaling rules per DEC-018.
+        - Fixed: venue, photography, entertainment, rituals, ritual_priest
+        - Tiered: decor, sound_light, sound_and_lighting
+        - Per-guest: catering, rentals, wardrobe, logistics, gifts_favors, invitations, contingency
+        """
+        cat = (category or "").lower().strip()
+        if cat in {"venue", "photography", "entertainment", "rituals", "ritual_priest"}:
+            return "fixed"
+        if cat in {"decor", "sound_light", "sound_and_lighting"}:
+            return "tiered"
+        return "per_guest"
+
+    @classmethod
     def get_tier_info(cls, category: str, guest_count: int) -> Tuple[float, str]:
         cfg = cls.load_tier_config().get(category.lower())
         if not cfg or "tiers" not in cfg:
@@ -81,7 +96,15 @@ class BudgetRescalingEngine:
             b_id = getattr(b, "id", "")
             cat = (getattr(b, "category", "") or "other").lower()
             name = getattr(b, "name", "")
-            rule = (getattr(b, "scaling_rule", "") or "per_guest").lower()
+            stored_rule = getattr(b, "scaling_rule", None)
+            
+            # Resolve canonical scaling rule per DEC-018 if missing or defaulted to per_guest
+            canonical_rule = cls.resolve_scaling_rule(cat)
+            if not stored_rule or (stored_rule.lower() == "per_guest" and canonical_rule != "per_guest"):
+                rule = canonical_rule
+            else:
+                rule = stored_rule.lower()
+
             old_amt = float(getattr(b, "planned_amount", 0.0) or 0.0)
             total_old += old_amt
 
