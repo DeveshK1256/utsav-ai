@@ -325,8 +325,9 @@ def test_webhook_inbound_flow_stop_opt_out_and_rsvp():
     2. Button reply updates guest RSVP
     3. Status update updates message_log delivery_status
     """
+    import random
     db = SessionLocal()
-    phone = "+919833344455"
+    phone = f"+9198{random.randint(10000000, 99999999)}"
 
     # Create dummy guest
     ev = db.query(Event).first()

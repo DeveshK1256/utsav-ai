@@ -98,6 +98,7 @@ class Event(Base):
     guests = relationship("Guest", back_populates="event", cascade="all, delete-orphan")
     message_logs = relationship("MessageLog", back_populates="event", cascade="all, delete-orphan")
     fact_sheet = relationship("EventFactSheet", back_populates="event", uselist=False, cascade="all, delete-orphan")
+    invitation_cards = relationship("InvitationCard", back_populates="event", cascade="all, delete-orphan")
 
 
 class SubEvent(Base):
@@ -427,6 +428,25 @@ class OptOut(Base):
     phone = Column(String(30), unique=True, nullable=False, index=True)
     reason = Column(String(100), default="STOP", nullable=False)
     opted_out_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
+
+
+class InvitationCard(Base):
+    __tablename__ = "invitation_cards"
+
+    id = Column(String(36), primary_key=True, default=generate_uuid)
+    event_id = Column(String(36), ForeignKey("events.id", ondelete="CASCADE"), nullable=False, index=True)
+    theme_proposal_id = Column(String(36), ForeignKey("theme_proposals.id", ondelete="SET NULL"), nullable=True, index=True)
+    layout_variant = Column(String(50), nullable=False, default="classic_royal")
+    wording_text = Column(Text, nullable=False)
+    guest_id = Column(String(36), ForeignKey("guests.id", ondelete="CASCADE"), nullable=True, index=True)
+    rendered_png = Column(LargeBinary, nullable=True)
+    rendered_pdf = Column(LargeBinary, nullable=True)
+    generated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
+
+    event = relationship("Event", back_populates="invitation_cards")
+    theme_proposal = relationship("ThemeProposal")
+    guest = relationship("Guest")
+
 
 
 

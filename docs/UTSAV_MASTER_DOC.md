@@ -34,6 +34,7 @@
   - [4.13 F13: "Why This?" Architectural Transparency Layer](#413-f13-why-this-architectural-transparency-layer)
   - [4.14 F14: Community Festival & Housing Society Event Module](#414-f14-community-festival--housing-society-event-module)
   - [4.15 F15: Vendor & Venue Discovery Map](#415-f15-vendor--venue-discovery-map)
+  - [4.16 F16: Invitation Card Generator](#416-f16-invitation-card-generator)
 - [5. Information Architecture](#5-information-architecture)
   - [5.1 App Structure & Sitemap](#51-app-structure--sitemap)
   - [5.2 Navigation Model (Web & Responsive Mobile PWA)](#52-navigation-model-web--responsive-mobile-pwa)
@@ -58,7 +59,7 @@
   - [8.1 High-Level System Architecture](#81-high-level-system-architecture)
   - [8.2 Frontend Architecture (Next.js 15 App Router / TypeScript)](#82-frontend-architecture-nextjs-15-app-router--typescript)
   - [8.3 Backend Architecture (FastAPI & Node Hybrid Services + Queue)](#83-backend-architecture-fastapi--node-hybrid-services--queue)
-  - [8.4 Specialized AI Agent Registry (11 Discrete Autonomous Workers)](#84-specialized-ai-agent-registry-11-discrete-autonomous-workers)
+  - [8.4 Specialized AI Agent Registry (12 Discrete Autonomous Workers)](#84-specialized-ai-agent-registry-12-discrete-autonomous-workers)
   - [8.5 Infrastructure, Environments & CI/CD Pipelines](#85-infrastructure-environments--cicd-pipelines)
 - [9. Technical Requirements Document (TRD)](#9-technical-requirements-document-trd)
   - [9.1 Non-Functional Requirements (NFRs)](#91-non-functional-requirements-nfrs)
@@ -76,7 +77,7 @@
 - [16. Accessibility Specification (WCAG 2.2 AA)](#16-accessibility-specification-wcag-22-aa)
 - [17. Implementation Plan & Milestone Roadmap](#17-implementation-plan--milestone-roadmap)
   - [17.1 Staged Build Sequence](#171-staged-build-sequence)
-  - [17.2 Milestones M0 through M9 with Strict Exit Gates](#172-milestones-m0-through-m9-with-strict-exit-gates)
+  - [17.2 Milestones M0 through M10 with Strict Exit Gates](#172-milestones-m0-through-m10-with-strict-exit-gates)
   - [17.3 Definition of Done (DoD) per Milestone](#173-definition-of-done-dod-per-milestone)
 - [18. Open Decisions for Product Owner](#18-open-decisions-for-product-owner)
 - [19. Post-Document Actions & Starter Build Prompt](#19-post-document-actions--starter-build-prompt)
@@ -230,6 +231,9 @@ Organizing a multi-day celebration in India is plagued by four structural failur
 | **DEC-025** | **Strict Grounding Boundary for Guest Concierge FAQ Bot** | Guest FAQ answering strictly retrieves from the event's `event_fact_sheets` record (+ basic event date/city metadata); any query outside this sheet deterministically returns a polite deferral and logs a host notification | Prevents AI hallucination regarding sensitive event logistics, private financial data, alcohol/corkage, or unverified amenities. Answers outside the fact sheet are strictly blocked. | **Critical / Absolute** | Core trust and compliance invariant. |
 | **DEC-026** | **Deterministic Opt-Out Send-Layer Enforcement & Privacy Purge Policy** | Outbound WhatsApp transmission unconditionally verifies destination numbers against `opt_outs` before contacting providers; inbound "STOP" immediately persists opt-out; individual guest data purgeable via `DELETE /api/v1/events/{id}/guests/{guest_id}` | 100% compliance with WhatsApp Business API anti-spam regulations and GDPR/DPDP personal data erasure requirements. | **Critical / Absolute** | Regulatory and legal compliance requirement. |
 | **DEC-027** | **Deterministic Astronomical Panchang Engine & Unverified AI-Drafted Tradition Baselines with Dual Mandatory Disclaimers** | Astronomical calculations for Sunrise, Sunset, Rahu Kaal, Tithi, Nakshatra, and Muhurat candidate windows are computed deterministically via `ephem` and NOAA solar geometry equations (zero LLM math/time generation; validated against real external reference data). In contrast, all tradition ritual sequences and samagri lists are AI-drafted starting baselines that have NOT been reviewed by community members, priests, or liturgical bodies. Every tradition and ritual item is explicitly stored with `is_verified: false` and labeled `"AI-drafted baseline, pending community/priest review"`. Dual mandatory elevated disclaimers are enforced across 100% of ritual screens: (1) Astronomical timing priest confirmation, and (2) Ceremony content accuracy & unreviewed status warning. | Mathematical accuracy for astronomical timings guaranteed. Prevents false claims of religious verification; enforces total transparency that cultural content requires family/officiant review before real-world execution. | **Critical / Absolute** | Truth in advertising, cultural integrity, and religious sensitivity requirement. |
+| **DEC-028** | **Card Rendering Approach** | Server-side composition (Pillow, same library already proven in F4's moodboard generator) over a second paid image-generation API | Keeps a consistent, already-tested dependency rather than adding a new generative cost/latency surface for something that is fundamentally a templated layout task, not open-ended image generation. | **High** | If hosts request true AI-illustrated card art (not just layout/typography), revisit with a generation provider, same pattern as F4's `DEC-022`. |
+| **DEC-029** | **Personalization Scope** | Per-guest personalization is limited to name and RSVP-relevant fields (dietary note, table assignment if seating from F9 exists) — never fabricated personal details | Cards must never invent facts about a guest. Only fields the host or guest actually supplied are interpolated. | **Critical** | Never — same standard as all other no-invented-facts rules. |
+| **DEC-030** | **Export Format** | Cards export as PNG (for WhatsApp/social sharing) and PDF (for printing), generated from one shared layout, not two separate designs | Avoids layout drift between the digital and print versions; matches the existing pattern of Claude Docs-style multi-format export used elsewhere in the stack. | **Medium** | If print-shop requirements (bleed, CMYK color profile) become necessary, add a dedicated print-export path. |
 
 
 ## 4. Functional Requirements
@@ -579,6 +583,24 @@ Organizing a multi-day celebration in India is plagued by four structural failur
   - Geolocation denial never blocks the flow — manual city/pincode entry is always present, not a fallback-only-on-error state.
 
 
+### 4.16 F16: Invitation Card Generator
+- **Overview:** Converts an accepted F4 theme (palette, style tags, invitation design brief text) plus confirmed event logistics (date/time — ideally muhurat-aware per F2 — venue name/address once selected) into an actual downloadable/shareable invitation card, personalized per guest where the guest list (F3, currently paused) exists.
+- **User Story:** *As a host who's finalized my theme, my auspicious muhurat, and my venue, I want an actual invitation card generated — not just a text description of what one should look like — so I can send it to my guests without hiring a separate designer.*
+- **User Flow:**
+  1. User reaches this step only after a theme exists (F4) and a date/time is confirmed (F2's muhurat flow, or a manually chosen date if no muhurat applies for that event type).
+  2. System pre-fills a card template using the theme's palette and style tags; user picks from 2-3 layout variants (not infinite customization — keep scope tight for v1).
+  3. User confirms the text content: event name, host name(s), date/time, venue (once selected via F15-Lite or manually entered), and any tradition-specific wording pulled from F2's merged run-of-show (e.g. ceremony names).
+  4. If a guest list exists (F3), the system generates one personalized card per guest (name interpolation only, per DEC-029); if no guest list exists yet, it generates one generic card the host can share manually.
+  5. Preview renders before export — host can regenerate wording or swap layout, but cannot free-type arbitrary design changes in v1 (that's a future "full editor" scope, not this milestone).
+  6. Export as PNG (digital share) or PDF (print), or both.
+- **Edge Cases:** No venue selected yet (card renders with a placeholder "Venue to be confirmed" rather than blocking generation entirely); no muhurat/time confirmed yet (same placeholder pattern for time); very long venue names or guest names overflowing the template (truncate with ellipsis, never silently cut off important text like the date); non-Latin script names (Hindi/Marathi guest names) — font must support Devanagari rendering correctly, test this explicitly, don't assume the chosen font covers it.
+- **Validation Rules:** Every field interpolated into a card must trace to a value the host actually confirmed (event record, theme record, guest record) — never a placeholder silently left in as if it were real content (no card should ship with literal `{host_name}` visible, that's a template bug, not acceptable output).
+- **Empty States:** "Finish your theme and confirm your date to generate invitation cards."
+- **Loading States:** "Composing your invitation..."
+- **Error States:** If Pillow rendering fails for a specific guest's name (e.g. an unsupported character), generate the rest of the batch successfully and flag which ones failed with the specific reason, rather than failing the entire batch silently.
+- **Acceptance Criteria:** Given a confirmed theme, date, and at least 3 test guests, the system generates 3 correctly personalized cards (distinct names, identical layout/palette/date/venue) as both PNG and PDF, with zero unfilled template placeholders visible in any output.
+
+
 ## 5. Information Architecture
 
 ### 5.1 App Structure & Sitemap
@@ -632,6 +654,7 @@ UTSAV APP ROOT
 | **Risk Forecaster** | `/dashboard/risk-radar` | 14-day weather radar, municipal sound rules, traffic analysis | Coordinator, Host | Dashboard alert badge |
 | **Wrap-up & Settlements** | `/dashboard/wrap-up` | Vendor invoice closure, deposit recovery, thank-you notes | Host, Treasurer | Post-event prompt |
 | **Vendor & Venue Discovery Map** | `/dashboard/vendors/discover` (and public `/discover` pre-signup) | Geolocated map of nearby venues/vendors ranked by rating with normalized cost estimates | Host, Prospective Host | Marketing site CTA, Vendors subnav |
+| **Invitation Card Studio** | `/dashboard/events/{id}/invitations` | Generate and export personalized invitation cards from the confirmed theme, date, and guest list | Host | Unified Event Workspace tab, Compose Celebration flow (Stage 4) |
 
 ### 5.4 Layout Hierarchy
 ```
@@ -927,7 +950,7 @@ frontend/
   - Enforces strict Pydantic JSON schema decoding with retry policy: $	ext{Retry} \le 2$ with error feedback prompt injection. If schema validation fails after 2 retries, fallback gracefully to a deterministic safe rule-based template.
   - LLM temperature locked to $0.0$ for all analytical and extraction tasks; $0.4$ for localized negotiation and invitation drafting.
 
-### 8.4 Specialized AI Agent Registry (11 Discrete Autonomous Workers)
+### 8.4 Specialized AI Agent Registry (12 Discrete Autonomous Workers)
 
 #### 1. Plan Generator Agent
 - **Trigger:** Submission of Onboarding Intake Wizard.
@@ -1023,6 +1046,12 @@ frontend/
 - **Fallback Policy:** If caption generation fails or times out, render the pin with its raw structured data and no caption — never block map rendering on this agent.
 
 > **Note:** This agent is optional in practice — F15 is fully functional as a pure deterministic ranking/filtering service with zero LLM involvement. It exists only to generate the short explanatory caption; cost and rating math must never depend on it.
+
+#### 12. Invitation Text Composer Agent (F16)
+- **Trigger:** User reaches the card confirmation step with a theme, date, and (optionally) venue already set.
+- **Inputs:** Theme's `invitation_design_brief` text (from F4), event basics, tradition-specific ceremony names (from F2's merged run-of-show, if applicable).
+- **Output:** Short, warm invitation wording options (2-3 variants) for the host to pick from — strictly composed from the structured inputs already present, never inventing venue details, dates, or ceremony names not already confirmed in the data.
+- **Guardrails:** Does not generate layout, images, or personalization logic — those are deterministic (Pillow + interpolation). This agent's only job is the wording options. If it fails, fall back to a plain, non-LLM template sentence (e.g. "You are cordially invited to celebrate [event_name] on [date] at [venue]") so card generation is never blocked by this agent.
 
 ### 8.5 Infrastructure, Environments & CI/CD Pipelines
 - **Hosting Architecture (Production & Staging):**
@@ -1422,7 +1451,20 @@ erDiagram
 
 ---
 
-### 10.3 Formal JSON Schemas for Agent Payloads
+##### Table: `invitation_cards`
+- `id` (UUID, Primary Key)
+- `event_id` (UUID, FK -> `events(id)` ON DELETE CASCADE)
+- `theme_proposal_id` (UUID, FK -> `theme_proposals(id)`, nullable — null if generated without an accepted theme)
+- `layout_variant` (VARCHAR(50))
+- `wording_text` (TEXT)
+- `guest_id` (UUID, FK -> `guests(id)` ON DELETE CASCADE, nullable — null for the generic/non-personalized card)
+- `rendered_png` (BYTEA, nullable)
+- `rendered_pdf` (BYTEA, nullable)
+- `generated_at` (TIMESTAMPTZ, Default `NOW()`)
+
+---
+
+## 10.3 Formal JSON Schemas for Agent Payloads
 
 #### 1. Plan Generator Output Schema
 ```json
@@ -1713,6 +1755,13 @@ erDiagram
 
 ---
 
+### 11.8 Invitation Cards (`/api/v1/events/{id}/invitations`)
+- **POST `/generate`** — Body: `{theme_proposal_id, layout_variant, wording_variant_index}`. Generates either one generic card (no guest list) or one card per guest (if guests exist). Returns array of `invitation_cards` rows with download links.
+- **GET `/{card_id}/download?format=png|pdf`** — Streams the rendered file.
+- **Caching:** Rendered cards are cached (not regenerated on every request) since inputs are immutable once generated; regeneration only happens if the host explicitly requests a new variant.
+
+---
+
 ## 12. Component Inventory
 
 A buildable registry of core reusable UI components:
@@ -1742,6 +1791,10 @@ A buildable registry of core reusable UI components:
 23. `<RatingTierLegend />`: Persistent map legend explaining the four tiers (Top Rated / Highly Rated / Rated / New·Unrated) so an unrated vendor is never mistaken for a low-rated one.
 24. `<DiscoveryListToggle />`: Map/List view switcher — list view is the accessibility and low-end-device fallback, not a secondary feature.
 25. `<LocationPermissionPrompt />`: Geolocation consent UI with a mandatory manual city/pincode entry path shown alongside, never gated behind permission grant.
+26. `<InvitationLayoutPicker />`: 2-3 card layout thumbnails driven by the active theme's palette.
+27. `<InvitationWordingSelector />`: Shows the 2-3 LLM-composed wording variants (or the deterministic fallback) for the host to pick.
+28. `<InvitationPreviewCard />`: Live preview of the rendered card before export, with regenerate/export controls.
+29. `<GuestCardBatchStatus />`: Shows generation progress/failures when producing one card per guest, surfacing per-guest errors without blocking the batch.
 
 
 ## 13. Performance Strategy
@@ -1854,7 +1907,7 @@ Utsav is designed to be fully usable by family elders with aging eyesight and co
 In strict accordance with the core system priorities, Utsav follows the phased build order:
 $$	ext{Foundation (M0)} \longrightarrow 	ext{F5 Quote Audit (M1)} \longrightarrow 	ext{F1 Plan B (M2)} \longrightarrow 	ext{F4 Vibe Vision (M3)} \longrightarrow 	ext{F3 WhatsApp Engine (M4)} \longrightarrow 	ext{F2 Cultural Engine (M5)} \longrightarrow 	ext{Phase 2 (M6)} \longrightarrow 	ext{Phase 3 & GA (M7-M8)}$$
 
-### 17.2 Milestones M0 through M9 with Strict Exit Gates
+### 17.2 Milestones M0 through M10 with Strict Exit Gates
 
 ```mermaid
 flowchart LR
@@ -1956,6 +2009,10 @@ flowchart LR
 - **Exit Gate (Loop Test):** Returns correct ranked results for 25 seeded test vendors across all 4 rating tiers including New/Unrated; cost badges correctly suppress to "Limited data" when sample size < 5 across 10 seeded low-volume categories; manual city/pincode fallback verified functional with geolocation permission denied in test harness; map failure (simulated tile load error) confirmed to degrade to list view without blank screen.
 
 > **Sequencing note:** F15 depends on F5 (for normalized cost data) and benefits from F12 (for real ratings) already existing, so M9 is correctly sequenced after both rather than inserted earlier in the roadmap.
+
+#### Milestone M10: F16 Invitation Card Generator
+- **Scope:** `invitation_cards` schema, Pillow-based card renderer (layout + palette + text interpolation), wording composer agent with deterministic fallback, PNG/PDF export, per-guest batch generation wired to F3's guest list (resumes correctly once M4/F3 un-pauses).
+- **Exit Gate:** 3-guest batch test produces 3 correctly personalized cards with zero unfilled placeholders, in both export formats; Devanagari name rendering explicitly tested and confirmed correct, not assumed.
 
 ### 17.3 Definition of Done (DoD) per Milestone
 A milestone is declared complete ONLY when:

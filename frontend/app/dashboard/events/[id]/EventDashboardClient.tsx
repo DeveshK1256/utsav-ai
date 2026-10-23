@@ -7,6 +7,7 @@ import { Navbar } from '@/components/ui/Navbar';
 import { ElderDisclaimerBanner } from '@/components/ui/ElderDisclaimerBanner';
 import { GuestCoordinationModule } from '@/components/ui/GuestCoordinationModule';
 import { RitualIntelligenceHub } from '@/components/ui/RitualIntelligenceHub';
+import { InvitationStudio } from '@/components/ui/InvitationStudio';
 
 // Currency Formatter
 const formatINR = (val: number) => {
@@ -92,7 +93,7 @@ export default function EventDashboardClient() {
 
   const [eventData, setEventData] = useState<EventData | null>(null);
   const [styleProfile, setStyleProfile] = useState<StyleProfile | null>(null);
-  const [activeTab, setActiveTab] = useState<'overview' | 'itinerary' | 'rituals' | 'budget' | 'vendors' | 'vibe' | 'guests'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'itinerary' | 'rituals' | 'budget' | 'vendors' | 'vibe' | 'guests' | 'invitations'>('overview');
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [selectedWhyThis, setSelectedWhyThis] = useState<BudgetItem | null>(null);
@@ -457,7 +458,8 @@ export default function EventDashboardClient() {
             { key: 'budget', label: 'Itemized Budget & Formulas', icon: '💰' },
             { key: 'vendors', label: 'Vendor Hub & Quotes', icon: '🤝' },
             { key: 'vibe', label: 'Vibe & Aesthetic Decor', icon: '🎨' },
-            { key: 'guests', label: 'Guests & WhatsApp RSVP', icon: '💌' }
+            { key: 'guests', label: 'Guests & WhatsApp RSVP', icon: '💌' },
+            { key: 'invitations', label: 'Invitation Cards (F16)', icon: '🎴' }
           ].map((tab) => (
             <button
               key={tab.key}
@@ -478,7 +480,7 @@ export default function EventDashboardClient() {
         {activeTab === 'overview' && (
           <div className="space-y-8 animate-fadeIn">
             {/* Quick Action Navigation Tiles */}
-            <div className="grid sm:grid-cols-3 gap-6">
+            <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
               {/* Tile 1: Replanning Engine */}
               <div className="glass-card p-6 rounded-3xl shadow-sm border border-stone-200/80 dark:border-stone-800/80 space-y-4 hover:border-amber-400/50 transition-all">
                 <div className="w-10 h-10 rounded-2xl bg-amber-100 dark:bg-amber-950/80 text-amber-700 dark:text-amber-300 flex items-center justify-center text-xl font-bold">
@@ -540,6 +542,27 @@ export default function EventDashboardClient() {
                 >
                   Audit Scoped Vendor Quotes →
                 </Link>
+              </div>
+
+              {/* Tile 4: Invitation Cards Studio (M10) */}
+              <div className="glass-card p-6 rounded-3xl shadow-sm border border-stone-200/80 dark:border-stone-800/80 space-y-4 hover:border-amber-400/50 transition-all">
+                <div className="w-10 h-10 rounded-2xl bg-amber-100 dark:bg-amber-950/80 text-amber-700 dark:text-amber-300 flex items-center justify-center text-xl font-bold">
+                  🎴
+                </div>
+                <div>
+                  <h3 className="font-serif font-bold text-lg text-stone-900 dark:text-stone-100">
+                    Invitation Studio
+                  </h3>
+                  <p className="text-xs text-stone-600 dark:text-stone-300 mt-1 leading-relaxed">
+                    Generate personalized print-ready PDFs and digital PNG cards with theme palettes and Devanagari script.
+                  </p>
+                </div>
+                <button
+                  onClick={() => setActiveTab('invitations')}
+                  className="inline-flex items-center text-xs font-bold text-amber-700 dark:text-amber-400 hover:underline gap-1"
+                >
+                  Open Card Studio →
+                </button>
               </div>
             </div>
 
@@ -962,6 +985,17 @@ export default function EventDashboardClient() {
             eventId={currentEventId}
             eventName={eventData.name}
             apiBase={getApiBase()}
+          />
+        )}
+
+        {/* TAB 7: INVITATION CARD STUDIO (M10 / F16) */}
+        {activeTab === 'invitations' && (
+          <InvitationStudio
+            eventId={currentEventId}
+            eventName={eventData.name}
+            city={eventData.city}
+            startDate={eventData.start_date}
+            apiBase={getApiBase().replace(/\/api\/v1\/?$/, '')}
           />
         )}
 
