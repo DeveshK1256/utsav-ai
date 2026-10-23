@@ -26,7 +26,8 @@ Status reflected directly from [`docs/UTSAV_MASTER_DOC.md`](docs/UTSAV_MASTER_DO
 | **Multi-Event Workspace Expansion** | **Complete** | Unified multi-tab dashboard covering Weddings, Birthdays (Carnival, Milestone, Ayushya Homa), and Community Festivals (Navratri, Sarvajanik, Society Mela). |
 | **M4: F3 WhatsApp Guest Coordination** | **Paused** | Code-complete backend abstractions (`MetaCloudWhatsAppProvider` & mock provider), send-layer opt-out hard boundary, and FAQ concierge. **Paused pending Meta WhatsApp Business API business verification.** Not tested with real phone numbers. |
 | **M5: F2 Cultural & Ritual Intelligence** | **In Progress** | Astronomical Panchang Engine (`ephem` + NOAA solar physics) verified against external astronomical references with zero LLM time math. Tradition content layer is **explicitly AI-drafted and unreviewed** (`is_verified: false` across all 21 database rows). Dual mandatory elevated disclaimers active. |
-| **M6–M9: Future Capabilities (F6–F15)** | **Specced** | Risk Forecaster, Seating Solver, Offline PWA, Vendor Discovery Map (F15), and Invitation Studio (F16) specified in roadmap; not yet built. |
+| **M10: F16 Invitation Card Generator** | **Complete** | Server-side composition via Pillow (DEC-028), Google Noto Sans Devanagari verified for Hindi/Marathi/Sanskrit, zero-placeholder guarantee (DEC-029), single-pipeline dual PNG and 300 DPI PDF export (DEC-030), and partial failure isolation for guest batches. |
+| **M6–M9: Future Capabilities (F6–F15)** | **Specced** | Risk Forecaster, Seating Solver, Offline PWA, and Vendor Discovery Map (F15) specced in roadmap; not yet built. |
 
 ---
 
@@ -37,7 +38,7 @@ Status reflected directly from [`docs/UTSAV_MASTER_DOC.md`](docs/UTSAV_MASTER_DO
 * **Database:** Managed PostgreSQL 16 (Singapore region on Render).
 * **AI & LLM Services:** Google Gemini (`gemini-2.0-flash` / `gemini-1.5-flash`) for multimodal ingestion, quotation extraction, and cross-cultural tradition merging, backed by deterministic offline stubs for testing.
 * **Astronomical Engine:** `ephem` (PyEphem) orbital mechanics and solar geometry models with Chitrapaksha (Lahiri) Ayanamsha for deterministic panchang and muhurat windows.
-* **Graphic Generation:** Pure Pillow (PIL) for deterministic 1200×800 mood board collages without generative model dependencies.
+* **Graphic Generation:** Pure Pillow (PIL) for deterministic 1200×800 mood board collages and 1200×1800 personalized invitation cards (PNG + 300 DPI PDF) without generative model dependencies. Official Google Noto Sans Devanagari bundled for Marathi/Hindi typography.
 
 ---
 
