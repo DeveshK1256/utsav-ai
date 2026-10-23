@@ -11,6 +11,12 @@ jobs:
     name: Deterministic & Schema Regression Loop Gate
     runs-on: ubuntu-latest
 
+    env:
+      PYTHONPATH: .
+      DATABASE_URL: sqlite:///./ci_test.db
+      WHATSAPP_PROVIDER: mock
+      ENABLE_M4_WHATSAPP: "false"
+
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
@@ -19,11 +25,13 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+          cache: 'pip'
 
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install pytest jsonschema pydantic
+          pip install -r backend/requirements.txt
+          pip install jsonschema
 
       - name: Run Deterministic Unit Tests
         run: |
