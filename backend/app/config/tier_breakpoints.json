@@ -48,5 +48,55 @@
         "tier_name": "Concert-grade Arena Audio & Laser Grid (500+ guests)"
       }
     ]
+  },
+  "sound_and_lighting": {
+    "default_multiplier": 1.0,
+    "tiers": [
+      {
+        "max_guests": 100,
+        "multiplier": 0.75,
+        "tier_name": "Basic PA & Ambient Truss (up to 100 guests)"
+      },
+      {
+        "max_guests": 250,
+        "multiplier": 1.00,
+        "tier_name": "Standard DJ, Line Array & Moving Heads (101-250 guests)"
+      },
+      {
+        "max_guests": 500,
+        "multiplier": 1.35,
+        "tier_name": "Dual Stage Line Array & Beam Truss (251-500 guests)"
+      },
+      {
+        "max_guests": 10000,
+        "multiplier": 1.70,
+        "tier_name": "Concert-grade Arena Audio & Laser Grid (500+ guests)"
+      }
+    ]
+  },
+  "pandal_and_stage": {
+    "default_multiplier": 1.0,
+    "tiers": [
+      {
+        "max_guests": 150,
+        "multiplier": 0.80,
+        "tier_name": "Community Hall / Society Canopy (up to 150 footfall)"
+      },
+      {
+        "max_guests": 400,
+        "multiplier": 1.00,
+        "tier_name": "Standard Waterproof Pandal & Raised Stage (151-400 footfall)"
+      },
+      {
+        "max_guests": 1000,
+        "multiplier": 1.45,
+        "tier_name": "Grand German Hangar & Carpeted Arena (401-1000 footfall)"
+      },
+      {
+        "max_guests": 25000,
+        "multiplier": 2.10,
+        "tier_name": "Mega Sarvajanik Pandal & Multi-tier Amphitheater (1000+ footfall)"
+      }
+    ]
   }
 }

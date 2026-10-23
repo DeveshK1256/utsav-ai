@@ -43,7 +43,13 @@ class IntakeService:
             ("south_indian_iyer", "Tamil Brahmin Iyer Kalyanam", "Traditional rituals including Vratham, Kasi Yatra, Oonjal, and Kanyadaan."),
             ("marwari_traditional", "Marwari Traditional Vivah", "Royal Marwari rituals with Mudha Tika, Pithi, Tel Baan, and Baraat."),
             ("satyanarayan_puja", "Satyanarayan Vrat Katha", "Sacred home blessing and thanksgiving puja ceremony."),
-            ("community_festival", "Sarvajanik Community Festival", "Public community festival celebration with cultural programs, aarti, and volunteer coordination.")
+            ("community_festival", "Sarvajanik Community Festival", "Public community festival celebration with cultural programs, aarti, and volunteer coordination."),
+            ("birthday_kids_carnival", "Kids Themed Birthday Carnival", "Fun-filled kids birthday celebration with interactive games, magic show, custom cake, and return gifts."),
+            ("birthday_milestone", "Milestone Jubilee Birthday", "Celebration for 18th, 21st, 50th, or 60th birthday with family blessings, toasts, and gala feast."),
+            ("birthday_traditional", "Traditional Vedic Ayushya Homa", "Sacred birthday rituals including Ayushya Homa, Ganapati puja, elder blessings, and satvik meal."),
+            ("community_sarvajanik", "Sarvajanik Utsav & Pandal", "Public festival (Ganesh Utsav / Durga Puja) with murti sthapana, maha aarti, cultural night, and bhandara."),
+            ("community_navratri", "Navratri Garba & Dandiya Mahotsav", "Multi-night folk dance celebration with live orchestra, Dandiya Raas, awards, and prasad."),
+            ("community_society_mela", "Housing Society Cultural Mela", "Residential community gathering with food & game stalls, resident talent show, and society feast.")
         ]
         for code, name, desc in known_traditions:
             if not db.query(Tradition).filter(Tradition.code == code).first():
@@ -87,7 +93,7 @@ class IntakeService:
         db.flush()
 
         # 3. Sub-Events via DAGScheduler
-        sub_event_specs = DAGScheduler.get_sub_events_for_tradition(req.tradition_code, req.start_date)
+        sub_event_specs = DAGScheduler.get_sub_events_for_tradition(req.tradition_code, req.start_date, req.event_type)
         created_sub_events = []
         for spec in sub_event_specs:
             se = SubEvent(
@@ -131,7 +137,7 @@ class IntakeService:
             created_budget_items.append((b_item, alloc["percentage"]))
 
         # 5. Scheduled Tasks via DAGScheduler
-        scheduled_tasks = DAGScheduler.generate_scheduled_tasks(req.start_date)
+        scheduled_tasks = DAGScheduler.generate_scheduled_tasks(req.start_date, req.event_type)
         created_tasks = []
         for t in scheduled_tasks:
             task = Task(

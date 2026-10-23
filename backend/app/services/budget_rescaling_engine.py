@@ -51,9 +51,9 @@ class BudgetRescalingEngine:
         - Per-guest: catering, rentals, wardrobe, logistics, gifts_favors, invitations, contingency
         """
         cat = (category or "").lower().strip()
-        if cat in {"venue", "photography", "entertainment", "rituals", "ritual_priest"}:
+        if cat in {"venue", "photography", "entertainment", "rituals", "ritual_priest", "security_and_permits"}:
             return "fixed"
-        if cat in {"decor", "sound_light", "sound_and_lighting"}:
+        if cat in {"decor", "sound_light", "sound_and_lighting", "pandal_and_stage"}:
             return "tiered"
         return "per_guest"
 

@@ -56,6 +56,15 @@ class BudgetScalingEngine:
             "decor": Decimal("0.10"),
             "contingency": Decimal("0.08")
         },
+        "birthday": {
+            "venue": Decimal("0.20"),
+            "catering": Decimal("0.32"),
+            "decor": Decimal("0.16"),
+            "entertainment": Decimal("0.12"),
+            "cake_and_desserts": Decimal("0.08"),
+            "photography": Decimal("0.06"),
+            "contingency": Decimal("0.06")
+        },
         "milestone_anniversary": {
             "venue": Decimal("0.25"),
             "catering": Decimal("0.35"),
@@ -103,7 +112,21 @@ class BudgetScalingEngine:
 
         tier = cls.resolve_city_tier(city)
         multiplier = cls.get_tier_multiplier(tier)
-        model_key = event_type.lower() if event_type.lower() in cls.ALLOCATION_MODELS else "wedding"
+
+        raw_key = (event_type or "").lower().strip()
+        if raw_key in cls.ALLOCATION_MODELS:
+            model_key = raw_key
+        elif "birthday" in raw_key:
+            model_key = "birthday"
+        elif any(k in raw_key for k in ("community", "festival", "mela", "society", "ganesh", "navratri")):
+            model_key = "community_festival"
+        elif "anniversary" in raw_key:
+            model_key = "milestone_anniversary"
+        elif any(k in raw_key for k in ("puja", "pooja", "havan", "vrat", "griha")):
+            model_key = "puja"
+        else:
+            model_key = "wedding"
+
         allocation_spec = cls.ALLOCATION_MODELS[model_key]
 
         envelope_dec = Decimal(str(total_envelope))

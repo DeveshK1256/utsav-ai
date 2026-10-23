@@ -159,3 +159,50 @@ def test_database_url_normalization_to_postgresql():
     assert Settings.assemble_db_connection("postgres://user:pass@host/db") == "postgresql://user:pass@host/db"
     assert Settings.assemble_db_connection("postgresql+psycopg://user:pass@host/db") == "postgresql://user:pass@host/db"
     assert Settings.assemble_db_connection("sqlite:///./test.db") == "sqlite:///./test.db"
+
+
+def test_birthday_budget_allocation_and_dag_tasks():
+    from backend.app.services.dag_scheduler import DAGScheduler
+    from datetime import date
+
+    envelope = 250000.0  # ₹2.5 Lakhs
+    items = BudgetScalingEngine.compute_budget_allocation(envelope, "birthday", "mumbai", 75)
+    cats = {i["category"]: i["planned_amount"] for i in items}
+    
+    # Assert birthday categories present
+    assert "cake_and_desserts" in cats
+    assert "entertainment" in cats
+    assert "catering" in cats
+    assert "venue" in cats
+    assert abs(sum(cats.values()) - envelope) < 0.01
+
+    # Assert birthday DAG tasks generated with zero cycles
+    tasks = DAGScheduler.generate_scheduled_tasks(date(2027, 5, 20), event_type="birthday")
+    assert len(tasks) >= 7
+    titles = [t["title"] for t in tasks]
+    assert any("Cake" in t for t in titles)
+    assert any("Entertainer" in t or "Magician" in t for t in titles)
+
+
+def test_community_festival_budget_allocation_and_dag_tasks():
+    from backend.app.services.dag_scheduler import DAGScheduler
+    from datetime import date
+
+    envelope = 800000.0  # ₹8 Lakhs
+    items = BudgetScalingEngine.compute_budget_allocation(envelope, "community_festival", "jaipur", 600)
+    cats = {i["category"]: i["planned_amount"] for i in items}
+
+    # Assert community festival categories present
+    assert "pandal_and_stage" in cats
+    assert "prasad_and_food" in cats
+    assert "sound_and_lighting" in cats
+    assert "security_and_permits" in cats
+    assert abs(sum(cats.values()) - (envelope * 0.68)) < 0.05  # Jaipur is tier 2 (0.68x)
+
+    # Assert community DAG tasks generated with zero cycles
+    tasks = DAGScheduler.generate_scheduled_tasks(date(2027, 9, 10), event_type="community_festival")
+    assert len(tasks) >= 7
+    titles = [t["title"] for t in tasks]
+    assert any("Pandal" in t for t in titles)
+    assert any("NOC" in t or "Permission" in t for t in titles)
+    assert any("Prasad" in t or "Ration" in t for t in titles)

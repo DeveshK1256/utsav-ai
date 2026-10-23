@@ -74,6 +74,233 @@ class DAGScheduler:
                 "venue_type": "Royal Palace Lawn"
             }
         ],
+        "birthday_kids_carnival": [
+            {
+                "key": "welcome_and_games",
+                "name": "Guest Arrival, Welcome Drinks & Tattoo Station",
+                "day_offset": 0,
+                "start_time_hour": 16,
+                "duration_hours": 2,
+                "is_outdoor": False,
+                "is_muhurat_locked": False,
+                "venue_type": "Themed Party Hall / Play Zone"
+            },
+            {
+                "key": "magic_and_entertainment",
+                "name": "Magic Show, Mascot & Interactive Party Games",
+                "day_offset": 0,
+                "start_time_hour": 18,
+                "duration_hours": 2,
+                "is_outdoor": False,
+                "is_muhurat_locked": False,
+                "venue_type": "Center Stage & Activity Arena"
+            },
+            {
+                "key": "cake_cutting",
+                "name": "Grand Cake Cutting & Birthday Song",
+                "day_offset": 0,
+                "start_time_hour": 20,
+                "duration_hours": 1,
+                "is_outdoor": False,
+                "is_muhurat_locked": True,
+                "muhurat_notes": "Prime celebration spotlight & photography moment",
+                "venue_type": "Theme Backdrop & Cake Table"
+            },
+            {
+                "key": "kids_buffet_and_favors",
+                "name": "Kids & Family Feast & Return Gift Distribution",
+                "day_offset": 0,
+                "start_time_hour": 21,
+                "duration_hours": 2,
+                "is_outdoor": False,
+                "is_muhurat_locked": False,
+                "venue_type": "Dining Lounge & Hospitality Desk"
+            }
+        ],
+        "birthday_milestone": [
+            {
+                "key": "family_blessing",
+                "name": "Ayushya Homa & Family Blessings",
+                "day_offset": 0,
+                "start_time_hour": 9,
+                "duration_hours": 3,
+                "is_outdoor": False,
+                "is_muhurat_locked": True,
+                "muhurat_notes": "Auspicious morning muhurat window for long life & health",
+                "venue_type": "Puja Mandap & Prayer Hall"
+            },
+            {
+                "key": "jubilee_lunch",
+                "name": "Festive Family Lunch & Memory Walk",
+                "day_offset": 0,
+                "start_time_hour": 13,
+                "duration_hours": 3,
+                "is_outdoor": False,
+                "is_muhurat_locked": False,
+                "venue_type": "Banquet Dining Hall"
+            },
+            {
+                "key": "evening_gala",
+                "name": "Evening Jubilee Gala, Toasting & Live Music",
+                "day_offset": 0,
+                "start_time_hour": 19,
+                "duration_hours": 4,
+                "is_outdoor": True,
+                "is_muhurat_locked": False,
+                "venue_type": "Rooftop Garden / Grand Terrace"
+            }
+        ],
+        "birthday_traditional": [
+            {
+                "key": "ayushya_homa",
+                "name": "Vedic Ayushya Homa & Ganapati Puja",
+                "day_offset": 0,
+                "start_time_hour": 8,
+                "duration_hours": 3,
+                "is_outdoor": False,
+                "is_muhurat_locked": True,
+                "muhurat_notes": "Sunrise solar alignment for longevity mantras",
+                "venue_type": "Traditional Mandap"
+            },
+            {
+                "key": "elder_blessings",
+                "name": "Elder Blessings, Aarti & Tilak Ceremony",
+                "day_offset": 0,
+                "start_time_hour": 11,
+                "duration_hours": 2,
+                "is_outdoor": False,
+                "is_muhurat_locked": False,
+                "venue_type": "Main Ancestral Hall"
+            },
+            {
+                "key": "traditional_feast",
+                "name": "Satvik Banana Leaf Feast (Pankat)",
+                "day_offset": 0,
+                "start_time_hour": 13,
+                "duration_hours": 3,
+                "is_outdoor": False,
+                "is_muhurat_locked": False,
+                "venue_type": "Dining Hall"
+            }
+        ],
+        "community_sarvajanik": [
+            {
+                "key": "prana_pratishtha",
+                "name": "Pandal Inauguration, Murti Sthapana & Prana Pratishtha",
+                "day_offset": 0,
+                "start_time_hour": 8,
+                "duration_hours": 3,
+                "is_outdoor": False,
+                "is_muhurat_locked": True,
+                "muhurat_notes": "Auspicious Vedic Prana Pratishtha muhurat window",
+                "venue_type": "Main Sanctum Pandal"
+            },
+            {
+                "key": "maha_aarti",
+                "name": "Maha Sandhya Aarti & Dhol Tasha Procession",
+                "day_offset": 0,
+                "start_time_hour": 19,
+                "duration_hours": 3,
+                "is_outdoor": True,
+                "is_muhurat_locked": False,
+                "venue_type": "Utsav Stage & Courtyard"
+            },
+            {
+                "key": "cultural_program",
+                "name": "Resident Talent Showcase & Folk Dance Competition",
+                "day_offset": 1,
+                "start_time_hour": 18,
+                "duration_hours": 4,
+                "is_outdoor": False,
+                "is_muhurat_locked": False,
+                "venue_type": "Main Stage Amphitheater"
+            },
+            {
+                "key": "mahaprasad_bhandara",
+                "name": "Community Mahaprasad / Annadan Bhandara",
+                "day_offset": 2,
+                "start_time_hour": 11,
+                "duration_hours": 4,
+                "is_outdoor": True,
+                "is_muhurat_locked": False,
+                "venue_type": "Prasad Distribution Pavilion"
+            },
+            {
+                "key": "visarjan_procession",
+                "name": "Grand Visarjan Shobhayatra & Procession",
+                "day_offset": 2,
+                "start_time_hour": 16,
+                "duration_hours": 5,
+                "is_outdoor": True,
+                "is_muhurat_locked": False,
+                "venue_type": "Procession Route & Riverfront"
+            }
+        ],
+        "community_navratri": [
+            {
+                "key": "ghatasthapana",
+                "name": "Maa Durga Ghatasthapana & Opening Aarti",
+                "day_offset": 0,
+                "start_time_hour": 18,
+                "duration_hours": 2,
+                "is_outdoor": False,
+                "is_muhurat_locked": True,
+                "muhurat_notes": "Navratri Day 1 auspicious twilight puja",
+                "venue_type": "Garba Mandap Temple"
+            },
+            {
+                "key": "dandiya_raas",
+                "name": "Traditional Dandiya Raas & Mega Garba Night",
+                "day_offset": 0,
+                "start_time_hour": 20,
+                "duration_hours": 4,
+                "is_outdoor": True,
+                "is_muhurat_locked": False,
+                "venue_type": "Central Illuminated Garba Arena"
+            },
+            {
+                "key": "awards_and_prasad",
+                "name": "Midnight Aarti, Attire Awards & Prasad Distribution",
+                "day_offset": 0,
+                "start_time_hour": 23,
+                "duration_hours": 1,
+                "is_outdoor": False,
+                "is_muhurat_locked": False,
+                "venue_type": "Main Stage"
+            }
+        ],
+        "community_society_mela": [
+            {
+                "key": "mela_opening",
+                "name": "Society Carnival Opening & Food/Game Stalls Live",
+                "day_offset": 0,
+                "start_time_hour": 16,
+                "duration_hours": 3,
+                "is_outdoor": True,
+                "is_muhurat_locked": False,
+                "venue_type": "Society Clubhouse Grounds"
+            },
+            {
+                "key": "musical_tambola",
+                "name": "Resident Talent Showcase & Musical Tambola Night",
+                "day_offset": 0,
+                "start_time_hour": 19,
+                "duration_hours": 3,
+                "is_outdoor": False,
+                "is_muhurat_locked": False,
+                "venue_type": "Clubhouse Auditorium"
+            },
+            {
+                "key": "society_dinner",
+                "name": "Community Potluck Dinner & Lantern Lighting",
+                "day_offset": 0,
+                "start_time_hour": 21,
+                "duration_hours": 3,
+                "is_outdoor": True,
+                "is_muhurat_locked": False,
+                "venue_type": "Central Lawn Promenade"
+            }
+        ],
         "default": [
             {
                 "key": "welcome_evening",
@@ -120,9 +347,42 @@ class DAGScheduler:
         TaskNode("vendor_call_sheet", "Issue Day-of Vendor Run-of-Show Call Sheet", 60, -2, "Day-of Director", dependencies=["mandap_rigging", "caterer_menu", "sound_permits"])
     ]
 
+    BIRTHDAY_TASKS = [
+        TaskNode("bday_venue", "Reserve Birthday Party Hall / Clubhouse / Play Zone", 90, -30, "Host", dependencies=[]),
+        TaskNode("bday_theme_decor", "Finalize Birthday Theme, Balloon Arches & Backdrop Specs", 120, -21, "Decor Lead", dependencies=["bday_venue"]),
+        TaskNode("bday_cake", "Order Custom Themed Birthday Cake & Dessert Spread", 60, -14, "Host", dependencies=["bday_theme_decor"]),
+        TaskNode("bday_entertainer", "Book Magician, Game Host/Emcee & Tattoo Artist", 60, -14, "Entertainment Lead", dependencies=["bday_venue"]),
+        TaskNode("bday_catering", "Finalize Kids & Adults Party Finger-Food Buffet Menu", 60, -10, "Food & Beverage Lead", dependencies=["bday_venue"]),
+        TaskNode("bday_gifts", "Procure Personalized Return Gifts & Party Favors", 60, -7, "Host", dependencies=["bday_theme_decor"]),
+        TaskNode("bday_invites", "Send Digital WhatsApp Birthday Invitations & Track RSVPs", 45, -7, "Host", dependencies=["bday_venue"]),
+        TaskNode("bday_run_of_show", "Assemble Day-of Party Timeline & Music Playlist", 45, -2, "Host", dependencies=["bday_cake", "bday_entertainer"])
+    ]
+
+    COMMUNITY_TASKS = [
+        TaskNode("comm_permits_noc", "Obtain Municipal Ward Pandal Permission, Police & Traffic NOC", 120, -45, "Permits Liaison", dependencies=[]),
+        TaskNode("comm_pandal_stage", "Contract Pandal Fabricator, Stage & German Hangar Tent", 180, -30, "Logistics Lead", dependencies=["comm_permits_noc"]),
+        TaskNode("comm_sound_generator", "Contract Line-Array Sound, Diesel Genset & Fire Safety Gear", 90, -21, "Technical Lead", dependencies=["comm_permits_noc"]),
+        TaskNode("comm_prasad_rations", "Procure Mahaprasad Rations, Cooking Team & Eco-Friendly Plates", 120, -14, "Food & Prasad Lead", dependencies=["comm_pandal_stage"]),
+        TaskNode("comm_volunteer_corps", "Organize Volunteer Rosters for Crowd Control & Queue Management", 90, -10, "Volunteer Captain", dependencies=["comm_permits_noc"]),
+        TaskNode("comm_dignitary_invites", "Issue VIP & Resident Society Cultural Invitations", 60, -7, "Secretary", dependencies=["comm_permits_noc"]),
+        TaskNode("comm_security_cctv", "Install CCTV Surveillance, Metal Detectors & First Aid Booth", 120, -3, "Security Lead", dependencies=["comm_pandal_stage"]),
+        TaskNode("comm_sound_dry_run", "Conduct Pre-Event Dry Run & Sound Level Decibel Check", 60, -1, "Festival Director", dependencies=["comm_sound_generator", "comm_security_cctv"])
+    ]
+
     @classmethod
-    def get_sub_events_for_tradition(cls, tradition_code: str, start_date_val: date) -> List[Dict[str, Any]]:
-        template = cls.SUB_EVENT_TEMPLATES.get(tradition_code.lower(), cls.SUB_EVENT_TEMPLATES["default"])
+    def get_sub_events_for_tradition(cls, tradition_code: str, start_date_val: date, event_type: str = "wedding") -> List[Dict[str, Any]]:
+        t_key = (tradition_code or "").lower()
+        e_key = (event_type or "").lower()
+
+        if t_key in cls.SUB_EVENT_TEMPLATES:
+            template = cls.SUB_EVENT_TEMPLATES[t_key]
+        elif "birthday" in e_key or "birthday" in t_key:
+            template = cls.SUB_EVENT_TEMPLATES.get("birthday_kids_carnival")
+        elif any(k in e_key or k in t_key for k in ("community", "festival", "mela", "society", "ganesh", "navratri")):
+            template = cls.SUB_EVENT_TEMPLATES.get("community_sarvajanik")
+        else:
+            template = cls.SUB_EVENT_TEMPLATES.get(e_key, cls.SUB_EVENT_TEMPLATES["default"])
+
         result = []
         for idx, item in enumerate(template):
             sub_date = start_date_val + timedelta(days=item["day_offset"])
@@ -172,12 +432,20 @@ class DAGScheduler:
         return False
 
     @classmethod
-    def generate_scheduled_tasks(cls, start_date_val: date) -> List[Dict[str, Any]]:
-        if cls.check_cycles(cls.FOUNDATION_TASKS):
-            raise ValueError("Circular dependency detected in foundation task DAG")
+    def generate_scheduled_tasks(cls, start_date_val: date, event_type: str = "wedding") -> List[Dict[str, Any]]:
+        e_key = (event_type or "").lower()
+        if "birthday" in e_key:
+            task_nodes = cls.BIRTHDAY_TASKS
+        elif any(k in e_key for k in ("community", "festival", "mela", "society", "ganesh", "navratri")):
+            task_nodes = cls.COMMUNITY_TASKS
+        else:
+            task_nodes = cls.FOUNDATION_TASKS
+
+        if cls.check_cycles(task_nodes):
+            raise ValueError(f"Circular dependency detected in {event_type} task DAG")
 
         scheduled = []
-        for task in cls.FOUNDATION_TASKS:
+        for task in task_nodes:
             task_date = start_date_val + timedelta(days=task.offset_days)
             task_start = datetime.combine(task_date, time(10, 0), tzinfo=timezone.utc)
             task_end = task_start + timedelta(minutes=task.duration_minutes)

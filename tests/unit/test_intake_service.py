@@ -90,3 +90,65 @@ def test_intake_service_generates_complete_master_plan(db_session):
 
     # Check that at least one sub-event is marked muhurat locked
     assert any(se.is_muhurat_locked for se in plan.sub_events)
+
+
+def test_intake_service_generates_birthday_master_plan(db_session):
+    payload = IntakeRequestSchema(
+        name="Aarav's 5th Birthday Carnival",
+        host_name="Pooja Sharma",
+        phone_number="+91 98111 22334",
+        event_type="birthday",
+        tradition_code="birthday_kids_carnival",
+        guest_count=80,
+        total_budget=200000.0,
+        city="Mumbai",
+        pincode="400001",
+        start_date=date(2027, 4, 15),
+        end_date=date(2027, 4, 15)
+    )
+
+    plan = IntakeService.generate_master_plan(db_session, payload)
+
+    assert plan.event_id is not None
+    assert plan.owner_name == "Pooja Sharma"
+    # Check sub-events include cake cutting
+    sub_names = [se.name for se in plan.sub_events]
+    assert any("Cake" in s for s in sub_names)
+    # Check budget includes cake_and_desserts & entertainment
+    bud_cats = [b.category for b in plan.budget_breakdown]
+    assert "cake_and_desserts" in bud_cats
+    assert "entertainment" in bud_cats
+    # Check tasks include birthday-specific tasks
+    task_titles = [t.title for t in plan.tasks]
+    assert any("Cake" in t for t in task_titles)
+
+
+def test_intake_service_generates_community_festival_master_plan(db_session):
+    payload = IntakeRequestSchema(
+        name="Sarvajanik Ganeshotsav Utsav",
+        host_name="Mandar Deshmukh",
+        phone_number="+91 98222 33445",
+        event_type="community_festival",
+        tradition_code="community_sarvajanik",
+        guest_count=1200,
+        total_budget=1000000.0,
+        city="Pune",
+        pincode="411030",
+        start_date=date(2027, 9, 10),
+        end_date=date(2027, 9, 12)
+    )
+
+    plan = IntakeService.generate_master_plan(db_session, payload)
+
+    assert plan.event_id is not None
+    # Check sub-events include aarti & visarjan
+    sub_names = [se.name for se in plan.sub_events]
+    assert any("Aarti" in s for s in sub_names)
+    assert any("Prasad" in s or "Bhandara" in s for s in sub_names)
+    # Check budget includes pandal_and_stage & security_and_permits
+    bud_cats = [b.category for b in plan.budget_breakdown]
+    assert "pandal_and_stage" in bud_cats
+    assert "security_and_permits" in bud_cats
+    # Check tasks include municipal permission/NOC
+    task_titles = [t.title for t in plan.tasks]
+    assert any("NOC" in t or "Permission" in t for t in task_titles)
