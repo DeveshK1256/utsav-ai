@@ -74,6 +74,371 @@ class DAGScheduler:
                 "venue_type": "Royal Palace Lawn"
             }
         ],
+        "punjabi_traditional": [
+            {
+                "key": "maiyan_vatna",
+                "name": "Maiyan & Vatna Ceremony",
+                "day_offset": 0,
+                "start_time_hour": 15,
+                "duration_hours": 3,
+                "is_outdoor": True,
+                "is_muhurat_locked": False,
+                "venue_type": "Courtyard / Terrace"
+            },
+            {
+                "key": "jaggo_sangeet",
+                "name": "Jaggo Night & Sangeet Celebration",
+                "day_offset": 0,
+                "start_time_hour": 19,
+                "duration_hours": 5,
+                "is_outdoor": False,
+                "is_muhurat_locked": False,
+                "venue_type": "Grand Ballroom"
+            },
+            {
+                "key": "chooda_milni",
+                "name": "Chooda & Milni Welcoming",
+                "day_offset": 1,
+                "start_time_hour": 9,
+                "duration_hours": 2,
+                "is_outdoor": True,
+                "is_muhurat_locked": False,
+                "venue_type": "Entrance Promenade"
+            },
+            {
+                "key": "anand_karaj_laavan",
+                "name": "Anand Karaj & 4 Laavan Pheras",
+                "day_offset": 1,
+                "start_time_hour": 11,
+                "duration_hours": 3,
+                "is_outdoor": False,
+                "is_muhurat_locked": True,
+                "muhurat_notes": "Holy Anand Karaj recitation in Gurdwara / Darbar hall",
+                "venue_type": "Gurdwara / Sacred Darbar Hall"
+            },
+            {
+                "key": "doli_reception",
+                "name": "Doli Send-off & Grand Reception",
+                "day_offset": 1,
+                "start_time_hour": 19,
+                "duration_hours": 5,
+                "is_outdoor": False,
+                "is_muhurat_locked": False,
+                "venue_type": "Imperial Lawn Banquet"
+            }
+        ],
+        "bengali_vedic": [
+            {
+                "key": "gaye_holud",
+                "name": "Gaye Holud & Tatta Presentation",
+                "day_offset": 0,
+                "start_time_hour": 11,
+                "duration_hours": 4,
+                "is_outdoor": True,
+                "is_muhurat_locked": False,
+                "venue_type": "Courtyard Pavilion"
+            },
+            {
+                "key": "bor_jatri_boron",
+                "name": "Bor Jatri Welcoming & Boron Dala",
+                "day_offset": 1,
+                "start_time_hour": 18,
+                "duration_hours": 2,
+                "is_outdoor": True,
+                "is_muhurat_locked": False,
+                "venue_type": "Floral Entrance Arch"
+            },
+            {
+                "key": "saat_paake_ghomar",
+                "name": "Saat Paake Ghomar, Shubho Drishti & Mala Badal",
+                "day_offset": 1,
+                "start_time_hour": 20,
+                "duration_hours": 2,
+                "is_outdoor": False,
+                "is_muhurat_locked": True,
+                "muhurat_notes": "Auspicious dusk Lagna muhurat window for Shubho Drishti",
+                "venue_type": "Traditional Chhandnatala Mandap"
+            },
+            {
+                "key": "sampradan_saptapadi",
+                "name": "Sampradan, Saptapadi & Sindoor Daan",
+                "day_offset": 1,
+                "start_time_hour": 22,
+                "duration_hours": 3,
+                "is_outdoor": False,
+                "is_muhurat_locked": True,
+                "muhurat_notes": "Sacred fire Kusumdinge oblations and Sindoor Daan",
+                "venue_type": "Vedic Vivaha Mandap"
+            },
+            {
+                "key": "bou_bhat_reception",
+                "name": "Bou Bhat & Evening Reception",
+                "day_offset": 2,
+                "start_time_hour": 19,
+                "duration_hours": 4,
+                "is_outdoor": False,
+                "is_muhurat_locked": False,
+                "venue_type": "Grand Banquet Hall"
+            }
+        ],
+        "tamil_brahmin_hindu": [
+            {
+                "key": "vratham",
+                "name": "Vratham & Sumangali Prarthanai",
+                "day_offset": 0,
+                "start_time_hour": 8,
+                "duration_hours": 3,
+                "is_outdoor": False,
+                "is_muhurat_locked": True,
+                "muhurat_notes": "Morning Vratham vow rites with sacred Darbha grass",
+                "venue_type": "Kalyana Mandapam Shrine"
+            },
+            {
+                "key": "jaanavasam_oonjal",
+                "name": "Jaanavasam (Kasi Yatra) & Oonjal Swing",
+                "day_offset": 0,
+                "start_time_hour": 17,
+                "duration_hours": 4,
+                "is_outdoor": True,
+                "is_muhurat_locked": False,
+                "venue_type": "Oonjal Swing Courtyard"
+            },
+            {
+                "key": "mangalya_dharanam",
+                "name": "Kanyadaanam & Mangalya Dharanam",
+                "day_offset": 1,
+                "start_time_hour": 8,
+                "duration_hours": 3,
+                "is_outdoor": False,
+                "is_muhurat_locked": True,
+                "muhurat_notes": "Sacred Muhurtam for tying 3 knots of Thali / Mangalyam",
+                "venue_type": "Main Vivaha Mandapam"
+            },
+            {
+                "key": "saptapadi_nalangu",
+                "name": "Saptapadi & Playful Nalangu Games",
+                "day_offset": 1,
+                "start_time_hour": 11,
+                "duration_hours": 3,
+                "is_outdoor": False,
+                "is_muhurat_locked": False,
+                "venue_type": "Mandapam Stage"
+            },
+            {
+                "key": "traditional_reception",
+                "name": "Carnatic Concert & Evening Reception",
+                "day_offset": 1,
+                "start_time_hour": 18,
+                "duration_hours": 4,
+                "is_outdoor": False,
+                "is_muhurat_locked": False,
+                "venue_type": "Royal Kalyana Hall"
+            }
+        ],
+        "gujarati_hindu": [
+            {
+                "key": "mandap_mahurat",
+                "name": "Mandap Mahurat & Grah Shanti",
+                "day_offset": 0,
+                "start_time_hour": 9,
+                "duration_hours": 4,
+                "is_outdoor": False,
+                "is_muhurat_locked": True,
+                "muhurat_notes": "Grah Shanti planetary invocation with Samidha wood",
+                "venue_type": "Puja Mandap"
+            },
+            {
+                "key": "pithi_mameru",
+                "name": "Pithi Cleansing & Mosalu / Mameru",
+                "day_offset": 0,
+                "start_time_hour": 15,
+                "duration_hours": 3,
+                "is_outdoor": True,
+                "is_muhurat_locked": False,
+                "venue_type": "Courtyard Pavilion"
+            },
+            {
+                "key": "sangeet_garba",
+                "name": "Grand Sanedo Sangeet & Dandiya Night",
+                "day_offset": 0,
+                "start_time_hour": 19,
+                "duration_hours": 5,
+                "is_outdoor": True,
+                "is_muhurat_locked": False,
+                "venue_type": "Central Illuminated Garba Lawn"
+            },
+            {
+                "key": "pokhana_jaimala",
+                "name": "Jaan Arrival, Pokhana Welcome & Jaimala",
+                "day_offset": 1,
+                "start_time_hour": 10,
+                "duration_hours": 2,
+                "is_outdoor": True,
+                "is_muhurat_locked": False,
+                "venue_type": "Mandap Gateway"
+            },
+            {
+                "key": "mangal_pheras",
+                "name": "Hastamelap, 4 Mangal Pheras & Coda Codi",
+                "day_offset": 1,
+                "start_time_hour": 12,
+                "duration_hours": 3,
+                "is_outdoor": False,
+                "is_muhurat_locked": True,
+                "muhurat_notes": "4 Pheras representing Dharma, Artha, Kama, Moksha",
+                "venue_type": "Central Vivah Mandap"
+            },
+            {
+                "key": "gujarati_reception",
+                "name": "Gala Dinner & Reception",
+                "day_offset": 1,
+                "start_time_hour": 19,
+                "duration_hours": 4,
+                "is_outdoor": True,
+                "is_muhurat_locked": False,
+                "venue_type": "Lawn Ballroom"
+            }
+        ],
+        "muslim_nikah": [
+            {
+                "key": "manjha_mehndi",
+                "name": "Manjha (Haldi) & Rasm-e-Heena",
+                "day_offset": 0,
+                "start_time_hour": 16,
+                "duration_hours": 4,
+                "is_outdoor": True,
+                "is_muhurat_locked": False,
+                "venue_type": "Mughal Garden Terrace"
+            },
+            {
+                "key": "baraat_istiqbal",
+                "name": "Baraat Arrival & Royal Istiqbal Welcome",
+                "day_offset": 1,
+                "start_time_hour": 18,
+                "duration_hours": 2,
+                "is_outdoor": True,
+                "is_muhurat_locked": False,
+                "venue_type": "Grand Portico Gateway"
+            },
+            {
+                "key": "nikah_ceremony",
+                "name": "Nikah Ceremony, Khutbah & Ijab-o-Qubool",
+                "day_offset": 1,
+                "start_time_hour": 20,
+                "duration_hours": 2,
+                "is_outdoor": False,
+                "is_muhurat_locked": True,
+                "muhurat_notes": "Auspicious evening Waqt for Nikahnama signing and Mehr settlement",
+                "venue_type": "Draped Nikah Diwan Hall"
+            },
+            {
+                "key": "arsi_mushaf_rukhsati",
+                "name": "Arsi Mushaf Reflection & Rukhsati Send-off",
+                "day_offset": 1,
+                "start_time_hour": 22,
+                "duration_hours": 2,
+                "is_outdoor": False,
+                "is_muhurat_locked": False,
+                "venue_type": "Main Stage Diwan"
+            },
+            {
+                "key": "walima_reception",
+                "name": "Grand Walima Feast & Reception",
+                "day_offset": 2,
+                "start_time_hour": 19,
+                "duration_hours": 4,
+                "is_outdoor": False,
+                "is_muhurat_locked": False,
+                "venue_type": "Crystal Ballroom"
+            }
+        ],
+        "christian_traditional": [
+            {
+                "key": "roce_blessing",
+                "name": "Roce Coconut Milk Blessing Bath",
+                "day_offset": 0,
+                "start_time_hour": 17,
+                "duration_hours": 3,
+                "is_outdoor": True,
+                "is_muhurat_locked": False,
+                "venue_type": "Ancestral Villa Lawn"
+            },
+            {
+                "key": "nuptial_mass",
+                "name": "Church Nuptial Mass & Holy Matrimony",
+                "day_offset": 1,
+                "start_time_hour": 11,
+                "duration_hours": 2,
+                "is_outdoor": False,
+                "is_muhurat_locked": True,
+                "muhurat_notes": "Solemn Church liturgy with consent of vows, exchange of rings & Minnu",
+                "venue_type": "Parish Church / Cathedral"
+            },
+            {
+                "key": "bridal_toast_reception",
+                "name": "Grand Reception, Cake Cutting & First Dance",
+                "day_offset": 1,
+                "start_time_hour": 18,
+                "duration_hours": 6,
+                "is_outdoor": False,
+                "is_muhurat_locked": False,
+                "venue_type": "Grand Country Club Ballroom"
+            }
+        ],
+        "telugu_hindu": [
+            {
+                "key": "pellikuthuru_snathakam",
+                "name": "Pellikuthuru & Snathakam Ceremony",
+                "day_offset": 0,
+                "start_time_hour": 8,
+                "duration_hours": 4,
+                "is_outdoor": False,
+                "is_muhurat_locked": True,
+                "muhurat_notes": "Auspicious morning Mangala Snanam and Snathakam rites",
+                "venue_type": "Courtyard Mandapam"
+            },
+            {
+                "key": "kasi_yatra_sangeet",
+                "name": "Kasi Yatra & Cultural Sangeet Night",
+                "day_offset": 0,
+                "start_time_hour": 18,
+                "duration_hours": 4,
+                "is_outdoor": False,
+                "is_muhurat_locked": False,
+                "venue_type": "Banquet Hall"
+            },
+            {
+                "key": "jeelakarra_bellam",
+                "name": "Jeelakarra Bellam & Kanyadanam",
+                "day_offset": 1,
+                "start_time_hour": 9,
+                "duration_hours": 2,
+                "is_outdoor": False,
+                "is_muhurat_locked": True,
+                "muhurat_notes": "Exact astronomical fraction of a second for Jeelakarra Bellam placement",
+                "venue_type": "Central Kalyana Mandapam"
+            },
+            {
+                "key": "mangalsutra_talambralu",
+                "name": "Mangalsutra Dharana & Talambralu Shower",
+                "day_offset": 1,
+                "start_time_hour": 11,
+                "duration_hours": 3,
+                "is_outdoor": False,
+                "is_muhurat_locked": False,
+                "venue_type": "Vivaha Stage"
+            },
+            {
+                "key": "telugu_reception",
+                "name": "Grand Kalyanam Dinner Reception",
+                "day_offset": 1,
+                "start_time_hour": 19,
+                "duration_hours": 4,
+                "is_outdoor": True,
+                "is_muhurat_locked": False,
+                "venue_type": "Royal Palace Lawn"
+            }
+        ],
         "birthday_kids_carnival": [
             {
                 "key": "welcome_and_games",
@@ -518,3 +883,84 @@ class DAGScheduler:
                 "formula": f"Event date moved: shifted by {days_delta:+d} days (Muhurat lock: {'Preserved' if is_muhurat_locked else 'Standard'})"
             })
         return diffs
+
+    @classmethod
+    def generate_ritual_samagri_tasks(
+        cls,
+        start_date_val: date,
+        tradition_code: str,
+        secondary_tradition_code: Optional[str] = None,
+        db: Optional[Any] = None
+    ) -> List[Dict[str, Any]]:
+        """
+        Generates structured preparation and procurement tasks for ritual samagri,
+        anchored into the DAG schedule prior to event start.
+        """
+        items = []
+        if db:
+            from backend.app.models.models import RitualItem
+            codes = [c for c in [tradition_code, secondary_tradition_code] if c]
+            db_items = db.query(RitualItem).filter(RitualItem.tradition_code.in_(codes)).all()
+            for i in db_items:
+                items.append({
+                    "item_name": i.item_name,
+                    "regional_name": i.regional_name,
+                    "standard_quantity": i.standard_quantity,
+                    "ritual_name": i.ritual_name or "Puja Vidhi",
+                    "category": i.category or "puja_samagri",
+                    "spiritual_purpose": i.spiritual_purpose or "Sacred ceremonial element",
+                    "tradition_code": i.tradition_code,
+                })
+
+        if not items:
+            from backend.app.db.seed_traditions import CURATED_TRADITIONS
+            codes = {tradition_code}
+            if secondary_tradition_code:
+                codes.add(secondary_tradition_code)
+            for t in CURATED_TRADITIONS:
+                if t["code"] in codes:
+                    for name, reg, qty, cat, purp, rit in t["items"]:
+                        items.append({
+                            "item_name": name,
+                            "regional_name": reg,
+                            "standard_quantity": qty,
+                            "ritual_name": rit,
+                            "category": cat,
+                            "spiritual_purpose": purp,
+                            "tradition_code": t["code"],
+                        })
+
+        tasks = []
+        rituals_grouped: Dict[str, List[Dict[str, Any]]] = {}
+        for it in items:
+            rit = it.get("ritual_name") or "Main Sacred Ceremony"
+            if rit not in rituals_grouped:
+                rituals_grouped[rit] = []
+            rituals_grouped[rit].append(it)
+
+        for idx, (rit_name, group_items) in enumerate(rituals_grouped.items()):
+            offset = -1 if idx % 2 == 0 else -2
+            task_date = start_date_val + timedelta(days=offset)
+            task_start = datetime.combine(task_date, time(9 + (idx % 4), 0), tzinfo=timezone.utc)
+            task_end = task_start + timedelta(minutes=90)
+
+            item_list_str = "; ".join([f"{it['item_name']} ({it['standard_quantity']})" for it in group_items[:4]])
+            if len(group_items) > 4:
+                item_list_str += f"; and {len(group_items) - 4} more items"
+
+            tasks.append({
+                "title": f"Procure Ritual Samagri: {rit_name}",
+                "description": (
+                    f"Checklist verification and procurement for {rit_name}. "
+                    f"Items include: {item_list_str}. "
+                    f"Review quantities with family Panditji / priest before final purchase."
+                ),
+                "status": "pending",
+                "scheduled_start": task_start,
+                "scheduled_end": task_end,
+                "duration_minutes": 90,
+                "dependency_task_ids": ["task-vendor-intake"],
+                "assigned_role": "Family Elder / Ritual Lead"
+            })
+
+        return tasks

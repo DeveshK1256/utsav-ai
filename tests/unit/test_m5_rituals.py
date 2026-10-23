@@ -1,17 +1,17 @@
 """
 Unit tests for Milestone M5 - F2 Cultural & Ritual Intelligence.
-Tests astronomical panchang provider (DEC-027), curated tradition validation,
-multi-tradition fusion merge agent, and priest-guide generation.
+Tests astronomical panchang provider (DEC-027), 8 curated traditions validation,
+spec acceptance scenario: Maharashtrian x Punjabi fusion merge,
+ritual task generation via DAG scheduler, and candidate muhurat windows.
 """
 
 from datetime import date
 import pytest
 from fastapi.testclient import TestClient
 from backend.app.main import app
-from backend.app.services.panchang_service import default_panchang_provider, EphemPanchangProvider
-from backend.app.services.tradition_merge_service import TraditionMergeService
+from backend.app.services.panchang_service import default_panchang_provider
 from backend.app.db.session import SessionLocal
-from backend.app.models.models import Tradition, RitualItem, Event, User
+from backend.app.models.models import Tradition, RitualItem, Event, User, Task
 
 
 @pytest.fixture(scope="module")
@@ -59,7 +59,6 @@ def test_ephem_panchang_provider_deterministic_delhi():
 
 def test_ephem_panchang_provider_wednesday_abhijit_caution():
     """Verifies that Wednesday calculates Abhijit with traditional caution note."""
-    # 2024-04-17 was a Wednesday (Ram Navami)
     test_date = date(2024, 4, 17)
     res = default_panchang_provider.calculate_panchang(
         event_date=test_date,
@@ -83,28 +82,31 @@ def test_panchang_api_bounds_validation(client):
     assert "Latitude must be in [-90, 90]" in resp.json()["detail"]
 
 
-def test_curated_traditions_verification_flags(client):
-    """Verifies that curated traditions are explicitly marked verified or unverified with sources."""
+def test_all_8_curated_traditions_per_spec(client):
+    """Verifies that all 8 traditions from original spec exist and have verified flags set."""
     resp = client.get("/api/v1/rituals/traditions")
     assert resp.status_code == 200
     data = resp.json()
-    assert len(data) >= 8
+
+    codes = {t["code"] for t in data}
+    expected_8 = {
+        "maharashtrian_vedic",
+        "punjabi_traditional",
+        "bengali_vedic",
+        "tamil_brahmin_hindu",
+        "gujarati_hindu",
+        "muslim_nikah",
+        "christian_traditional",
+        "telugu_hindu"
+    }
+    assert expected_8.issubset(codes), f"Missing traditions: {expected_8 - codes}"
 
     tradition_map = {t["code"]: t for t in data}
-    assert "maharashtrian_vedic" in tradition_map
-    assert "south_indian_iyer" in tradition_map
-    assert "punjabi_sikh" in tradition_map
-    assert "contemporary_secular" in tradition_map
-
-    # Liturgical traditions must be verified with cited sources
-    assert tradition_map["maharashtrian_vedic"]["is_verified"] is True
-    assert tradition_map["maharashtrian_vedic"]["verification_source"] is not None
-    assert tradition_map["south_indian_iyer"]["is_verified"] is True
-    assert tradition_map["punjabi_sikh"]["is_verified"] is True
-
-    # Contemporary template must be marked unverified
-    assert tradition_map["contemporary_secular"]["is_verified"] is False
-    assert "Not verified" in tradition_map["contemporary_secular"]["verification_source"]
+    for code in expected_8:
+        t = tradition_map[code]
+        assert t["is_verified"] is True
+        assert t["verification_source"] is not None
+        assert t["item_count"] >= 7
 
 
 def test_tradition_samagri_checklist_endpoint(client):
@@ -119,96 +121,132 @@ def test_tradition_samagri_checklist_endpoint(client):
     assert any("Antarpat" in n for n in item_names)
     assert any("Mundavalya" in n for n in item_names)
     assert any("Akshata" in n for n in item_names)
-
-    # Check that regional vernacular script exists
     assert any(i["regional_name"] and "मुंडावळ्या" in i["regional_name"] for i in data["items"])
 
 
-def test_multi_tradition_merge_iyer_and_punjabi(client):
-    """Tests cross-cultural fusion merge between Tamil Brahmin Iyer and Punjabi Sikh."""
+def test_spec_acceptance_scenario_maharashtrian_x_punjabi(client):
+    """
+    Core Spec Acceptance Test:
+    A Maharashtrian x Punjabi wedding produces a merged sequence
+    with each ceremony correctly labeled by origin tradition.
+    """
     resp = client.post(
         "/api/v1/rituals/merge-traditions",
         json={
-            "primary_tradition_code": "south_indian_iyer",
-            "secondary_tradition_code": "punjabi_sikh"
+            "primary_tradition_code": "maharashtrian_vedic",
+            "secondary_tradition_code": "punjabi_traditional",
+            "start_date": "2026-11-20",
+            "notes": "Bride is Maharashtrian, groom is Punjabi"
         }
     )
     assert resp.status_code == 200
     data = resp.json()
     assert data["status"] == "success"
-    assert "Tamil Brahmin Iyer" in data["fusion_title"]
-    assert "Punjabi Anand Karaj" in data["fusion_title"]
+    assert "Maharashtrian" in data["fusion_title"]
+    assert "Punjabi" in data["fusion_title"]
 
-    # Reconciled samagri checklist checks
-    items = data["samagri_items"]
-    assert len(items) > 10
+    # 1. Run-of-show verification
+    ceremonies = data["run_of_show"]
+    assert len(ceremonies) >= 5
 
-    # Ensure source_tradition is tagged on every single item
-    for item in items:
-        assert "source_tradition" in item
-        assert item["source_tradition"] in [
-            "Shared Vedic / Common",
-            "Tamil Brahmin Iyer Kalyanam",
-            "Punjabi Anand Karaj"
+    # Check origin labels on every ceremony
+    origins = [c["origin_tradition"] for c in ceremonies]
+    assert any("Maharashtrian" in o for o in origins), "Must have ceremonies with Maharashtrian origin"
+    assert any("Punjabi" in o for o in origins), "Must have ceremonies with Punjabi origin"
+    assert any("Shared" in o or "Combined" in o for o in origins), "Must have shared ceremonies"
+
+    for c in ceremonies:
+        assert c["origin_tradition"] in [
+            "Maharashtrian Vedic Lagna",
+            "Punjabi Traditional Vivah / Anand Karaj",
+            "Shared / Combined"
         ]
+        assert "start_time" in c
+        assert "duration_hours" in c
+        assert "cultural_significance" in c
 
-    # Shared common items (e.g. ghee / akshata) should be labeled Shared Vedic
-    shared_items = [i for i in items if i["source_tradition"] == "Shared Vedic / Common"]
-    assert len(shared_items) >= 1
+    # Specific ceremony checks
+    ceremony_names = [c["name"] for c in ceremonies]
+    assert any("Jaggo" in name for name in ceremony_names)
+    assert any("Simant Pujan" in name or "Antarpat" in name for name in ceremony_names)
+    assert any("Saptapadi" in name or "Laavan" in name for name in ceremony_names)
 
-    # Family alignment points must flag timing & dietary divergence
+    # 2. Family alignment points
     alignments = data["family_alignment_points"]
-    assert len(alignments) >= 2
+    assert len(alignments) >= 3
     issue_titles = [a["issue"] for a in alignments]
-    assert any("Timing" in title or "Venue" in title for title in issue_titles)
-    assert any("Dietary" in title for title in issue_titles)
+    assert any("Entrance" in title for title in issue_titles)
+    assert any("Dining" in title for title in issue_titles)
+    assert any("Wardrobe" in title or "Adornment" in title for title in issue_titles)
 
 
-def test_event_pandit_guide_endpoint(client):
-    """Tests generating a complete pandit guide for a real event."""
+def test_generate_ritual_tasks_in_dag(client):
+    """Verifies generating ritual tasks attached as tasks rows via the DAG scheduler pattern."""
     db = SessionLocal()
     try:
-        # Create user and test event
         user = db.query(User).first()
         if not user:
             user = User(
-                id="test-priest-user-1",
-                phone_number="+919876543299",
-                email="priest@utsav.ai",
-                full_name="Priest Host"
+                id="test-dag-user-1",
+                phone_number="+919876543211",
+                email="dag@utsav.ai",
+                full_name="DAG Test Host"
             )
             db.add(user)
             db.commit()
 
         event = Event(
-            id="test-pandit-event-1",
+            id="test-ritual-task-event-1",
             owner_id=user.id,
-            name="Aarav & Ananya Vivah",
+            name="Rohit & Priya Fusion Vivah",
             event_type="wedding",
             tradition_code="maharashtrian_vedic",
-            guest_count=250,
-            total_budget=1500000,
-            city="Mumbai",
-            pincode="400001",
-            start_date=date(2026, 11, 20),
-            end_date=date(2026, 11, 22),
+            secondary_tradition_code="punjabi_traditional",
+            guest_count=300,
+            total_budget=2000000,
+            city="Pune",
+            pincode="411001",
+            start_date=date(2026, 12, 10),
+            end_date=date(2026, 12, 12),
             status="planning"
         )
         db.add(event)
         db.commit()
 
-        resp = client.get(f"/api/v1/rituals/events/{event.id}/pandit-guide")
+        resp = client.post(f"/api/v1/rituals/events/{event.id}/generate-tasks")
         assert resp.status_code == 200
         data = resp.json()
+        assert data["status"] == "success"
+        assert data["tasks_created_count"] >= 5
 
-        assert data["event_name"] == "Aarav & Ananya Vivah"
-        assert data["city"] == "Mumbai"
-        assert "panchang_and_muhurat" in data
-        assert "sunrise" in data["panchang_and_muhurat"]
-        assert "samagri_checklist" in data
-        assert len(data["samagri_checklist"]) >= 10
-        assert "ALWAYS confirm your final wedding pheras" in data["disclaimer"]
+        # Check DB directly
+        db_tasks = db.query(Task).filter(Task.event_id == event.id).all()
+        assert len(db_tasks) >= 5
+        task_titles = [t.title for t in db_tasks]
+        assert any("Procure Ritual Samagri" in t for t in task_titles)
+        assert any(t.assigned_role == "Family Elder / Ritual Lead" for t in db_tasks)
     finally:
-        db.query(Event).filter(Event.id == "test-pandit-event-1").delete()
+        db.query(Task).filter(Task.event_id == "test-ritual-task-event-1").delete()
+        db.query(Event).filter(Event.id == "test-ritual-task-event-1").delete()
         db.commit()
         db.close()
+
+
+def test_muhurat_candidates_endpoint(client):
+    """Verifies calculation of morning, midday, and twilight candidate muhurats with elevated disclaimer."""
+    resp = client.get("/api/v1/rituals/muhurat-candidates?event_date=2024-10-24&latitude=28.6139&longitude=77.2090")
+    assert resp.status_code == 200
+    data = resp.json()
+
+    assert data["event_date"] == "2024-10-24"
+    assert "candidates" in data
+    assert len(data["candidates"]) == 3
+
+    candidate_ids = [c["id"] for c in data["candidates"]]
+    assert "muhurat-morning" in candidate_ids
+    assert "muhurat-abhijit" in candidate_ids
+    assert "muhurat-godhuli" in candidate_ids
+
+    # Elevated disclaimer must be prominent
+    assert "ALWAYS confirm your final wedding pheras" in data["elevated_disclaimer"]
+    assert "prohibited_window" in data["rahu_kaal_prohibited_window"] or "-" in data["rahu_kaal_prohibited_window"]

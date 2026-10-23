@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { Navbar } from '@/components/ui/Navbar';
 import { ElderDisclaimerBanner } from '@/components/ui/ElderDisclaimerBanner';
 import { GuestCoordinationModule } from '@/components/ui/GuestCoordinationModule';
+import { RitualIntelligenceHub } from '@/components/ui/RitualIntelligenceHub';
 
 // Currency Formatter
 const formatINR = (val: number) => {
@@ -91,7 +92,7 @@ export default function EventDashboardClient() {
 
   const [eventData, setEventData] = useState<EventData | null>(null);
   const [styleProfile, setStyleProfile] = useState<StyleProfile | null>(null);
-  const [activeTab, setActiveTab] = useState<'overview' | 'itinerary' | 'budget' | 'vendors' | 'vibe' | 'guests'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'itinerary' | 'rituals' | 'budget' | 'vendors' | 'vibe' | 'guests'>('overview');
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [selectedWhyThis, setSelectedWhyThis] = useState<BudgetItem | null>(null);
@@ -443,6 +444,7 @@ export default function EventDashboardClient() {
           {[
             { key: 'overview', label: 'Overview & Cockpit', icon: '⚡' },
             { key: 'itinerary', label: 'Master Itinerary & Muhurats', icon: '📅' },
+            { key: 'rituals', label: 'Cultural Rituals & Fusion', icon: '🕉️' },
             { key: 'budget', label: 'Itemized Budget & Formulas', icon: '💰' },
             { key: 'vendors', label: 'Vendor Hub & Quotes', icon: '🤝' },
             { key: 'vibe', label: 'Vibe & Aesthetic Decor', icon: '🎨' },
@@ -682,6 +684,22 @@ export default function EventDashboardClient() {
                 </div>
               ))}
             </div>
+          </div>
+        )}
+
+        {/* TAB: CULTURAL RITUALS & MULTI-TRADITION FUSION */}
+        {activeTab === 'rituals' && (
+          <div className="space-y-6 animate-fadeIn">
+            <RitualIntelligenceHub
+              eventId={eventData.id}
+              eventName={eventData.name}
+              city={eventData.city}
+              startDate={eventData.start_date}
+              initialTraditionCode={eventData.tradition_code || 'maharashtrian_vedic'}
+              initialSecondaryTraditionCode={(eventData as any).secondary_tradition_code || 'punjabi_traditional'}
+              apiBase={getApiBase().replace(/\/api\/v1$/, '')}
+              onTasksGenerated={fetchEventData}
+            />
           </div>
         )}
 

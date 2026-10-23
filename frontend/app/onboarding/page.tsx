@@ -158,40 +158,80 @@ const TRADITIONS: TraditionConfig[] = [
     defaultName: "Ananya & Rohan's Maharashtrian Lagna"
   },
   {
-    code: 'gujarati_hindu',
-    name: 'Gujarati Hindu Vivah',
+    code: 'punjabi_traditional',
+    name: 'Punjabi Traditional Vivah / Anand Karaj',
     category: 'wedding',
-    highlights: 'Mameru, Dandiya Raas, Mandap, Hastamelap, Gala Dinner',
-    icon: '🪔',
-    recommendedGuests: 400,
-    recommendedBudget: 4200000,
-    defaultName: "Pooja & Harsh's Gujarati Vivah"
-  },
-  {
-    code: 'punjabi_sikh',
-    name: 'Punjabi Anand Karaj',
-    category: 'wedding',
-    highlights: 'Roka, Chunni, Mehndi/Sangeet, Anand Karaj, Grand Reception',
+    highlights: 'Maiyan, Jaggo Night, Milni, Anand Karaj 4 Laavan, Gala Reception',
     icon: '✨',
     recommendedGuests: 450,
     recommendedBudget: 5000000,
-    defaultName: "Simran & Kabir's Anand Karaj"
+    defaultName: "Simran & Kabir's Punjabi Vivah"
   },
   {
-    code: 'south_indian_iyer',
+    code: 'bengali_vedic',
+    name: 'Bengali Vedic Bibaho',
+    category: 'wedding',
+    highlights: 'Gaye Holud, Bor Jatri, Saat Paake Ghomar, Shubho Drishti, Sampradan',
+    icon: '🐚',
+    recommendedGuests: 350,
+    recommendedBudget: 3200000,
+    defaultName: "Debolina & Soumyo's Bengali Bibaho"
+  },
+  {
+    code: 'tamil_brahmin_hindu',
     name: 'Tamil Brahmin Iyer Kalyanam',
     category: 'wedding',
-    highlights: 'Vratham, Janavasam, Kasi Yatra, Oonjal, Kanyadaan',
+    highlights: 'Vratham, Janavasam, Kasi Yatra, Oonjal, Mangalya Dharanam',
     icon: '🌸',
     recommendedGuests: 300,
     recommendedBudget: 2800000,
     defaultName: "Deepa & Karthik's Iyer Kalyanam"
   },
   {
+    code: 'gujarati_hindu',
+    name: 'Gujarati Hindu Vivah',
+    category: 'wedding',
+    highlights: 'Gol Dhana, Mameru, Dandiya Raas, Mandap, 4 Mangal Pheras',
+    icon: '🪔',
+    recommendedGuests: 400,
+    recommendedBudget: 4200000,
+    defaultName: "Pooja & Harsh's Gujarati Vivah"
+  },
+  {
+    code: 'muslim_nikah',
+    name: 'Muslim Traditional Nikah',
+    category: 'wedding',
+    highlights: 'Manjha, Istiqbal, Nikahnama Ijab-o-Qubool, Arsi Mushaf, Walima',
+    icon: '🌙',
+    recommendedGuests: 400,
+    recommendedBudget: 3800000,
+    defaultName: "Zoya & Farhan's Nikah & Walima"
+  },
+  {
+    code: 'christian_traditional',
+    name: 'Indian Christian Traditional Wedding',
+    category: 'wedding',
+    highlights: 'Roce Bath, Church Nuptial Mass, Ring & Minnu Tying, Gala Toast',
+    icon: '⛪',
+    recommendedGuests: 350,
+    recommendedBudget: 3000000,
+    defaultName: "Rhea & Kevin's Christian Wedding"
+  },
+  {
+    code: 'telugu_hindu',
+    name: 'Telugu Vaidika Kalyanam',
+    category: 'wedding',
+    highlights: 'Pellikuthuru, Snathakam, Jeelakarra Bellam, Talambralu, Reception',
+    icon: '🪷',
+    recommendedGuests: 350,
+    recommendedBudget: 3400000,
+    defaultName: "Sravani & Vamsi's Telugu Kalyanam"
+  },
+  {
     code: 'marwari_traditional',
     name: 'Marwari Traditional Vivah',
     category: 'wedding',
-    highlights: 'Mudha Tika, Pithi, Tel Baan, Baraat, Royal Feast',
+    highlights: 'Mudha Tika, Pithi, Bhaat/Mayera, Toran Bandhan, Royal Feast',
     icon: '👑',
     recommendedGuests: 500,
     recommendedBudget: 5500000,

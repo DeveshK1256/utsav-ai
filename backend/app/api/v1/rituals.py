@@ -35,9 +35,11 @@ class PanchangResponseSchema(BaseModel):
 
 
 class MergeTraditionsRequest(BaseModel):
-    primary_tradition_code: str = Field(..., description="Primary cultural code, e.g. south_indian_iyer")
-    secondary_tradition_code: str = Field(..., description="Secondary cultural code, e.g. punjabi_sikh")
+    primary_tradition_code: str = Field(..., description="Primary cultural code, e.g. maharashtrian_vedic")
+    secondary_tradition_code: str = Field(..., description="Secondary cultural code, e.g. punjabi_traditional")
+    start_date: Optional[date] = None
     event_id: Optional[str] = None
+    notes: Optional[str] = None
 
 
 @router.get("/panchang", response_model=PanchangResponseSchema)
@@ -125,11 +127,12 @@ def merge_dual_traditions(payload: MergeTraditionsRequest, db: Session = Depends
     """
     service = TraditionMergeService(db)
     event_name = None
+    event_start = payload.start_date
     if payload.event_id:
         event = db.query(Event).filter(Event.id == payload.event_id).first()
         if event:
             event_name = event.name
-            # If requested, attach secondary tradition to event record
+            event_start = event.start_date
             event.secondary_tradition_code = payload.secondary_tradition_code
             db.commit()
 
@@ -137,11 +140,134 @@ def merge_dual_traditions(payload: MergeTraditionsRequest, db: Session = Depends
         merged = service.merge_traditions(
             primary_code=payload.primary_tradition_code,
             secondary_code=payload.secondary_tradition_code,
-            event_name=event_name
+            start_date=event_start,
+            event_name=event_name,
+            notes=payload.notes
         )
         return merged
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+
+@router.post("/events/{event_id}/generate-tasks")
+def generate_ritual_tasks_for_event(event_id: str, db: Session = Depends(get_db)):
+    """
+    Generates structured preparation and procurement tasks for ritual samagri,
+    inserting them into the event's DAG task graph.
+    """
+    from backend.app.models.models import Task
+    from backend.app.services.dag_scheduler import DAGScheduler
+    import uuid
+
+    event = db.query(Event).filter(Event.id == event_id).first()
+    if not event:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Event not found")
+
+    tasks_payload = DAGScheduler.generate_ritual_samagri_tasks(
+        start_date_val=event.start_date,
+        tradition_code=event.tradition_code or "maharashtrian_vedic",
+        secondary_tradition_code=event.secondary_tradition_code,
+        db=db
+    )
+
+    created_tasks = []
+    for t_data in tasks_payload:
+        task_obj = Task(
+            id=f"task-ritual-{uuid.uuid4().hex[:12]}",
+            event_id=event.id,
+            title=t_data["title"],
+            description=t_data["description"],
+            status="pending",
+            scheduled_start=t_data["scheduled_start"],
+            scheduled_end=t_data["scheduled_end"],
+            duration_minutes=t_data["duration_minutes"],
+            dependency_task_ids=t_data["dependency_task_ids"],
+            assigned_role=t_data["assigned_role"]
+        )
+        db.add(task_obj)
+        created_tasks.append({
+            "id": task_obj.id,
+            "title": task_obj.title,
+            "scheduled_start": task_obj.scheduled_start.isoformat(),
+            "assigned_role": task_obj.assigned_role,
+        })
+
+    db.commit()
+    return {
+        "status": "success",
+        "event_id": event.id,
+        "tasks_created_count": len(created_tasks),
+        "tasks": created_tasks
+    }
+
+
+@router.get("/muhurat-candidates")
+def get_muhurat_candidates(
+    event_date: date = Query(..., description="Date YYYY-MM-DD"),
+    latitude: float = Query(28.6139, description="Venue latitude"),
+    longitude: float = Query(77.2090, description="Venue longitude"),
+    elevation_meters: float = Query(216.0, description="Elevation in meters")
+):
+    """
+    Calculates 3 auspicious candidate muhurat windows (Morning Brahma/Pratah, Midday Abhijit, Evening Godhuli/Twilight)
+    alongside inauspicious Rahu Kaal prohibitions and mandatory priest verification disclaimer.
+    """
+    p_data = default_panchang_provider.calculate_panchang(
+        event_date=event_date,
+        latitude=latitude,
+        longitude=longitude,
+        elevation_meters=elevation_meters
+    )
+
+    from datetime import datetime, time, timedelta
+    sunrise_dt = datetime.strptime(p_data["sunrise"], "%H:%M:%S")
+
+    # Morning auspicious window: 1.5h to 3.5h post-sunrise
+    m1_start = (sunrise_dt + timedelta(hours=1, minutes=30)).strftime("%H:%M")
+    m1_end = (sunrise_dt + timedelta(hours=3, minutes=30)).strftime("%H:%M")
+
+    # Twilight Godhuli window: 24 min before to 24 min after sunset
+    sunset_dt = datetime.strptime(p_data["sunset"], "%H:%M:%S")
+    m3_start = (sunset_dt - timedelta(minutes=24)).strftime("%H:%M")
+    m3_end = (sunset_dt + timedelta(minutes=24)).strftime("%H:%M")
+
+    candidates = [
+        {
+            "id": "muhurat-morning",
+            "name": "Pratah Kaal / Morning Vivah Muhurat",
+            "window": f"{m1_start} - {m1_end}",
+            "suitability": "Highly Auspicious",
+            "planetary_rationale": f"Solar energy ascendant, {p_data['tithi']['name']} active, favorable nakshatra alignment.",
+            "is_recommended": True,
+        },
+        {
+            "id": "muhurat-abhijit",
+            "name": "Abhijit Muhurat (Midday Solar Zenith)",
+            "window": f"{p_data['abhijit_muhurat']['start'][:5]} - {p_data['abhijit_muhurat']['end'][:5]}",
+            "suitability": "Auspicious (Universal Victory Muhurat)" if p_data["abhijit_muhurat"]["is_auspicious"] else "Caution on Wednesdays",
+            "planetary_rationale": "8th Muhurat of daytime, removes blemishes except when falling on Wednesdays.",
+            "is_recommended": p_data["abhijit_muhurat"]["is_auspicious"],
+        },
+        {
+            "id": "muhurat-godhuli",
+            "name": "Godhuli Bela (Twilight Sacred Window)",
+            "window": f"{m3_start} - {m3_end}",
+            "suitability": "Auspicious Evening Horizon",
+            "planetary_rationale": "Sacred twilight transition, revered across Vedic, Rajasthani, and Bengali traditions.",
+            "is_recommended": False,
+        }
+    ]
+
+    return {
+        "event_date": event_date.isoformat(),
+        "sunrise": p_data["sunrise"],
+        "sunset": p_data["sunset"],
+        "rahu_kaal_prohibited_window": f"{p_data['rahu_kaal']['start'][:5]} - {p_data['rahu_kaal']['end'][:5]}",
+        "tithi": p_data["tithi"],
+        "nakshatra": p_data["nakshatra"],
+        "candidates": candidates,
+        "elevated_disclaimer": p_data["priest_disclaimer"]
+    }
 
 
 @router.get("/events/{event_id}/pandit-guide")
