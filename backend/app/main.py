@@ -63,6 +63,15 @@ def run_db_backfill_on_startup():
 
         from sqlalchemy import text
         with engine.begin() as conn:
+            # Idempotently add missing columns in PostgreSQL if they don't exist
+            if engine.dialect.name == "postgresql":
+                conn.execute(text("ALTER TABLE traditions ADD COLUMN IF NOT EXISTS is_verified BOOLEAN DEFAULT FALSE;"))
+                conn.execute(text("ALTER TABLE traditions ADD COLUMN IF NOT EXISTS verification_source VARCHAR(255);"))
+                conn.execute(text("ALTER TABLE ritual_items ADD COLUMN IF NOT EXISTS ritual_name VARCHAR(100);"))
+                conn.execute(text("ALTER TABLE ritual_items ADD COLUMN IF NOT EXISTS category VARCHAR(50) DEFAULT 'puja_samagri';"))
+                conn.execute(text("ALTER TABLE ritual_items ADD COLUMN IF NOT EXISTS is_verified BOOLEAN DEFAULT FALSE;"))
+                conn.execute(text("ALTER TABLE events ADD COLUMN IF NOT EXISTS secondary_tradition_code VARCHAR(50);"))
+
             conn.execute(text("""
                 UPDATE budget_items
                 SET scaling_rule = CASE
@@ -79,8 +88,9 @@ def run_db_backfill_on_startup():
         # Seed curated cultural traditions & ritual items if needed
         from backend.app.db.seed_traditions import seed_cultural_traditions
         seed_cultural_traditions()
-    except Exception:
-        pass
+    except Exception as exc:
+        import logging
+        logging.getLogger("uvicorn.error").exception("Startup migration/backfill error: %s", exc)
 
 
 @app.get("/health")
