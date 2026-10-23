@@ -34,6 +34,12 @@ export function Navbar({ badge, rightAction }: NavbarProps) {
         </Link>
 
         <div className="flex items-center space-x-3">
+          <Link
+            href="/privacy"
+            className="text-xs font-semibold text-stone-600 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-100 transition-colors px-2 py-1"
+          >
+            Privacy
+          </Link>
           {rightAction}
           <ThemeToggle />
         </div>
