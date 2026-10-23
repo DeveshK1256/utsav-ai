@@ -518,3 +518,78 @@ def test_intake_generated_event_fixed_category_scaling_regression():
     finally:
         # Cleanup
         client.delete(f"/api/v1/events/{event_id}")
+
+
+def test_birthday_replanning_guest_surge_scales_cake_and_desserts():
+    """
+    Asserts that M2 Replanning Engine correctly rescales birthday events:
+    - 'cake_and_desserts' must scale linearly per_guest (* new_guests / old_guests)
+    - 'entertainment' and 'venue' must remain fixed (contract rate, difference == 0.0)
+    - 'decor' must resolve to tiered
+    """
+    import random
+    suffix = random.randint(1000, 9999)
+    phone = f"+91981111{suffix}"
+
+    # 1. Synthesize Birthday Event
+    create_res = client.post(
+        "/api/v1/intake/generate",
+        json={
+            "name": "Vivaan 6th Birthday Carnival",
+            "host_name": "Meera Sen",
+            "phone_number": phone,
+            "event_type": "birthday",
+            "tradition_code": "birthday_kids_carnival",
+            "guest_count": 75,
+            "total_budget": 200000.0,
+            "city": "Mumbai",
+            "pincode": "400050",
+            "start_date": "2027-06-10",
+            "end_date": "2027-06-10"
+        }
+    )
+    assert create_res.status_code == 201
+    event_id = create_res.json()["event_id"]
+
+    try:
+        # 2. Trigger Guest Surge (75 -> 100 guests)
+        replan_res = client.post(
+            f"/api/v1/events/{event_id}/changes",
+            json={
+                "change_type": "guest_count_changed",
+                "payload": {
+                    "from_guest_count": 75,
+                    "to_guest_count": 100
+                }
+            }
+        )
+        assert replan_res.status_code == 201
+        data = replan_res.json()
+        diffs = {d["category"]: d for d in data["budget_diff"]}
+
+        # Assert cake_and_desserts scales per_guest
+        assert "cake_and_desserts" in diffs
+        cake = diffs["cake_and_desserts"]
+        assert cake["scaling_rule"] == "per_guest"
+        expected_cake = round(cake["old_amount"] * (100 / 75), 2)
+        assert cake["new_amount"] == expected_cake
+        assert cake["difference"] > 0
+        assert "(100/75)" in cake["formula"]
+
+        # Assert entertainment remains fixed
+        assert "entertainment" in diffs
+        ent = diffs["entertainment"]
+        assert ent["scaling_rule"] == "fixed"
+        assert ent["difference"] == 0.0
+        assert "Fixed contract rate" in ent["formula"]
+
+        # Assert venue remains fixed
+        assert "venue" in diffs
+        assert diffs["venue"]["scaling_rule"] == "fixed"
+        assert diffs["venue"]["difference"] == 0.0
+
+        # Assert decor is tiered
+        assert "decor" in diffs
+        assert diffs["decor"]["scaling_rule"] == "tiered"
+    finally:
+        client.delete(f"/api/v1/events/{event_id}")
