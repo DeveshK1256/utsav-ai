@@ -671,18 +671,18 @@ export default function OnboardingPage() {
                     Host: {masterPlan.owner_name} • {masterPlan.city_tier} • {masterPlan.guest_count} Guests • Total Budget: {formatINR(masterPlan.total_budget)}
                   </p>
                 </div>
-                <div className="flex gap-3">
+                <div className="flex flex-wrap gap-2.5">
                   <button
                     onClick={() => window.print()}
-                    className="px-5 py-2.5 rounded-full border border-stone-300 dark:border-stone-700 text-stone-800 dark:text-stone-200 text-xs font-semibold hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors active:scale-95"
+                    className="px-4 py-2.5 rounded-full border border-stone-300 dark:border-stone-700 text-stone-800 dark:text-stone-200 text-xs font-semibold hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors active:scale-95"
                   >
                     Print Itinerary
                   </button>
                   <Link
-                    href={`/dashboard/events/${masterPlan.event_id}/vibe`}
-                    className="px-6 py-2.5 rounded-full bg-[#8B1E28] hover:bg-stone-900 text-white dark:bg-[#F4B41A] dark:hover:bg-amber-300 dark:text-stone-950 text-xs font-semibold shadow-sm transition-all active:scale-95 flex items-center space-x-1.5"
+                    href={`/dashboard/events/${masterPlan.event_id}`}
+                    className="px-5 py-2.5 rounded-full bg-[#8B1E28] hover:bg-stone-900 text-white dark:bg-[#F4B41A] dark:hover:bg-amber-300 dark:text-stone-950 text-xs font-semibold shadow-md transition-all active:scale-95 flex items-center space-x-1.5"
                   >
-                    <span>Vibe-to-Plan</span>
+                    <span>Open Event Workspace</span>
                     <span>→</span>
                   </Link>
                 </div>
