@@ -88,6 +88,9 @@ class Event(Base):
     change_events = relationship("ChangeEvent", back_populates="event", cascade="all, delete-orphan")
     ai_suggestions = relationship("AISuggestion", back_populates="event", cascade="all, delete-orphan")
     style_profiles = relationship("StyleProfile", back_populates="event", cascade="all, delete-orphan")
+    guests = relationship("Guest", back_populates="event", cascade="all, delete-orphan")
+    message_logs = relationship("MessageLog", back_populates="event", cascade="all, delete-orphan")
+    fact_sheet = relationship("EventFactSheet", back_populates="event", uselist=False, cascade="all, delete-orphan")
 
 
 class SubEvent(Base):
@@ -331,5 +334,92 @@ class DecorItem(Base):
     theme_proposal = relationship("ThemeProposal", back_populates="decor_items")
     budget_item = relationship("BudgetItem")
     task = relationship("Task")
+
+
+class Guest(Base):
+    __tablename__ = "guests"
+
+    id = Column(String(36), primary_key=True, default=generate_uuid)
+    event_id = Column(String(36), ForeignKey("events.id", ondelete="CASCADE"), nullable=False, index=True)
+    name = Column(String(150), nullable=False)
+    phone = Column(String(30), nullable=False, index=True)
+    group_side = Column(String(50), nullable=True)  # bride, groom, family, friends, society, general
+    diet = Column(String(50), default="veg", nullable=True)  # veg, jain, non_veg, vegan
+    mobility_needs = Column(Boolean, default=False, nullable=False)
+    kids_count = Column(Integer, default=0, nullable=False)
+    headcount = Column(Integer, default=1, nullable=False)
+    rsvp_status = Column(String(30), default="pending", nullable=False, index=True)  # pending, attending, declined, maybe
+    accommodation = Column(Boolean, default=False, nullable=False)
+    language = Column(String(10), default="en", nullable=False)
+    notes = Column(Text, nullable=True)
+    needs_host_review = Column(Boolean, default=False, nullable=False)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc), nullable=False)
+
+    __table_args__ = (
+        Index("idx_guests_event_phone", "event_id", "phone", unique=True),
+    )
+
+    event = relationship("Event", back_populates="guests")
+    messages = relationship("MessageLog", back_populates="guest", cascade="all, delete-orphan")
+
+
+class MessageTemplate(Base):
+    __tablename__ = "message_templates"
+
+    id = Column(String(36), primary_key=True, default=generate_uuid)
+    template_name = Column(String(100), unique=True, nullable=False, index=True)
+    category = Column(String(50), nullable=False)  # invitation, reminder, faq_response, update
+    language = Column(String(10), default="en", nullable=False)
+    body_text = Column(Text, nullable=False)
+    meta_template_id = Column(String(100), nullable=True)
+    approval_status = Column(String(50), default="approved", nullable=False)  # pending, approved, rejected
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
+
+
+class MessageLog(Base):
+    __tablename__ = "message_log"
+
+    id = Column(String(36), primary_key=True, default=generate_uuid)
+    guest_id = Column(String(36), ForeignKey("guests.id", ondelete="SET NULL"), nullable=True, index=True)
+    event_id = Column(String(36), ForeignKey("events.id", ondelete="CASCADE"), nullable=False, index=True)
+    phone_number = Column(String(30), nullable=False, index=True)
+    direction = Column(String(20), nullable=False)  # outbound, inbound
+    message_type = Column(String(30), nullable=False)  # template, freeform, quick_reply
+    content_snapshot = Column(Text, nullable=False)
+    whatsapp_message_id = Column(String(100), nullable=True, index=True)
+    delivery_status = Column(String(30), default="queued", nullable=False, index=True)  # queued, sent, delivered, read, failed
+    failure_reason = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False, index=True)
+
+    guest = relationship("Guest", back_populates="messages")
+    event = relationship("Event", back_populates="message_logs")
+
+
+class EventFactSheet(Base):
+    __tablename__ = "event_fact_sheets"
+
+    id = Column(String(36), primary_key=True, default=generate_uuid)
+    event_id = Column(String(36), ForeignKey("events.id", ondelete="CASCADE"), unique=True, nullable=False, index=True)
+    venue_address = Column(Text, nullable=True)
+    parking_info = Column(Text, nullable=True)
+    dress_code = Column(Text, nullable=True)
+    timing_notes = Column(Text, nullable=True)
+    map_link = Column(String(500), nullable=True)
+    other_facts = Column(JSON, default=dict, nullable=False)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc), nullable=False)
+
+    event = relationship("Event", back_populates="fact_sheet")
+
+
+class OptOut(Base):
+    __tablename__ = "opt_outs"
+
+    id = Column(String(36), primary_key=True, default=generate_uuid)
+    phone = Column(String(30), unique=True, nullable=False, index=True)
+    reason = Column(String(100), default="STOP", nullable=False)
+    opted_out_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
+
 
 

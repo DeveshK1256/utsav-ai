@@ -8,6 +8,8 @@ from backend.app.api.v1.events import router as events_router
 from backend.app.api.v1.quotes import router as quotes_router
 from backend.app.api.v1.replanning import router as replanning_router
 from backend.app.api.v1.vibe import router as vibe_router
+from backend.app.api.v1.guests import router as guests_router
+from backend.app.api.v1.webhooks import router as webhooks_router
 
 app = FastAPI(
     title=f"{settings.PROJECT_NAME} API Engine",
@@ -30,16 +32,23 @@ app.include_router(events_router, prefix=settings.API_V1_STR)
 app.include_router(quotes_router, prefix=settings.API_V1_STR)
 app.include_router(replanning_router, prefix=settings.API_V1_STR)
 app.include_router(vibe_router, prefix=settings.API_V1_STR)
+app.include_router(guests_router, prefix=settings.API_V1_STR)
+app.include_router(webhooks_router, prefix=settings.API_V1_STR)
 
 
 @app.on_event("startup")
 def run_db_backfill_on_startup():
     """
     Idempotent data integrity safeguard: ensure all existing budget_items rows
-    in the active database conform to canonical DEC-018 scaling rules.
+    in the active database conform to canonical DEC-018 scaling rules,
+    and guarantee all M0-M4 tables exist.
     """
     try:
         from backend.app.db.session import engine
+        from backend.app.db.base import Base
+        import backend.app.models.models
+        Base.metadata.create_all(bind=engine)
+
         from sqlalchemy import text
         with engine.begin() as conn:
             conn.execute(text("""

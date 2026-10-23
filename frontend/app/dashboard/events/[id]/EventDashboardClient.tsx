@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Navbar } from '@/components/ui/Navbar';
 import { ElderDisclaimerBanner } from '@/components/ui/ElderDisclaimerBanner';
+import { GuestCoordinationModule } from '@/components/ui/GuestCoordinationModule';
 
 // Currency Formatter
 const formatINR = (val: number) => {
@@ -90,7 +91,7 @@ export default function EventDashboardClient() {
 
   const [eventData, setEventData] = useState<EventData | null>(null);
   const [styleProfile, setStyleProfile] = useState<StyleProfile | null>(null);
-  const [activeTab, setActiveTab] = useState<'overview' | 'itinerary' | 'budget' | 'vendors' | 'vibe'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'itinerary' | 'budget' | 'vendors' | 'vibe' | 'guests'>('overview');
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [selectedWhyThis, setSelectedWhyThis] = useState<BudgetItem | null>(null);
@@ -444,7 +445,8 @@ export default function EventDashboardClient() {
             { key: 'itinerary', label: 'Master Itinerary & Muhurats', icon: '📅' },
             { key: 'budget', label: 'Itemized Budget & Formulas', icon: '💰' },
             { key: 'vendors', label: 'Vendor Hub & Quotes', icon: '🤝' },
-            { key: 'vibe', label: 'Vibe & Aesthetic Decor', icon: '🎨' }
+            { key: 'vibe', label: 'Vibe & Aesthetic Decor', icon: '🎨' },
+            { key: 'guests', label: 'Guests & WhatsApp RSVP', icon: '💌' }
           ].map((tab) => (
             <button
               key={tab.key}
@@ -925,6 +927,15 @@ export default function EventDashboardClient() {
               </div>
             )}
           </div>
+        )}
+
+        {/* TAB 6: GUESTS & WHATSAPP RSVP CONCIERGE (M4) */}
+        {activeTab === 'guests' && (
+          <GuestCoordinationModule
+            eventId={currentEventId}
+            eventName={eventData.name}
+            apiBase={getApiBase()}
+          />
         )}
 
         {/* Elder Verification Disclaimer Banner (Mandatory F13 compliance) */}
