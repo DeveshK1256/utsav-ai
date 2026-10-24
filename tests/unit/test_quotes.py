@@ -137,14 +137,17 @@ def test_quotes_api_endpoints_flow():
     }
     event_res = client.post("/api/v1/events", json=event_payload)
     assert event_res.status_code == 201
-    event_id = event_res.json()["id"]
+    event_data = event_res.json()
+    event_id = event_data["id"]
+    auth_headers = {"X-Event-Owner-Token": event_data["owner_token"]}
 
     # 2. Upload Quote 1 (Catering)
     fake_pdf = io.BytesIO(b"%PDF-1.4 Fake Quote Data For Testing")
     upload_res1 = client.post(
         "/api/v1/quotes/upload",
         data={"event_id": event_id, "category": "caterer"},
-        files={"file": ("caterer_quote_1.pdf", fake_pdf, "application/pdf")}
+        files={"file": ("caterer_quote_1.pdf", fake_pdf, "application/pdf")},
+        headers=auth_headers
     )
     assert upload_res1.status_code == 201
     quote1_data = upload_res1.json()
@@ -158,7 +161,8 @@ def test_quotes_api_endpoints_flow():
     upload_res2 = client.post(
         "/api/v1/quotes/upload",
         data={"event_id": event_id, "category": "caterer"},
-        files={"file": ("caterer_quote_2.pdf", fake_pdf2, "application/pdf")}
+        files={"file": ("caterer_quote_2.pdf", fake_pdf2, "application/pdf")},
+        headers=auth_headers
     )
     assert upload_res2.status_code == 201
     quote2_data = upload_res2.json()
@@ -185,7 +189,8 @@ def test_quotes_api_endpoints_flow():
     upload_dec = client.post(
         "/api/v1/quotes/upload",
         data={"event_id": event_id, "category": "decorator"},
-        files={"file": ("decorator_quote.pdf", fake_dec_pdf, "application/pdf")}
+        files={"file": ("decorator_quote.pdf", fake_dec_pdf, "application/pdf")},
+        headers=auth_headers
     )
     assert upload_dec.status_code == 201
     dec_quote_id = upload_dec.json()["id"]
@@ -211,7 +216,7 @@ def test_quotes_api_endpoints_flow():
     assert "never sends messages autonomously" in draft_data["disclaimer"]
 
     # Cleanup event (cascades to quotes and line items)
-    client.delete(f"/api/v1/events/{event_id}")
+    client.delete(f"/api/v1/events/{event_id}", headers=auth_headers)
 
 
 def test_extraction_validation_failure_fallback(monkeypatch):
@@ -251,7 +256,9 @@ def test_extraction_validation_failure_fallback(monkeypatch):
         "host_name": "Fallback Host"
     })
     assert ev_res.status_code == 201
-    event_id = ev_res.json()["id"]
+    ev_data = ev_res.json()
+    event_id = ev_data["id"]
+    fallback_auth = {"X-Event-Owner-Token": ev_data["owner_token"]}
 
     try:
         # 2. Upload file that triggers provider failure
@@ -259,7 +266,8 @@ def test_extraction_validation_failure_fallback(monkeypatch):
         res = client.post(
             "/api/v1/quotes/upload",
             data={"event_id": event_id, "category": "caterer"},
-            files={"file": ("corrupt_quote.pdf", corrupt_doc, "application/pdf")}
+            files={"file": ("corrupt_quote.pdf", corrupt_doc, "application/pdf")},
+            headers=fallback_auth
         )
         assert res.status_code == 201
         data = res.json()
@@ -291,7 +299,7 @@ def test_extraction_validation_failure_fallback(monkeypatch):
 
     finally:
         # Cleanup
-        client.delete(f"/api/v1/events/{event_id}")
+        client.delete(f"/api/v1/events/{event_id}", headers=fallback_auth)
 
 
 def test_deterministic_confidence_calculation():

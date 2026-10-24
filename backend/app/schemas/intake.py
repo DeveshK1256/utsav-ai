@@ -84,6 +84,7 @@ class TaskResponseSchema(BaseModel):
 
 class MasterPlanResponseSchema(BaseModel):
     event_id: str
+    owner_token: Optional[str] = None
     name: str
     owner_name: str
     status: str

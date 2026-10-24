@@ -461,7 +461,9 @@ def test_intake_generated_event_fixed_category_scaling_regression():
     # 1. Generate master plan via real intake endpoint
     gen_res = client.post("/api/v1/intake/generate", json=intake_payload)
     assert gen_res.status_code == 201
-    event_id = gen_res.json()["event_id"]
+    gen_data = gen_res.json()
+    event_id = gen_data["event_id"]
+    auth_headers = {"X-Event-Owner-Token": gen_data["owner_token"]} if gen_data.get("owner_token") else {}
 
     try:
         # 2. Trigger Guest Surge (280 -> 330 guests) via the exact Live Scenario Simulator endpoint
@@ -473,7 +475,8 @@ def test_intake_generated_event_fixed_category_scaling_regression():
                     "from_guest_count": 280,
                     "to_guest_count": 330
                 }
-            }
+            },
+            headers=auth_headers
         )
         assert sim_res.status_code == 201
         proposal = sim_res.json()
@@ -517,7 +520,7 @@ def test_intake_generated_event_fixed_category_scaling_regression():
 
     finally:
         # Cleanup
-        client.delete(f"/api/v1/events/{event_id}")
+        client.delete(f"/api/v1/events/{event_id}", headers=auth_headers)
 
 
 def test_birthday_replanning_guest_surge_scales_cake_and_desserts():
@@ -549,7 +552,9 @@ def test_birthday_replanning_guest_surge_scales_cake_and_desserts():
         }
     )
     assert create_res.status_code == 201
-    event_id = create_res.json()["event_id"]
+    create_data = create_res.json()
+    event_id = create_data["event_id"]
+    auth_headers = {"X-Event-Owner-Token": create_data["owner_token"]} if create_data.get("owner_token") else {}
 
     try:
         # 2. Trigger Guest Surge (75 -> 100 guests)
@@ -561,7 +566,8 @@ def test_birthday_replanning_guest_surge_scales_cake_and_desserts():
                     "from_guest_count": 75,
                     "to_guest_count": 100
                 }
-            }
+            },
+            headers=auth_headers
         )
         assert replan_res.status_code == 201
         data = replan_res.json()
@@ -592,4 +598,4 @@ def test_birthday_replanning_guest_surge_scales_cake_and_desserts():
         assert "decor" in diffs
         assert diffs["decor"]["scaling_rule"] == "tiered"
     finally:
-        client.delete(f"/api/v1/events/{event_id}")
+        client.delete(f"/api/v1/events/{event_id}", headers=auth_headers)

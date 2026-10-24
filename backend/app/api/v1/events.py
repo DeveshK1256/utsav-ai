@@ -1,6 +1,7 @@
+import hmac
 import uuid
 from datetime import date, datetime
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Header, Query
 from sqlalchemy.orm import Session
 from pydantic import BaseModel, Field
 from typing import Optional, List, Dict, Any
@@ -13,6 +14,7 @@ from backend.app.schemas.intake import (
     TaskResponseSchema
 )
 from backend.app.services.budget_engine import BudgetScalingEngine
+from backend.app.core.security import verify_event_owner_token, generate_owner_token
 
 router = APIRouter(prefix="/events", tags=["Events"])
 
@@ -40,6 +42,7 @@ class EventResponseSchema(BaseModel):
     city: str
     pincode: Optional[str] = None
     status: str
+    owner_token: Optional[str] = None
 
     class Config:
         from_attributes = True
@@ -91,6 +94,7 @@ def create_event(payload: EventCreateSchema, db: Session = Depends(get_db)):
         db.add(user)
         db.flush()
 
+    owner_token = generate_owner_token()
     event = Event(
         owner_id=user.id,
         name=payload.name,
@@ -101,7 +105,9 @@ def create_event(payload: EventCreateSchema, db: Session = Depends(get_db)):
         pincode=payload.pincode or "400001",
         start_date=payload.start_date or date.today(),
         end_date=payload.end_date or date.today(),
-        status="planning"
+        status="planning",
+        owner_token=owner_token,
+        metadata_json={"owner_token": owner_token, "host_name": payload.host_name}
     )
     db.add(event)
     db.commit()
@@ -110,10 +116,26 @@ def create_event(payload: EventCreateSchema, db: Session = Depends(get_db)):
 
 
 @router.get("/{event_id}", response_model=EventDetailResponseSchema)
-def get_event(event_id: str, db: Session = Depends(get_db)):
+def get_event(
+    event_id: str,
+    x_event_owner_token: Optional[str] = Header(None, alias="X-Event-Owner-Token"),
+    owner_token: Optional[str] = Query(None),
+    authorization: Optional[str] = Header(None),
+    db: Session = Depends(get_db)
+):
     event = db.query(Event).filter(Event.id == event_id).first()
     if not event:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Event not found")
+
+    provided = x_event_owner_token or owner_token
+    if not provided and authorization and authorization.lower().startswith("bearer "):
+        provided = authorization[7:].strip()
+
+    expected = getattr(event, "owner_token", None) or (event.metadata_json or {}).get("owner_token")
+    # Only reveal owner_token in GET response if caller proved they already possess it
+    returned_token = None
+    if provided and expected and hmac.compare_digest(provided, expected):
+        returned_token = expected
 
     tier = BudgetScalingEngine.resolve_city_tier(event.city)
     owner_name = (
@@ -185,6 +207,7 @@ def get_event(event_id: str, db: Session = Depends(get_db)):
         sub_events=sub_events_list,
         budget_breakdown=budget_list,
         tasks=tasks_list,
+        owner_token=returned_token,
         metadata_json=event.metadata_json or {}
     )
 
@@ -193,6 +216,7 @@ def get_event(event_id: str, db: Session = Depends(get_db)):
 def update_event_compose_progress(
     event_id: str,
     payload: ComposeUpdateSchema,
+    event: Event = Depends(verify_event_owner_token),
     db: Session = Depends(get_db)
 ):
     """
@@ -202,10 +226,6 @@ def update_event_compose_progress(
       and writes to event.metadata_json['muhurat_time'].
     - Explicit skip actions record skip flags without fabricating or carrying stale data.
     """
-    event = db.query(Event).filter(Event.id == event_id).first()
-    if not event:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Event not found")
-
     meta = dict(event.metadata_json or {})
     compose_state = dict(meta.get("compose_celebration", {}))
 
@@ -283,14 +303,19 @@ def update_event_compose_progress(
     db.commit()
     db.refresh(event)
 
-    return get_event(event_id, db)
+    return get_event(
+        event_id=event.id,
+        x_event_owner_token=event.owner_token,
+        db=db
+    )
 
 
 @router.delete("/{event_id}", status_code=status.HTTP_200_OK)
-def delete_event(event_id: str, db: Session = Depends(get_db)):
-    event = db.query(Event).filter(Event.id == event_id).first()
-    if not event:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Event not found")
+def delete_event(
+    event_id: str,
+    event: Event = Depends(verify_event_owner_token),
+    db: Session = Depends(get_db)
+):
     owner_id = event.owner_id
     db.delete(event)
     db.commit()

@@ -19,6 +19,7 @@ from backend.app.schemas.invitations import (
 )
 from backend.app.services.invitation_renderer import InvitationCardRenderer
 from backend.app.services.invitation_wording_agent import InvitationWordingAgent
+from backend.app.core.security import verify_event_owner_token
 
 logger = logging.getLogger(__name__)
 
@@ -174,6 +175,7 @@ def get_invitation_studio_options(
 def generate_invitation_cards(
     event_id: str,
     payload: InvitationGenerateRequest,
+    event: Event = Depends(verify_event_owner_token),
     db: Session = Depends(get_db)
 ):
     """
@@ -182,10 +184,6 @@ def generate_invitation_cards(
     and exports both PNG and PDF from single composition pipeline (DEC-030).
     Per-guest errors are isolated and returned in failed_guests without failing the entire batch.
     """
-    event = db.query(Event).filter(Event.id == event_id).first()
-    if not event:
-        raise HTTPException(status_code=404, detail="Event not found")
-
     host_name, date_str, venue_str, muhurat_time, ceremonies = _resolve_event_logistics(event, db)
 
     # Resolve Theme

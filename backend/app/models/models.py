@@ -73,6 +73,7 @@ class Event(Base):
     start_date = Column(Date, nullable=False)
     end_date = Column(Date, nullable=False)
     status = Column(String(50), default="planning", nullable=False, index=True)
+    owner_token = Column(String(64), nullable=True, index=True)
     venue_capacity = Column(Integer, nullable=True)  # Manually-entered placeholder per DEC-016
     metadata_json = Column(JSON, default=dict, nullable=False)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)

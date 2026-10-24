@@ -8,8 +8,9 @@ from backend.app.schemas.vibe import (
     ThemeProposalResponseSchema,
     DecorItemProposalSchema,
 )
-from backend.app.models.models import StyleProfile, ThemeProposal, DecorItem
+from backend.app.models.models import StyleProfile, ThemeProposal, DecorItem, Event
 from backend.app.services.vibe_service import VibeService
+from backend.app.core.security import verify_event_owner_token
 
 router = APIRouter(tags=["Vibe-to-Plan (Theme & Decor)"])
 
@@ -88,6 +89,7 @@ def upload_vibe_and_extract(
     event_id: str,
     files: List[UploadFile] = File([]),
     text_description: Optional[str] = Form(None),
+    event: Event = Depends(verify_event_owner_token),
     db: Session = Depends(get_db)
 ):
     """
@@ -108,6 +110,7 @@ def upload_vibe_and_extract(
 def generate_theme(
     event_id: str,
     profile_id: str,
+    event: Event = Depends(verify_event_owner_token),
     db: Session = Depends(get_db)
 ):
     """
@@ -140,6 +143,7 @@ def get_moodboard(
 def accept_decor_item(
     event_id: str,
     item_id: str,
+    event: Event = Depends(verify_event_owner_token),
     db: Session = Depends(get_db)
 ):
     """
@@ -153,6 +157,7 @@ def accept_decor_item(
 def reject_decor_item(
     event_id: str,
     item_id: str,
+    event: Event = Depends(verify_event_owner_token),
     db: Session = Depends(get_db)
 ):
     """

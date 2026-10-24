@@ -13,6 +13,7 @@ from backend.app.schemas.intake import (
 from backend.app.services.budget_engine import BudgetScalingEngine
 from backend.app.services.budget_rescaling_engine import BudgetRescalingEngine
 from backend.app.services.dag_scheduler import DAGScheduler
+from backend.app.core.security import generate_owner_token
 
 
 def normalize_indian_phone(phone: str) -> str:
@@ -75,6 +76,7 @@ class IntakeService:
             db.flush()
 
         # 2. Event
+        owner_token = generate_owner_token()
         event = Event(
             owner_id=user.id,
             name=req.name,
@@ -87,7 +89,8 @@ class IntakeService:
             start_date=req.start_date,
             end_date=req.end_date,
             status="planning",
-            metadata_json={"host_name": req.host_name}
+            owner_token=owner_token,
+            metadata_json={"host_name": req.host_name, "owner_token": owner_token}
         )
         db.add(event)
         db.flush()
@@ -173,6 +176,7 @@ class IntakeService:
         # Build Response
         return MasterPlanResponseSchema(
             event_id=event.id,
+            owner_token=owner_token,
             name=event.name,
             owner_name=user.full_name,
             status=event.status,

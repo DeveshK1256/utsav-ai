@@ -3,6 +3,8 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from backend.app.db.session import get_db
+from backend.app.models.models import Event
+from backend.app.core.security import verify_event_owner_token
 from backend.app.schemas.replanning import (
     ChangeRequestSchema,
     ChangeProposalResponseSchema,
@@ -36,6 +38,7 @@ def list_change_proposals(
 def submit_change_event(
     id: str,
     payload: ChangeRequestSchema,
+    event: Event = Depends(verify_event_owner_token),
     db: Session = Depends(get_db)
 ):
     """
@@ -70,6 +73,7 @@ def get_change_proposal(
 def accept_change_proposal(
     id: str,
     change_id: str,
+    event: Event = Depends(verify_event_owner_token),
     db: Session = Depends(get_db)
 ):
     """
@@ -88,6 +92,7 @@ def accept_change_proposal(
 def reject_change_proposal(
     id: str,
     change_id: str,
+    event: Event = Depends(verify_event_owner_token),
     db: Session = Depends(get_db)
 ):
     """
@@ -106,6 +111,7 @@ def patch_change_proposal(
     id: str,
     change_id: str,
     payload: PatchChangeProposalSchema,
+    event: Event = Depends(verify_event_owner_token),
     db: Session = Depends(get_db)
 ):
     """

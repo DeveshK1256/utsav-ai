@@ -218,7 +218,9 @@ def test_vibe_to_plan_stub_workflow_and_granular_acceptance():
         }
     )
     assert intake_res.status_code == 201
-    event_id = intake_res.json()["id"]
+    intake_data = intake_res.json()
+    event_id = intake_data["id"]
+    auth_headers = {"X-Event-Owner-Token": intake_data["owner_token"]} if intake_data.get("owner_token") else {}
 
     # 2. Upload vibe inspiration images + text description
     img_data1 = create_dummy_image_bytes(color="gold")
@@ -235,7 +237,8 @@ def test_vibe_to_plan_stub_workflow_and_granular_acceptance():
     upload_res = client.post(
         f"/api/v1/events/{event_id}/vibe/upload",
         files=files,
-        data=data
+        data=data,
+        headers=auth_headers
     )
     assert upload_res.status_code == 201
     profile = upload_res.json()
@@ -246,7 +249,8 @@ def test_vibe_to_plan_stub_workflow_and_granular_acceptance():
 
     # 3. Generate Theme Proposal
     theme_res = client.post(
-        f"/api/v1/events/{event_id}/vibe/{profile_id}/generate-theme"
+        f"/api/v1/events/{event_id}/vibe/{profile_id}/generate-theme",
+        headers=auth_headers
     )
     assert theme_res.status_code == 201
     theme_data = theme_res.json()
@@ -276,7 +280,8 @@ def test_vibe_to_plan_stub_workflow_and_granular_acceptance():
     item_id = item_to_accept["id"]
 
     accept_res = client.post(
-        f"/api/v1/events/{event_id}/vibe/decor-items/{item_id}/accept"
+        f"/api/v1/events/{event_id}/vibe/decor-items/{item_id}/accept",
+        headers=auth_headers
     )
     assert accept_res.status_code == 200
     accepted_data = accept_res.json()
@@ -303,7 +308,8 @@ def test_vibe_to_plan_stub_workflow_and_granular_acceptance():
     # 6. Reject another decor item
     item_to_reject = theme_data["decor_items"][1]
     reject_res = client.post(
-        f"/api/v1/events/{event_id}/vibe/decor-items/{item_to_reject['id']}/reject"
+        f"/api/v1/events/{event_id}/vibe/decor-items/{item_to_reject['id']}/reject",
+        headers=auth_headers
     )
     assert reject_res.status_code == 200
     assert reject_res.json()["status"] == "rejected"

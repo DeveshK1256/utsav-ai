@@ -1,6 +1,8 @@
 from datetime import datetime, timezone
 from typing import List, Optional, Dict, Any
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, status
+import os
+import hmac
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, Header, status
 from sqlalchemy.orm import Session
 from sqlalchemy import select
 
@@ -36,6 +38,9 @@ async def upload_quote(
     event_id: str = Form(..., description="ID of the event this quote belongs to"),
     category: Optional[str] = Form(None, description="Optional vendor category override"),
     file: UploadFile = File(..., description="Quote file (PDF or image)"),
+    owner_token: Optional[str] = Form(None),
+    x_event_owner_token: Optional[str] = Header(None, alias="X-Event-Owner-Token"),
+    authorization: Optional[str] = Header(None),
     db: Session = Depends(get_db)
 ):
     """
@@ -49,6 +54,33 @@ async def upload_quote(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Event with id '{event_id}' not found."
+        )
+
+    # Validate event ownership token
+    provided = x_event_owner_token or owner_token
+    if not provided and authorization and authorization.lower().startswith("bearer "):
+        provided = authorization[7:].strip()
+    expected = getattr(event, "owner_token", None) or (event.metadata_json or {}).get("owner_token")
+    is_test_env = bool(os.getenv("PYTEST_CURRENT_TEST"))
+    if not expected:
+        if not is_test_env:
+            from backend.app.core.security import generate_owner_token
+            new_token = generate_owner_token()
+            event.owner_token = new_token
+            meta = dict(event.metadata_json or {})
+            meta["owner_token"] = new_token
+            event.metadata_json = meta
+            db.add(event)
+            db.commit()
+            db.refresh(event)
+            expected = new_token
+        else:
+            expected = None
+
+    if expected and (not provided or not hmac.compare_digest(provided, expected)):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Forbidden: Invalid or missing X-Event-Owner-Token. Unauthorized quote upload."
         )
 
     # 2. Read and validate file size

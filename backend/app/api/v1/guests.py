@@ -14,6 +14,7 @@ from backend.app.services.whatsapp.send_service import (
 from backend.app.services.whatsapp.reminder_scheduler import (
     ReminderScheduler, ScheduledReminderPlan
 )
+from backend.app.core.security import verify_event_owner_token
 
 router = APIRouter(prefix="/events", tags=["Guests & Coordination"])
 
@@ -48,16 +49,13 @@ class FactSheetSchema(BaseModel):
 def import_guests(
     event_id: str,
     payload: Optional[GuestImportRequest] = None,
+    event: Event = Depends(verify_event_owner_token),
     db: Session = Depends(get_db)
 ):
     """
     Imports, validates, and normalizes guest rows for an event.
     Deduplicates by phone and rejects unparseable phone numbers with explicit feedback.
     """
-    event = db.query(Event).filter(Event.id == event_id).first()
-    if not event:
-        raise HTTPException(status_code=404, detail="Event not found")
-
     rows = [g.dict() for g in payload.guests] if payload and payload.guests else []
     return GuestService.import_guest_rows(db, event_id, rows)
 
@@ -66,18 +64,16 @@ def import_guests(
 async def import_guests_csv(
     event_id: str,
     file: UploadFile = File(...),
+    event: Event = Depends(verify_event_owner_token),
     db: Session = Depends(get_db)
 ):
     """
     Imports guests via CSV file upload.
     """
-    event = db.query(Event).filter(Event.id == event_id).first()
-    if not event:
-        raise HTTPException(status_code=404, detail="Event not found")
-
     contents = await file.read()
     text = contents.decode("utf-8-sig", errors="ignore")
     rows = GuestService.parse_csv_file(text)
+    return GuestService.import_guest_rows(db, event_id, rows)
     return GuestService.import_guest_rows(db, event_id, rows)
 
 
@@ -131,16 +127,13 @@ def get_rsvp_summary(
 def send_invitations(
     event_id: str,
     guest_ids: Optional[List[str]] = None,
+    event: Event = Depends(verify_event_owner_token),
     db: Session = Depends(get_db)
 ):
     """
     Batch-sends WhatsApp invitations to guests.
     Enforces opt_out verification before every send.
     """
-    event = db.query(Event).filter(Event.id == event_id).first()
-    if not event:
-        raise HTTPException(status_code=404, detail="Event not found")
-
     return WhatsAppSendService.send_batch_invitations(db, event_id, guest_ids)
 
 
@@ -148,6 +141,7 @@ def send_invitations(
 def delete_guest(
     event_id: str,
     guest_id: str,
+    event: Event = Depends(verify_event_owner_token),
     db: Session = Depends(get_db)
 ):
     """Purges guest data on request per privacy and data-deletion policies."""
@@ -189,13 +183,10 @@ def get_fact_sheet(
 def update_fact_sheet(
     event_id: str,
     payload: FactSheetSchema,
+    event: Event = Depends(verify_event_owner_token),
     db: Session = Depends(get_db)
 ):
     """Creates or updates the verified event fact sheet."""
-    event = db.query(Event).filter(Event.id == event_id).first()
-    if not event:
-        raise HTTPException(status_code=404, detail="Event not found")
-
     fs = db.query(EventFactSheet).filter(EventFactSheet.event_id == event_id).first()
     if not fs:
         fs = EventFactSheet(

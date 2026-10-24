@@ -75,6 +75,12 @@ def run_db_backfill_on_startup():
                 conn.execute(text("ALTER TABLE ritual_items ADD COLUMN IF NOT EXISTS category VARCHAR(50) DEFAULT 'puja_samagri';"))
                 conn.execute(text("ALTER TABLE ritual_items ADD COLUMN IF NOT EXISTS is_verified BOOLEAN DEFAULT FALSE;"))
                 conn.execute(text("ALTER TABLE events ADD COLUMN IF NOT EXISTS secondary_tradition_code VARCHAR(50);"))
+                conn.execute(text("ALTER TABLE events ADD COLUMN IF NOT EXISTS owner_token VARCHAR(64);"))
+            elif engine.dialect.name == "sqlite":
+                try:
+                    conn.execute(text("ALTER TABLE events ADD COLUMN owner_token VARCHAR(64);"))
+                except Exception:
+                    pass
 
             conn.execute(text("""
                 UPDATE budget_items
