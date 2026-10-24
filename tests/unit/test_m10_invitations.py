@@ -446,3 +446,71 @@ def test_pdf_lossless_pixel_diff():
     diff = np.max(np.abs(arr_pdf.astype(int) - arr_png.astype(int)))
     assert diff == 0, f"Expected 0 pixel difference, got max diff of {diff}"
 
+
+def test_venue_skipped_card_generation_returns_valid_card_id():
+    """
+    Regression test: Verifies that when a host skips venue selection (Stage 4 Step A),
+    invitation generation returns a valid, non-null card UUID in cards[0]['id'],
+    gracefully renders 'Venue to be confirmed', and provides valid download URLs.
+    """
+    import random
+    import uuid
+    db = SessionLocal()
+    phone = f"+9197{random.randint(10000000, 99999999)}"
+    user = User(phone_number=phone, full_name="Skip Venue Host", role="host")
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+
+    owner_token = "test_owner_token_" + uuid.uuid4().hex
+    ev = Event(
+        owner_id=user.id,
+        name="Ananya & Dev Wedding",
+        event_type="wedding",
+        guest_count=100,
+        total_budget=1000000.0,
+        city="Jaipur",
+        pincode="302001",
+        start_date=date.today() + timedelta(days=45),
+        end_date=date.today() + timedelta(days=46),
+        metadata_json={
+            "owner_token": owner_token,
+            "compose_celebration": {
+                "venue_action": "skip",
+                "completed_steps": ["venue"]
+            }
+        }
+    )
+    db.add(ev)
+    db.commit()
+    db.refresh(ev)
+    db.close()
+
+    headers = {"X-Event-Owner-Token": owner_token}
+    res = client.post(
+        f"/api/v1/events/{ev.id}/invitations/generate",
+        json={"layout_variant": "classic_arch"},
+        headers=headers
+    )
+    assert res.status_code == 201
+    data = res.json()
+
+    # Structural contract checks
+    assert "cards" in data and len(data["cards"]) > 0, "Expected non-empty cards list"
+    assert data["total_generated"] == 1
+    assert data["total_failed"] == 0
+
+    card = data["cards"][0]
+    card_id = card.get("id")
+    assert card_id is not None, "card_id must not be None"
+    assert isinstance(card_id, str) and len(card_id) == 36, f"card_id must be a 36-char UUID string, got {card_id}"
+    assert card["event_id"] == ev.id
+    assert f"/api/v1/events/{ev.id}/invitations/{card_id}/download?format=png" == card["png_download_url"]
+    assert f"/api/v1/events/{ev.id}/invitations/{card_id}/download?format=pdf" == card["pdf_download_url"]
+
+    # Verify download succeeds with the returned card_id
+    res_png = client.get(f"/api/v1/events/{ev.id}/invitations/{card_id}/download?format=png")
+    assert res_png.status_code == 200
+    assert res_png.headers["content-type"] == "image/png"
+
+

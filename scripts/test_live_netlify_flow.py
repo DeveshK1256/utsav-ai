@@ -91,8 +91,13 @@ def main():
     )
     with urllib.request.urlopen(req4) as resp:
         res4 = json.loads(resp.read().decode())
-        print(f"4. Invitation Generation status={resp.status}: card_id={res4.get('id')}")
-        assert resp.status in (200, 201)
+        assert resp.status in (200, 201), f"Expected 200/201, got {resp.status}"
+        assert 'cards' in res4 and len(res4['cards']) > 0, f"Expected non-empty cards list: {res4}"
+        card = res4['cards'][0]
+        card_id = card.get('id')
+        print(f"4. Invitation Generation status={resp.status}: card_id={card_id} (cards_count={len(res4['cards'])}, total_generated={res4.get('total_generated')})")
+        assert card_id is not None and isinstance(card_id, str) and len(card_id) == 36, f"Invalid card_id: {card_id}"
+        assert f"/invitations/{card_id}/download?format=png" in card.get('png_download_url', ''), f"Invalid png_download_url: {card.get('png_download_url')}"
 
     # 5. Verify that mutating WITHOUT token is blocked with 403
     req_unauth = urllib.request.Request(
