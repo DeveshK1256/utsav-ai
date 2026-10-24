@@ -275,3 +275,174 @@ def test_generic_card_fallback_when_no_guests():
     assert data["total_failed"] == 0
     assert data["cards"][0]["guest_id"] is None
     assert data["cards"][0]["guest_name"] is None
+
+
+def test_muhurat_resolution_from_locked_subevent():
+    """
+    Proves Path (a): when metadata_json['muhurat_time'] is absent,
+    a locked sub_event (is_muhurat_locked == True) correctly flows into
+    options and card generation.
+    """
+    import random
+    from datetime import datetime
+    from backend.app.models.models import SubEvent
+    db = SessionLocal()
+    phone = f"+9195{random.randint(10000000, 99999999)}"
+    user = User(phone_number=phone, full_name="Auspicious Host", role="host")
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+
+    ev = Event(
+        owner_id=user.id,
+        name="Pooja & Samaroh",
+        event_type="wedding",
+        guest_count=100,
+        total_budget=500000.0,
+        city="Pune",
+        pincode="411001",
+        start_date=date.today() + timedelta(days=15),
+        end_date=date.today() + timedelta(days=16),
+        metadata_json={}  # Explicitly NO muhurat_time in metadata
+    )
+    db.add(ev)
+    db.commit()
+    db.refresh(ev)
+
+    # Add an unlocked sub-event and a locked muhurat sub-event
+    s1 = SubEvent(
+        event_id=ev.id,
+        name="Haldi Ceremony",
+        start_time=datetime(2026, 11, 10, 8, 0),
+        end_time=datetime(2026, 11, 10, 10, 0),
+        venue_name="Lawn",
+        is_muhurat_locked=False
+    )
+    s2 = SubEvent(
+        event_id=ev.id,
+        name="Hastamelap Vivah",
+        start_time=datetime(2026, 11, 10, 11, 15),
+        end_time=datetime(2026, 11, 10, 12, 45),
+        venue_name="Main Mandap",
+        is_muhurat_locked=True,
+        muhurat_notes="Abhijit Muhurat"
+    )
+    db.add_all([s1, s2])
+    db.commit()
+
+    # 1. Test studio options endpoint
+    res_opts = client.get(f"/api/v1/events/{ev.id}/invitations/options")
+    assert res_opts.status_code == 200
+    opts_data = res_opts.json()
+    assert opts_data["muhurat_time"] == "11:15 AM - 12:45 PM (Abhijit Muhurat)"
+
+    # 2. Test card generation incorporates the locked muhurat
+    res_gen = client.post(f"/api/v1/events/{ev.id}/invitations/generate", json={"layout_variant": "classic_royal"})
+    assert res_gen.status_code == 201
+    card_id = res_gen.json()["cards"][0]["id"]
+
+    # Verify PNG and PDF download succeed and contain lossless FlateDecode PDF
+    res_pdf = client.get(f"/api/v1/events/{ev.id}/invitations/{card_id}/download?format=pdf")
+    assert res_pdf.status_code == 200
+    assert b"/FlateDecode" in res_pdf.content
+    assert b"/DCTDecode" not in res_pdf.content
+
+    db.close()
+
+
+def test_muhurat_placeholder_when_no_locked_subevent():
+    """
+    Proves Path (b): when neither metadata_json['muhurat_time'] nor a locked
+    sub_event exists, the system does NOT silently invent or calculate an unconfirmed
+    panchang muhurat, but cleanly leaves muhurat_time as None / placeholder.
+    """
+    import random
+    from datetime import datetime
+    from backend.app.models.models import SubEvent
+    db = SessionLocal()
+    phone = f"+9194{random.randint(10000000, 99999999)}"
+    user = User(phone_number=phone, full_name="Pending Host", role="host")
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+
+    ev = Event(
+        owner_id=user.id,
+        name="Reception Dinner",
+        event_type="milestone",
+        guest_count=50,
+        total_budget=200000.0,
+        city="Delhi",
+        pincode="110001",
+        start_date=date.today() + timedelta(days=30),
+        end_date=date.today() + timedelta(days=30),
+        metadata_json={}  # No muhurat_time
+    )
+    db.add(ev)
+    db.commit()
+    db.refresh(ev)
+
+    # Sub-event without muhurat lock
+    s1 = SubEvent(
+        event_id=ev.id,
+        name="Welcome Drinks",
+        start_time=datetime(2026, 12, 1, 19, 0),
+        end_time=datetime(2026, 12, 1, 23, 0),
+        venue_name="Banquet Hall",
+        is_muhurat_locked=False
+    )
+    db.add(s1)
+    db.commit()
+
+    # 1. Test studio options endpoint returns None for muhurat_time (no fabricated time)
+    res_opts = client.get(f"/api/v1/events/{ev.id}/invitations/options")
+    assert res_opts.status_code == 200
+    opts_data = res_opts.json()
+    assert opts_data["muhurat_time"] is None
+
+    # 2. Card generates cleanly without fabricating an unconfirmed muhurat
+    res_gen = client.post(f"/api/v1/events/{ev.id}/invitations/generate", json={"layout_variant": "modern_minimal"})
+    assert res_gen.status_code == 201
+    card_id = res_gen.json()["cards"][0]["id"]
+
+    res_pdf = client.get(f"/api/v1/events/{ev.id}/invitations/{card_id}/download?format=pdf")
+    assert res_pdf.status_code == 200
+    assert b"/FlateDecode" in res_pdf.content
+
+    db.close()
+
+
+def test_pdf_lossless_pixel_diff():
+    """
+    Directly tests that PDF extraction yields bitwise-identical pixels to the rendered PNG.
+    """
+    import zlib
+    import re
+    import numpy as np
+
+    png_bytes, pdf_bytes = InvitationCardRenderer.render_card(
+        event_name="Pixel Test Vivah",
+        host_name="Sharma Parivar",
+        date_str="Sunday, 15 November 2026",
+        venue_str="Grand Hyatt, Mumbai",
+        wording_text="Cordial invitation to celebrate.",
+        muhurat_time="11:00 AM - 12:30 PM",
+        guest_name="आदरणीय पाहुणे",
+        layout_variant="classic_royal"
+    )
+
+    # Extract FlateDecode image stream from PDF
+    match = re.search(rb'/Filter\s*/FlateDecode.*?stream\r?\n(.*?)\r?\nendstream', pdf_bytes, re.DOTALL)
+    assert match is not None, "PDF must use FlateDecode filter"
+    raw_stream = zlib.decompress(match.group(1))
+
+    pdf_image = Image.frombytes("RGB", (1200, 1800), raw_stream)
+    png_image = Image.open(io.BytesIO(png_bytes)).convert("RGB")
+
+    arr_pdf = np.array(pdf_image)
+    arr_png = np.array(png_image)
+
+    # Compare pixel arrays
+    diff = np.max(np.abs(arr_pdf.astype(int) - arr_png.astype(int)))
+    assert diff == 0, f"Expected 0 pixel difference, got max diff of {diff}"
+

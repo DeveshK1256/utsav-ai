@@ -69,13 +69,37 @@ def _resolve_event_logistics(event: Event, db: Session):
     elif event.city:
         venue_str = f"{event.city} (Venue to be confirmed)"
 
-    # 4. Muhurat Time
+    # 4. Muhurat Time:
+    # Priority A: Confirmed manual/event-level muhurat time from metadata_json
+    # Priority B: Sub-event with is_muhurat_locked == True (M5 auspicious locked time)
+    # Priority C: None (card renders without muhurat badge / with confirmed timing only, never fabricating unconfirmed panchang)
     muhurat_time = None
     if event.metadata_json and isinstance(event.metadata_json, dict):
         muhurat_time = event.metadata_json.get("muhurat_time")
 
-    # 5. Ceremonies from sub_events
+    # Fetch sub_events for both muhurat resolution and ceremony listing
     sub_events = db.query(SubEvent).filter(SubEvent.event_id == event.id).order_by(SubEvent.start_time).all()
+
+    if not muhurat_time:
+        locked_sub_event = next((s for s in sub_events if s.is_muhurat_locked), None)
+        if locked_sub_event:
+            # Format locked window: e.g. "10:30 AM - 12:00 PM (Vivah Muhurat)" or time range
+            start_fmt = locked_sub_event.start_time.strftime("%I:%M %p").lstrip("0") if locked_sub_event.start_time else None
+            end_fmt = locked_sub_event.end_time.strftime("%I:%M %p").lstrip("0") if locked_sub_event.end_time else None
+            if start_fmt and end_fmt:
+                time_range = f"{start_fmt} - {end_fmt}"
+            elif start_fmt:
+                time_range = start_fmt
+            else:
+                time_range = None
+
+            if time_range:
+                if locked_sub_event.muhurat_notes:
+                    muhurat_time = f"{time_range} ({locked_sub_event.muhurat_notes})"
+                else:
+                    muhurat_time = f"{time_range} ({locked_sub_event.name})"
+
+    # 5. Ceremonies from sub_events
     ceremonies = [s.name for s in sub_events if s.name]
 
     return host_name, date_str, venue_str, muhurat_time, ceremonies
