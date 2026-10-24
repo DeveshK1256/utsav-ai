@@ -100,13 +100,13 @@ export default function ComposePageClient() {
       fetch(`${API_BASE_URL}/rituals/muhurat-candidates?event_date=${eventDate}&latitude=${coords.lat}&longitude=${coords.lng}`)
         .then((r) => r.json())
         .then((res) => {
-          if (res && res.candidate_windows && res.candidate_windows.length > 0) {
+          if (res && res.candidates && res.candidates.length > 0) {
             setMuhuratOptions(
-              res.candidate_windows.map((w: any) => ({
+              res.candidates.map((w: any) => ({
                 name: w.name,
-                time: `${w.start_time} - ${w.end_time}`,
-                type: w.quality,
-                notes: w.notes
+                time: w.window,
+                type: w.suitability,
+                notes: w.planetary_rationale
               }))
             );
           }

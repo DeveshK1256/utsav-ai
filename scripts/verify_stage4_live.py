@@ -33,15 +33,15 @@ def run_live_verification():
         assert r.status_code == 200
 
         # 2. Query Stage 3 Discovery Endpoint for Real Seed Venues (Pune coordinates)
-        print("\n[2] Stage 3 Integration: Querying GET /discovery/vendors (Lat 18.5204, Lng 73.8567)...")
+        print("\n[2] Stage 3 Integration: Querying GET /discovery/vendors (Lat 18.485, Lng 73.812)...")
         r_disc = client.get(f"{BASE_URL}/discovery/vendors", params={
-            "latitude": 18.5204,
-            "longitude": 73.8567,
+            "lat": 18.485,
+            "lng": 73.812,
             "radius_km": 25.0
         })
         assert r_disc.status_code == 200, f"Discovery query failed: {r_disc.text}"
         disc_data = r_disc.json()
-        venues = disc_data.get("vendors", [])
+        venues = disc_data.get("results", [])
         print(f"Discovery returned {len(venues)} venues in radius:")
         for v in venues:
             print(f"  • {v['business_name']} ({v.get('locality', 'N/A')}) - {v.get('distance_km', 'N/A')} km [ID: {v['id']}]")
@@ -125,21 +125,21 @@ def run_live_verification():
         assert r_muhurat.status_code == 200, f"Muhurat calculation failed: {r_muhurat.text}"
         muhurat_data = r_muhurat.json()
         print("Real Computed Panchang Summary for 2026-11-20 (Pune):")
-        panchang_summary = muhurat_data.get("panchang_summary", {})
-        print(f"  • Sunrise:   {panchang_summary.get('sunrise')}")
-        print(f"  • Sunset:    {panchang_summary.get('sunset')}")
-        print(f"  • Tithi:     {panchang_summary.get('tithi')}")
-        print(f"  • Nakshatra: {panchang_summary.get('nakshatra')}")
-        print(f"  • Rahu Kaal: {panchang_summary.get('rahu_kaal')}")
+        print(f"  • Sunrise:   {muhurat_data.get('sunrise')}")
+        print(f"  • Sunset:    {muhurat_data.get('sunset')}")
+        print(f"  • Tithi:     {muhurat_data.get('tithi', {}).get('name')}")
+        print(f"  • Nakshatra: {muhurat_data.get('nakshatra', {}).get('name')}")
+        print(f"  • Rahu Kaal: {muhurat_data.get('rahu_kaal_prohibited_window')}")
+        print(f"  • Disclaimer: {muhurat_data.get('elevated_disclaimer')}")
 
-        candidate_windows = muhurat_data.get("candidate_windows", [])
+        candidate_windows = muhurat_data.get("candidates", [])
         print(f"\nAstronomical Candidate Windows ({len(candidate_windows)} calculated):")
         for idx, cw in enumerate(candidate_windows):
-            print(f"  [{idx + 1}] {cw['name']}: {cw['start_time']} - {cw['end_time']} ({cw['quality']})")
+            print(f"  [{idx + 1}] {cw['name']}: {cw['window']} ({cw['suitability']})")
 
         assert len(candidate_windows) > 0, "No candidate windows returned by ephemeris engine!"
         chosen_window = candidate_windows[0]
-        chosen_time_str = f"{chosen_window['start_time']} - {chosen_window['end_time']} ({chosen_window['name']})"
+        chosen_time_str = f"{chosen_window['window']} ({chosen_window['name']})"
         print(f"\nSelected Live Computed Muhurat for Step B: '{chosen_time_str}'")
 
         # 7. Step B Execution: Confirm real computed muhurat
@@ -169,7 +169,7 @@ def run_live_verification():
         print(f"  • Confirmed Venue:   {options.get('venue_str')}")
         print(f"  • Confirmed Muhurat: {options.get('muhurat_time')}")
         assert chosen_venue_name in str(options.get("venue_str"))
-        assert chosen_window["start_time"] in str(options.get("muhurat_time"))
+        assert chosen_window["window"] in str(options.get("muhurat_time"))
         print("✓ Confirmed: Invitation Studio consumed both real Stage 3 venue and real Stage 1 muhurat.")
 
         # 9. Generate Card & Verify Formats
