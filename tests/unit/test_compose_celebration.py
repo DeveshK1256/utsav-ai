@@ -292,3 +292,73 @@ def test_compose_celebration_venue_requires_real_vendor_profile_id():
     assert "requires a valid vendor_profile_id" in res_bare.json()["detail"]
 
     db.close()
+
+
+def test_compose_celebration_with_discovered_osm_venue():
+    """
+    Test 5: Nationwide Free OSM Venue Integration
+    Verifies that real OpenStreetMap venues discovered via VendorDiscoveryService
+    are persisted in vendor_profiles with deterministic UUIDs and successfully
+    link to events via POST /events/{id}/compose.
+    """
+    import uuid
+    from backend.app.services.discovery_service import VendorDiscoveryService
+    db = SessionLocal()
+    phone = f"+9198{random.randint(10000000, 99999999)}"
+    user = User(phone_number=phone, full_name="Bengaluru Host", role="host")
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+
+    owner_token = "osm_host_token_" + str(uuid.uuid4().hex)
+    ev = Event(
+        owner_id=user.id,
+        name="Kavya & Arjun Kalyana Vivaha",
+        event_type="wedding",
+        guest_count=150,
+        total_budget=800000.0,
+        city="Bengaluru",
+        pincode="560001",
+        start_date=date.today() + timedelta(days=30),
+        end_date=date.today() + timedelta(days=31),
+        metadata_json={"owner_token": owner_token}
+    )
+    db.add(ev)
+    db.commit()
+    db.refresh(ev)
+
+    # 1. Discover venues in Bengaluru via nationwide OSM service
+    discovery_res = VendorDiscoveryService.search_vendors(
+        db=db,
+        lat=12.9716,
+        lng=77.5946,
+        city="Bengaluru",
+        radius_km=25.0
+    )
+    assert discovery_res.total_results > 0, "Expected at least 1 OSM venue in Bengaluru"
+    osm_venue = discovery_res.results[0]
+    assert osm_venue.coordinate_precision == "exact_osm_node"
+    assert "OpenStreetMap" in osm_venue.source_notes
+
+    # 2. Host selects this OSM venue in Step A
+    headers = {"X-Event-Owner-Token": owner_token}
+    res_compose = client.post(
+        f"/api/v1/events/{ev.id}/compose",
+        json={
+            "step": "venue",
+            "vendor_profile_id": osm_venue.id
+        },
+        headers=headers
+    )
+    assert res_compose.status_code == 200
+    data = res_compose.json()
+
+    # 3. Assert database state correctly records shortlist pick
+    compose_meta = data["metadata_json"]["compose_celebration"]
+    assert compose_meta["vendor_profile_id"] == osm_venue.id
+    assert compose_meta["venue_name"] == osm_venue.business_name
+    assert compose_meta["venue_status"] == "shortlist_pick"
+    assert compose_meta["venue_skipped"] is False
+
+    db.close()
+

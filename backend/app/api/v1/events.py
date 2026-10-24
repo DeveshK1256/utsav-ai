@@ -127,14 +127,18 @@ def get_event(
     if not event:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Event not found")
 
-    provided = x_event_owner_token or owner_token
-    if not provided and authorization and authorization.lower().startswith("bearer "):
+    provided = None
+    if isinstance(x_event_owner_token, str):
+        provided = x_event_owner_token
+    elif isinstance(owner_token, str):
+        provided = owner_token
+    elif isinstance(authorization, str) and authorization.lower().startswith("bearer "):
         provided = authorization[7:].strip()
 
     expected = getattr(event, "owner_token", None) or (event.metadata_json or {}).get("owner_token")
     # Only reveal owner_token in GET response if caller proved they already possess it
     returned_token = None
-    if provided and expected and hmac.compare_digest(provided, expected):
+    if provided and expected and isinstance(expected, str) and hmac.compare_digest(provided, expected):
         returned_token = expected
 
     tier = BudgetScalingEngine.resolve_city_tier(event.city)
@@ -306,6 +310,8 @@ def update_event_compose_progress(
     return get_event(
         event_id=event.id,
         x_event_owner_token=event.owner_token,
+        owner_token=None,
+        authorization=None,
         db=db
     )
 

@@ -42,3 +42,27 @@ def get_nearby_vendors(
         category=category,
         sort_by=sort
     )
+
+
+@router.get("/geocode")
+def geocode_location(
+    q: str = Query(..., min_length=2, description="City name or 6-digit Indian pincode to geocode via OpenStreetMap")
+):
+    """
+    Converts a manual city name or 6-digit pincode to coordinates using OpenStreetMap Nominatim.
+    Free, no API key, zero-billing, strictly respects 1 req/sec policy with identification header.
+    """
+    res = VendorDiscoveryService.geocode_query(q)
+    if not res:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Could not resolve coordinates for '{q}' in OpenStreetMap. Please verify spelling or try city name."
+        )
+    lat, lng, display_name = res
+    return {
+        "query": q,
+        "lat": lat,
+        "lng": lng,
+        "display_name": display_name
+    }
+
