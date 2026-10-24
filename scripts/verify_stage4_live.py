@@ -1,5 +1,9 @@
+import sys
 import time
 import httpx
+
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8")
 
 BASE_URL = "https://utsav-ai-ycg2.onrender.com/api/v1"
 
@@ -75,12 +79,11 @@ def run_live_verification():
         r = client.get(f"{BASE_URL}/events/{event_id}/invitations/options")
         assert r.status_code == 200, f"Options query failed: {r.text}"
         options = r.json()
-        event_details = options.get("event_details", {})
-        print("Event Details consumed by Invitation Studio:")
-        print(f"  • Confirmed Venue: {event_details.get('venue')}")
-        print(f"  • Confirmed Muhurat: {event_details.get('muhurat_time')}")
-        assert "Sunny's World" in str(event_details.get('venue'))
-        assert "सकाळी १०:१५" in str(event_details.get('muhurat_time'))
+        print("Logistics consumed by Invitation Studio:")
+        print(f"  • Confirmed Venue: {options.get('venue_str')}")
+        print(f"  • Confirmed Muhurat: {options.get('muhurat_time')}")
+        assert "Sunny's World" in str(options.get('venue_str'))
+        assert "सकाळी १०:१५" in str(options.get('muhurat_time'))
 
         # 6. Generate Invitation Card
         print("\n[6] Generating Invitation Card via M10 Pillow Service...")
@@ -89,8 +92,9 @@ def run_live_verification():
             "wording_variant_index": 0
         }
         r = client.post(f"{BASE_URL}/events/{event_id}/invitations/generate", json=gen_payload)
-        assert r.status_code == 200, f"Card generation failed: {r.text}"
-        cards = r.json()
+        assert r.status_code in (200, 201), f"Card generation failed: {r.text}"
+        batch_res = r.json()
+        cards = batch_res.get("cards", [])
         print(f"Generated {len(cards)} card(s). First card ID: {cards[0]['id']}")
         card_id = cards[0]["id"]
 
@@ -131,13 +135,13 @@ def run_live_verification():
         client.post(f"{BASE_URL}/events/{skip_id}/compose", json={"step": "timing", "timing_skipped": True})
 
         r_skip_opt = client.get(f"{BASE_URL}/events/{skip_id}/invitations/options")
-        skip_details = r_skip_opt.json().get("event_details", {})
+        skip_options = r_skip_opt.json()
         print("Skip Details in Invitation Studio:")
-        print(f"  • Venue: {skip_details.get('venue')}")
-        print(f"  • Muhurat: {skip_details.get('muhurat_time')}")
-        assert skip_details.get("venue") is None
-        assert skip_details.get("muhurat_time") is None
-        print("  ✓ Zero hallucination confirmed: Venue and Muhurat correctly None when skipped!")
+        print(f"  • Venue: {skip_options.get('venue_str')}")
+        print(f"  • Muhurat: {skip_options.get('muhurat_time')}")
+        assert "to be confirmed" in skip_options.get("venue_str", "")
+        assert skip_options.get("muhurat_time") is None
+        print("  ✓ Zero hallucination confirmed: Venue is honest placeholder and Muhurat is None when skipped!")
 
         print("\n" + "=" * 80)
         print("       ALL STAGE 4 LIVE VERIFICATION CHECKS PASSED GREEN!")
