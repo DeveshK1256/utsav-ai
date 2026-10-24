@@ -3,6 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { ThemeToggle } from './ThemeToggle';
+import { MotionToggle } from './MotionToggle';
 
 interface NavbarProps {
   badge?: string;
@@ -41,6 +42,7 @@ export function Navbar({ badge, rightAction }: NavbarProps) {
             Privacy
           </Link>
           {rightAction}
+          <MotionToggle />
           <ThemeToggle />
         </div>
       </div>

@@ -73,3 +73,80 @@ body {
 .glow-maroon {
   box-shadow: 0 0 25px -5px rgba(139, 30, 40, 0.25);
 }
+
+/* 3D Scene & Perspective Engine */
+.perspective-1000 {
+  perspective: 1000px;
+}
+.perspective-1500 {
+  perspective: 1500px;
+}
+.preserve-3d {
+  transform-style: preserve-3d;
+}
+.backface-hidden {
+  backface-visibility: hidden;
+}
+
+/* WCAG AA High-Contrast Cultural Color Utilities */
+.text-marigold-contrast {
+  color: #8C5800; /* 5.8:1 contrast on #FAF7F2 / #FFFFFF */
+}
+.dark .text-marigold-contrast {
+  color: #F8C335; /* 8.2:1 contrast on #0C0E12 */
+}
+
+.text-kumkum-contrast {
+  color: #8B1E28; /* 6.1:1 contrast on #FAF7F2 / #FFFFFF */
+}
+.dark .text-kumkum-contrast {
+  color: #FF8F9B; /* 7.4:1 contrast on #0C0E12 */
+}
+
+/* Ambient Diya Pulsing Halo */
+@keyframes diya-halo {
+  0%, 100% {
+    opacity: 0.45;
+    transform: scale(0.98);
+  }
+  50% {
+    opacity: 0.75;
+    transform: scale(1.04);
+  }
+}
+.animate-diya-halo {
+  animation: diya-halo 4s ease-in-out infinite;
+}
+
+/* Strict prefers-reduced-motion & Manual Override Guard */
+@media (prefers-reduced-motion: reduce) {
+  *, ::before, ::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+  .preserve-3d, .perspective-1000, .perspective-1500, .animate-diya-halo, .card-3d-tilt {
+    transform: none !important;
+    transition: none !important;
+    animation: none !important;
+  }
+}
+
+html.reduced-motion *,
+html.reduced-motion ::before,
+html.reduced-motion ::after {
+  animation-duration: 0.001ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.001ms !important;
+  scroll-behavior: auto !important;
+}
+html.reduced-motion .preserve-3d,
+html.reduced-motion .perspective-1000,
+html.reduced-motion .perspective-1500,
+html.reduced-motion .animate-diya-halo,
+html.reduced-motion .card-3d-tilt {
+  transform: none !important;
+  transition: none !important;
+  animation: none !important;
+}

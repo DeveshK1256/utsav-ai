@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="none">
+  <!-- Diya Glow -->
+  <circle cx="16" cy="14" r="11" fill="#F4B41A" fill-opacity="0.18"/>
+  <!-- Diya Bowl -->
+  <path d="M6 18 C6 27, 26 27, 26 18 Z" fill="#8B1E28"/>
+  <ellipse cx="16" cy="18" rx="10" ry="2.2" fill="#F4B41A" stroke="#C69214" stroke-width="0.75"/>
+  <ellipse cx="16" cy="18" rx="8" ry="1.2" fill="#6B121A"/>
+  <!-- Outer Flame -->
+  <path d="M16 4 C18.5 8, 20.5 12, 20 15 C19.5 17.5, 18 18.5, 16 18.5 C14 18.5, 12.5 17.5, 12 15 C11.5 12, 13.5 8, 16 4 Z" fill="#F4B41A"/>
+  <!-- Inner Flame -->
+  <path d="M16 8 C17.2 11, 18.5 13.5, 18 15.5 C17.6 17, 16.8 17.5, 16 17.5 C15.2 17.5, 14.4 17, 14 15.5 C13.5 13.5, 14.8 11, 16 8 Z" fill="#FFF8E1"/>
+</svg>

@@ -343,8 +343,8 @@ $$\text{Contrast Ratio} = \frac{L_1 + 0.05}{L_2 + 0.05}$$
   - Explicit `focus-visible:ring-2` styles are missing across most action buttons.
 
 ### 5.4 Motion Sensitivity (`prefers-reduced-motion`)
-- **Inspection**: Grep across all CSS and TSX files.
-- **Finding**: Zero occurrences of `prefers-reduced-motion` in application stylesheets. Animations (`animate-pulse`, spinners, hover transitions) play unconditionally, failing WCAG 2.3.3.
+- **Initial Audit Finding**: Zero occurrences of `prefers-reduced-motion` in application stylesheets. Animations played unconditionally, failing WCAG 2.3.3.
+- **Resolution (DEC-034 - 2026-10-24)**: Fully addressed in `frontend/app/globals.css`, `frontend/components/3d/*`, and `frontend/components/ui/Navbar.tsx`. Added `@media (prefers-reduced-motion: reduce)` and an explicit in-app `html.reduced-motion` toggle class that forces `transform: none !important`, `animation: none !important`, and `transition: none !important` across all 3D cards, pulse halos, and celebratory micro-interactions. Live Playwright verification confirmed `getComputedStyle(card).transform === 'none'` and `animation === 'none'`.
 
 ### 5.5 Screen Reader Basics
 - Several decorative SVG patterns and icons in [FestiveDoodleBackground.tsx](file:///d:/Utsav/frontend/components/FestiveDoodleBackground.tsx) lack `aria-hidden="true"`, causing screen readers to announce meaningless SVG paths.
