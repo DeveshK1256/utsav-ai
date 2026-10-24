@@ -234,6 +234,8 @@ Organizing a multi-day celebration in India is plagued by four structural failur
 | **DEC-028** | **Card Rendering Approach** | Server-side composition (Pillow, same library already proven in F4's moodboard generator) over a second paid image-generation API | Keeps a consistent, already-tested dependency rather than adding a new generative cost/latency surface for something that is fundamentally a templated layout task, not open-ended image generation. | **High** | If hosts request true AI-illustrated card art (not just layout/typography), revisit with a generation provider, same pattern as F4's `DEC-022`. |
 | **DEC-029** | **Personalization Scope** | Per-guest personalization is limited to name and RSVP-relevant fields (dietary note, table assignment if seating from F9 exists) — never fabricated personal details | Cards must never invent facts about a guest. Only fields the host or guest actually supplied are interpolated. | **Critical** | Never — same standard as all other no-invented-facts rules. |
 | **DEC-030** | **Export Format** | Cards export as PNG (for WhatsApp/social sharing) and PDF (for printing), generated from one shared layout, not two separate designs | Avoids layout drift between the digital and print versions; matches the existing pattern of Claude Docs-style multi-format export used elsewhere in the stack. | **Medium** | If print-shop requirements (bleed, CMYK color profile) become necessary, add a dedicated print-export path. |
+| **DEC-031** | **F15-Lite Seed Strategy & Honesty Guardrail** | Curated real directory seed set (19 venues: 11 Jaipur, 8 Pune) with locality-centroid approximate coordinates; every entry starts unrated (
+ating_tier: new_unrated, verage_rating: null) with is_verified_profile: false and cost estimates flagged as limited_data: true. | Unblocks Stage 4 Compose Celebration venue selection immediately without synthetic or unverified business claims. Preserves strict honesty until post-event ratings (F12) and quote benchmarks (F5) accumulate real data. | **Critical** | Revisit at Milestone M9 when mature rating tiers, full Leaflet map, and PostGIS geocoding are implemented. |
 
 
 ## 4. Functional Requirements
@@ -2003,6 +2005,12 @@ flowchart LR
 #### Milestone M8: Security Hardening, A11y & Production GA
 - **Scope:** Penetration testing, prompt-injection red teaming, WCAG 2.2 AA accessibility audit, load testing (50k virtual users), and multi-region deployment.
 - **Exit Gate (Loop Test):** Zero critical security vulnerabilities; Lighthouse score >= 95 on mobile; WCAG AA compliance verified via automated axe-core.
+
+#### F15-Lite (Stage 3): Vendor & Venue Discovery [TRIMMED MVP - COMPLETE]
+- **Scope:** Trimmed, early release of F15 for Stage 4 Compose Celebration consumption. Includes endor_profiles table, deterministic Haversine geo-distance query service, 19 real curated seed venues across Jaipur (11) and Pune (8) with locality-centroid coordinates, non-blocking browser geolocation consent flow with mandatory city fallback, and <VenueDiscoveryList /> component.
+- **Honesty Guardrails (DEC-031):** Every venue defaults to 
+ating_tier: new_unrated (verage_rating: null) and cost_estimate: {is_estimate: true, limited_data: true}. Zero fabricated ratings, zero unverified business claims.
+- **Distinction from M9:** The full Milestone M9 build (interactive Leaflet map canvas, low-zoom cluster markers, PostGIS geocoding, mature rating tiers from real F12 reviews, and benchmark-driven cost ranges from real F5 quotes) remains scheduled for later in the roadmap once quote and wrap-up data accumulate.
 
 #### Milestone M9: F15 Vendor & Venue Discovery Map
 - **Scope:** `vendor_profiles` / `vendor_ratings` / `vendor_cost_estimates` schema + migrations, geo-indexed query service (PostGIS extension or lat/lng bounding-box query if PostGIS is unavailable), Leaflet map integration behind the `MapProvider` abstraction (DEC-012), discovery API endpoint, map + list UI, F12 rating-submission wiring into `vendor_ratings`.

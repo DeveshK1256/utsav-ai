@@ -448,5 +448,32 @@ class InvitationCard(Base):
     guest = relationship("Guest")
 
 
+class VendorProfile(Base):
+    """
+    Global vendor/venue directory profile (F15).
+    Distinct from the per-event `Vendor` contract table.
+    """
+    __tablename__ = "vendor_profiles"
+
+    id = Column(String(36), primary_key=True, default=generate_uuid)
+    business_name = Column(String(200), nullable=False)
+    category = Column(String(50), nullable=False, index=True)  # venue, caterer, decorator, etc.
+    latitude = Column(Numeric(9, 6), nullable=True)
+    longitude = Column(Numeric(9, 6), nullable=True)
+    service_area_radius_km = Column(Integer, nullable=True)
+    city = Column(String(100), nullable=False, index=True)
+    locality = Column(String(150), nullable=True)
+    city_tier = Column(String(20), nullable=True)
+    contact_phone = Column(String(20), nullable=True)
+    average_rating = Column(Numeric(2, 1), default=None, nullable=True)  # NULL when unrated (DEC-013)
+    rating_count = Column(Integer, default=0, nullable=False)
+    is_verified_profile = Column(Boolean, default=False, nullable=False)
+    coordinate_precision = Column(String(50), default="locality_approximate", nullable=False)
+    source_notes = Column(Text, nullable=True)
+    metadata_json = Column(JSON, default=dict, nullable=False)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
+
+
+
 
 

@@ -10,6 +10,7 @@ from backend.app.api.v1.replanning import router as replanning_router
 from backend.app.api.v1.vibe import router as vibe_router
 from backend.app.api.v1.rituals import router as rituals_router
 from backend.app.api.v1.invitations import router as invitations_router
+from backend.app.api.v1.discovery import router as discovery_router
 
 app = FastAPI(
     title=f"{settings.PROJECT_NAME} API Engine",
@@ -34,6 +35,7 @@ app.include_router(replanning_router, prefix=settings.API_V1_STR)
 app.include_router(vibe_router, prefix=settings.API_V1_STR)
 app.include_router(rituals_router, prefix=settings.API_V1_STR)
 app.include_router(invitations_router, prefix=settings.API_V1_STR)
+app.include_router(discovery_router, prefix=settings.API_V1_STR)
 
 # M4 WhatsApp guest coordination (feature-flagged and defensively isolated per pause guidelines)
 ENABLE_M4_WHATSAPP = os.getenv("ENABLE_M4_WHATSAPP", "true").lower() in ("true", "1", "yes")

@@ -8,6 +8,7 @@ import { ElderDisclaimerBanner } from '@/components/ui/ElderDisclaimerBanner';
 import { GuestCoordinationModule } from '@/components/ui/GuestCoordinationModule';
 import { RitualIntelligenceHub } from '@/components/ui/RitualIntelligenceHub';
 import { InvitationStudio } from '@/components/ui/InvitationStudio';
+import { VenueDiscoveryList } from '@/components/ui/VenueDiscoveryList';
 
 // Currency Formatter
 const formatINR = (val: number) => {
@@ -865,6 +866,11 @@ export default function EventDashboardClient() {
               >
                 Go to Scoped Quote Studio →
               </Link>
+            </div>
+
+            {/* F15-Lite: Nearby Venue & Vendor Discovery (Stage 3) */}
+            <div className="pt-4">
+              <VenueDiscoveryList initialCity={eventData.city || "Jaipur"} />
             </div>
           </div>
         )}
