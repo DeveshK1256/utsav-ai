@@ -237,6 +237,9 @@ export const VenueDiscoveryList: React.FC<VenueDiscoveryListProps> = ({
         <p className="text-amber-800">
           • <strong>Cost:</strong> Labeled as <em>estimates</em> only with <span className="underline">Limited data</span> until real quote benchmarks accumulate from local vendors.
         </p>
+        <p className="text-amber-800">
+          • <strong>Distances:</strong> Locality-approximate centroid calculations (~1-2 km resolution), not precise geocoded street addresses.
+        </p>
       </div>
 
       {/* Venues List */}
@@ -278,9 +281,14 @@ export const VenueDiscoveryList: React.FC<VenueDiscoveryListProps> = ({
                     </p>
                   </div>
                   {venue.distance_km !== null && venue.distance_km !== undefined && (
-                    <span className="text-xs font-mono bg-stone-100 text-stone-700 px-2 py-0.5 rounded border border-stone-200 shrink-0">
-                      {venue.distance_km} km
-                    </span>
+                    <div className="flex flex-col items-end shrink-0">
+                      <span className="text-xs font-mono bg-stone-100 text-stone-700 px-2 py-0.5 rounded border border-stone-200">
+                        ~{venue.distance_km} km
+                      </span>
+                      <span className="text-[10px] text-stone-600 mt-0.5">
+                        approx.
+                      </span>
+                    </div>
                   )}
                 </div>
 
