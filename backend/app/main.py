@@ -97,6 +97,10 @@ def run_db_backfill_on_startup():
         # Seed curated cultural traditions & ritual items if needed
         from backend.app.db.seed_traditions import seed_cultural_traditions
         seed_cultural_traditions()
+
+        # Seed F15-Lite curated vendor profiles (19 real venues in Jaipur and Pune)
+        from scripts.seed_vendor_discovery import seed_vendor_profiles
+        seed_vendor_profiles()
     except Exception as exc:
         import logging
         logging.getLogger("uvicorn.error").exception("Startup migration/backfill error: %s", exc)
