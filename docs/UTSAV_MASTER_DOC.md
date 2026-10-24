@@ -35,6 +35,7 @@
   - [4.14 F14: Community Festival & Housing Society Event Module](#414-f14-community-festival--housing-society-event-module)
   - [4.15 F15: Vendor & Venue Discovery Map](#415-f15-vendor--venue-discovery-map)
   - [4.16 F16: Invitation Card Generator](#416-f16-invitation-card-generator)
+  - [4.17 F17: Compose Celebration Orchestration Flow](#417-f17-compose-celebration-orchestration-flow)
 - [5. Information Architecture](#5-information-architecture)
   - [5.1 App Structure & Sitemap](#51-app-structure--sitemap)
   - [5.2 Navigation Model (Web & Responsive Mobile PWA)](#52-navigation-model-web--responsive-mobile-pwa)
@@ -234,8 +235,8 @@ Organizing a multi-day celebration in India is plagued by four structural failur
 | **DEC-028** | **Card Rendering Approach** | Server-side composition (Pillow, same library already proven in F4's moodboard generator) over a second paid image-generation API | Keeps a consistent, already-tested dependency rather than adding a new generative cost/latency surface for something that is fundamentally a templated layout task, not open-ended image generation. | **High** | If hosts request true AI-illustrated card art (not just layout/typography), revisit with a generation provider, same pattern as F4's `DEC-022`. |
 | **DEC-029** | **Personalization Scope** | Per-guest personalization is limited to name and RSVP-relevant fields (dietary note, table assignment if seating from F9 exists) — never fabricated personal details | Cards must never invent facts about a guest. Only fields the host or guest actually supplied are interpolated. | **Critical** | Never — same standard as all other no-invented-facts rules. |
 | **DEC-030** | **Export Format** | Cards export as PNG (for WhatsApp/social sharing) and PDF (for printing), generated from one shared layout, not two separate designs | Avoids layout drift between the digital and print versions; matches the existing pattern of Claude Docs-style multi-format export used elsewhere in the stack. | **Medium** | If print-shop requirements (bleed, CMYK color profile) become necessary, add a dedicated print-export path. |
-| **DEC-031** | **F15-Lite Seed Strategy & Honesty Guardrail** | Curated real directory seed set (19 venues: 11 Jaipur, 8 Pune) with locality-centroid approximate coordinates; every entry starts unrated (
-ating_tier: new_unrated, verage_rating: null) with is_verified_profile: false and cost estimates flagged as limited_data: true. | Unblocks Stage 4 Compose Celebration venue selection immediately without synthetic or unverified business claims. Preserves strict honesty until post-event ratings (F12) and quote benchmarks (F5) accumulate real data. | **Critical** | Revisit at Milestone M9 when mature rating tiers, full Leaflet map, and PostGIS geocoding are implemented. |
+| **DEC-031** | **F15-Lite Seed Strategy & Honesty Guardrail** | Curated real directory seed set (19 venues: 11 Jaipur, 8 Pune) with locality-centroid approximate coordinates; every entry starts unrated (`rating_tier: new_unrated`, `average_rating: null`) with `is_verified_profile: false` and cost estimates flagged as `limited_data: true`. | Unblocks Stage 4 Compose Celebration venue selection immediately without synthetic or unverified business claims. Preserves strict honesty until post-event ratings (F12) and quote benchmarks (F5) accumulate real data. | **Critical** | Revisit at Milestone M9 when mature rating tiers, full Leaflet map, and PostGIS geocoding are implemented. |
+| **DEC-032** | **Compose Celebration Progressive Confirmation & Zero Assumption Inheritance** | The guided celebration composer sequences Venue Selection -> Muhurat Timing -> Invitation Generation. Every step only consumes data explicitly confirmed by the host. A selected venue is stored strictly as a shortlist pick (`venue_status: "shortlist_pick"`), never falsely claimed as a confirmed booking. Panchang muhurat windows must be confirmed by the host to lock `sub_events.is_muhurat_locked = True`; skipped steps explicitly record skip flags in `events.metadata_json["compose_celebration"]` and render clean placeholders in invitation outputs rather than blocking or fabricating details. Progress persists directly in the database (`events.metadata_json`), ensuring state survives browser refreshes and multi-device sessions without phantom drafts. | Preserves absolute truthfulness across multi-stage orchestration. Eliminates premature vendor commitment claims and fabricated religious timings. | **Critical / Absolute** | Fundamental invariant for host trust and workflow orchestration. |
 
 
 ## 4. Functional Requirements
@@ -603,6 +604,23 @@ ating_tier: new_unrated, verage_rating: null) with is_verified_profile: false a
 - **Acceptance Criteria:** Given a confirmed theme, date, and at least 3 test guests, the system generates 3 correctly personalized cards (distinct names, identical layout/palette/date/venue) as both PNG and PDF, with zero unfilled template placeholders visible in any output.
 
 
+### 4.17 F17: Compose Celebration Orchestration Flow
+- **Overview:** End-to-end guided orchestration flow that weaves together Stage 3 Venue Discovery (F15-Lite), Stage 1 Panchang Muhurat Timing (M5), and Stage 2 Invitation Card Studio (M10/F16) into a coherent, progressive multi-step wizard.
+- **User Story:** *As an event host setting up a celebration, I want a step-by-step guided flow to discover and shortlist a venue, inspect and lock an auspicious muhurat, and immediately generate production-ready invitation cards without losing progress or seeing fabricated details.*
+- **User Flow:**
+  1. Host navigates to `/dashboard/events/{id}/compose` or clicks "✨ Compose Celebration" on the Event Workspace header.
+  2. **Step A — Venue Selection:** Browser geolocation or fallback city selector queries nearby venues via F15-Lite. Host chooses a venue (persisted as `venue_status: "shortlist_pick"`) or explicitly clicks "I'll decide later".
+  3. **Step B — Muhurat Timing:** System displays deterministic astronomical muhurat windows computed by M5's ephemeris engine with mandatory DEC-009 elder/priest consultation disclaimers. Host selects and confirms an auspicious window (locking `sub_events.is_muhurat_locked = True`) or clicks "Skip timing for now".
+  4. **Step C — Invitation Generation:** Host seamlessly transitions to the Invitation Card Studio (`/dashboard/events/{id}/invitations`). Confirmed venue and locked muhurat are automatically consumed by M10; skipped steps display clean, honest placeholders ("Venue to be confirmed", "Time to be confirmed").
+- **Edge Cases:** Host skips all steps; host picks venue but skips timing; host refreshes page mid-flow; host revisits previous steps to modify choices.
+- **Validation Rules:** In accordance with DEC-032, no assumption inheritance is permitted across steps. Shortlisted venues must never be labeled as confirmed bookings. Skips must never invent default times or venues.
+- **Acceptance Criteria:**
+  - Automated unit test suite passes green across happy path, all-skips path, and partial paths.
+  - State persisted to `events.metadata_json["compose_celebration"]` across all transitions.
+  - Zero unverified claims or placeholder leaks in invitation generation outputs.
+
+---
+
 ## 5. Information Architecture
 
 ### 5.1 App Structure & Sitemap
@@ -657,6 +675,7 @@ UTSAV APP ROOT
 | **Wrap-up & Settlements** | `/dashboard/wrap-up` | Vendor invoice closure, deposit recovery, thank-you notes | Host, Treasurer | Post-event prompt |
 | **Vendor & Venue Discovery Map** | `/dashboard/vendors/discover` (and public `/discover` pre-signup) | Geolocated map of nearby venues/vendors ranked by rating with normalized cost estimates | Host, Prospective Host | Marketing site CTA, Vendors subnav |
 | **Invitation Card Studio** | `/dashboard/events/{id}/invitations` | Generate and export personalized invitation cards from the confirmed theme, date, and guest list | Host | Unified Event Workspace tab, Compose Celebration flow (Stage 4) |
+| **Compose Celebration Orchestrator** | `/dashboard/events/{id}/compose` | Step-by-step progressive confirmation wizard (Venue -> Muhurat -> Invitation) | Host | Event Workspace CTA, Onboarding success |
 
 ### 5.4 Layout Hierarchy
 ```
@@ -1764,6 +1783,15 @@ erDiagram
 
 ---
 
+### 11.9 Compose Celebration Orchestration (`/api/v1/events/{id}/compose`)
+- **POST `/compose`** — Body: `ComposeUpdateSchema` (`step`, `venue_name`, `venue_locality`, `venue_skipped`, `muhurat_time`, `muhurat_locked`, `timing_skipped`).
+  - Progressively updates celebration setup state in `events.metadata_json["compose_celebration"]`.
+  - When venue is selected, stores venue details with `venue_status: "shortlist_pick"` (DEC-032).
+  - When muhurat is confirmed, updates `metadata_json["muhurat_time"]` and locks primary sub-event `is_muhurat_locked = True`.
+  - When steps are skipped, clears unconfirmed attributes to ensure clean downstream placeholders.
+
+---
+
 ## 12. Component Inventory
 
 A buildable registry of core reusable UI components:
@@ -1773,6 +1801,7 @@ A buildable registry of core reusable UI components:
 3. `<SidebarNav />`: Collapsible desktop navigation bar with badge counters for active alerts.
 4. `<CommandPalette />`: `Cmd+K` keyboard modal for jumping across screens, adding tasks, or searching guests.
 5. `<EventTimelineCard />`: Interactive timeline card rendering sub-event duration, venue, and muhurat lock status.
+6. `<ComposeCelebrationStepper />`: Guided 3-step wizard coordinating venue discovery, panchang muhurat selection, and invitation card generation.
 6. `<MuhuratBadge />`: Auspicious timing chip featuring golden glow and elder verification disclaimer popup.
 7. `<ElderDisclaimerBanner />`: Persistent, respectful banner reminding users to confirm rituals with family elders.
 8. `<ChangeDiffModal />`: Side-by-side comparison modal illustrating schedule and budget shifts between Plan A and Plan B.
@@ -2035,6 +2064,17 @@ ating_tier: new_unrated (verage_rating: null) and cost_estimate: {is_estimate: 
     - Downloaded and visually verified Devanagari card (`m10_rendered_invitation_devanagari.png`) displaying complete layout, borders, auspicious emblem, shubh muhurat, and personalized guest invitation.
   - **Frontend Workspace:** Built `<InvitationStudio />` with `<InvitationLayoutPicker />`, `<InvitationWordingSelector />`, `<InvitationPreviewCard />`, and `<GuestCardBatchStatus />`, integrated as a tab in `EventDashboardClient.tsx` and routed at `/dashboard/events/{id}/invitations`.
   - **Automated Regression Suite:** 63/63 tests passing green across M0-M3, M5, M10, schema regressions, and golden event evals.
+
+#### Stage 4: Compose Celebration Orchestration Flow [COMPLETE — SEQUENCED WORKFLOW, STEPPER & LIVE DB WIRED]
+- **Scope:** Coherent end-to-end orchestration flow sequencing Stage 3 (F15-Lite Venue Selection) -> Stage 1 (M5 Panchang Muhurat Timing) -> Stage 2 (M10 Invitation Card Studio).
+- **Core Orchestration Guarantees (DEC-032):**
+  - **Progressive Confirmation:** Zero assumption inheritance. Steps only use data explicitly confirmed by the host.
+  - **Honest Venue Status:** Selected venue is stored as a shortlist pick (`venue_status: "shortlist_pick"`), never falsely claimed as a confirmed booking.
+  - **Explicit Muhurat Confirmation:** Astronomical muhurat candidates computed deterministically; locked to `sub_events.is_muhurat_locked = True` only on explicit host confirmation; skips leave time unconfirmed.
+  - **Honest Invitation Rendering:** Invitations consume confirmed venue & muhurat seamlessly; when skipped, render clean placeholders ("Venue to be confirmed", "Time to be confirmed") with zero hallucination.
+  - **State Persistence:** Multi-step wizard state persisted to PostgreSQL `events.metadata_json["compose_celebration"]` supporting browser refresh and multi-device resumption.
+  - **Route & UI:** Dedicated guided stepper route `/dashboard/events/{id}/compose` and quick action tile in `EventDashboardClient.tsx`.
+- **Test Coverage:** Automated unit test suite (`tests/unit/test_compose_celebration.py`) validating (1) Happy path (venue + muhurat confirmed -> M10 renders with lossless PDF), (2) All-skips path (zero fabricated values), and (3) Partial path (venue confirmed, timing skipped).
 
 ### 17.3 Definition of Done (DoD) per Milestone
 A milestone is declared complete ONLY when:

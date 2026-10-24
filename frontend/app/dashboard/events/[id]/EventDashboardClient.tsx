@@ -374,6 +374,18 @@ export default function EventDashboardClient() {
             {/* Quick Action Navigation CTAs (Properly Event-Scoped) */}
             <div className="flex flex-wrap sm:flex-nowrap gap-2.5 self-start lg:self-center">
               <Link
+                href={`/dashboard/events/${currentEventId}/compose`}
+                className="px-4 py-2.5 rounded-xl bg-[#8B1E28] hover:bg-[#721820] text-white dark:bg-[#F4B41A] dark:text-stone-950 text-xs font-semibold shadow-sm flex items-center gap-1.5 transition-all"
+              >
+                <span>✨</span> Compose Celebration
+              </Link>
+              <Link
+                href={`/dashboard/events/${currentEventId}/invitations`}
+                className="px-4 py-2.5 rounded-xl bg-pink-50 dark:bg-pink-950/60 border border-pink-300 dark:border-pink-800 text-pink-900 dark:text-pink-200 text-xs font-semibold hover:bg-pink-100 dark:hover:bg-pink-900/60 transition-all shadow-sm flex items-center gap-1.5"
+              >
+                <span>💌</span> Invitations
+              </Link>
+              <Link
                 href={`/dashboard/events/${currentEventId}/changes/default`}
                 className="px-4 py-2.5 rounded-xl bg-amber-50 dark:bg-amber-950/60 border border-amber-300 dark:border-amber-800 text-amber-900 dark:text-amber-200 text-xs font-semibold hover:bg-amber-100 dark:hover:bg-amber-900/60 transition-all shadow-sm flex items-center gap-1.5"
               >

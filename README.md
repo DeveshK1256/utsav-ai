@@ -27,7 +27,9 @@ Status reflected directly from [`docs/UTSAV_MASTER_DOC.md`](docs/UTSAV_MASTER_DO
 | **M4: F3 WhatsApp Guest Coordination** | **Paused** | Code-complete backend abstractions (`MetaCloudWhatsAppProvider` & mock provider), send-layer opt-out hard boundary, and FAQ concierge. **Paused pending Meta WhatsApp Business API business verification.** Not tested with real phone numbers. |
 | **M5: F2 Cultural & Ritual Intelligence** | **In Progress** | Astronomical Panchang Engine (`ephem` + NOAA solar physics) verified against external astronomical references with zero LLM time math. Tradition content layer is **explicitly AI-drafted and unreviewed** (`is_verified: false` across all 21 database rows). Dual mandatory elevated disclaimers active. |
 | **M10: F16 Invitation Card Generator** | **Complete** | Server-side composition via Pillow (DEC-028), Google Noto Sans Devanagari verified for Hindi/Marathi/Sanskrit, zero-placeholder guarantee (DEC-029), single-pipeline dual PNG and 300 DPI PDF export (DEC-030), and partial failure isolation for guest batches. |
-| **M6–M9: Future Capabilities (F6–F15)** | **Specced** | Risk Forecaster, Seating Solver, Offline PWA, and Vendor Discovery Map (F15) specced in roadmap; not yet built. |
+| **F15-Lite: Venue Discovery (Stage 3)** | **Complete** | Curated real directory seed set (19 venues: 11 Jaipur, 8 Pune) with locality-centroid coordinates, non-blocking geolocation flow with manual fallback, and strict honesty guardrails (`rating_tier: new_unrated`, `limited_data: true`, DEC-031). |
+| **Stage 4: Compose Celebration Orchestration** | **Complete** | Coherent guided flow sequencing Venue Selection -> Muhurat Timing -> Invitation Generation. Zero assumption inheritance (DEC-032), shortlist-pick venue tracking, deterministic muhurat locking, and clean unconfirmed placeholders in invitation outputs. |
+| **M6–M9: Future Capabilities (F6–F15 Full)** | **Specced** | Risk Forecaster, Seating Solver, Offline PWA, and full Leaflet/PostGIS Venue Map (F15) specced in roadmap; not yet built. |
 
 ---
 

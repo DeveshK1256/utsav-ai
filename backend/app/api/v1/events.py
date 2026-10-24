@@ -59,6 +59,21 @@ class EventDetailResponseSchema(EventResponseSchema):
     sub_events: List[SubEventResponseSchema] = []
     budget_breakdown: List[BudgetItemResponseSchema] = []
     tasks: List[TaskResponseSchema] = []
+    metadata_json: Optional[Dict[str, Any]] = None
+
+
+class ComposeUpdateSchema(BaseModel):
+    step: Optional[str] = Field(None, description="Current step: 'venue', 'timing', 'invitation'")
+    venue_name: Optional[str] = None
+    venue_locality: Optional[str] = None
+    venue_address: Optional[str] = None
+    venue_city: Optional[str] = None
+    muhurat_time: Optional[str] = None
+    muhurat_date: Optional[date] = None
+    muhurat_notes: Optional[str] = None
+    sub_event_name: Optional[str] = None
+    skip_venue: Optional[bool] = False
+    skip_timing: Optional[bool] = False
 
 
 @router.post("", response_model=EventResponseSchema, status_code=status.HTTP_201_CREATED)
@@ -168,8 +183,91 @@ def get_event(event_id: str, db: Session = Depends(get_db)):
         created_at=event.created_at,
         sub_events=sub_events_list,
         budget_breakdown=budget_list,
-        tasks=tasks_list
+        tasks=tasks_list,
+        metadata_json=event.metadata_json or {}
     )
+
+
+@router.post("/{event_id}/compose", response_model=EventDetailResponseSchema)
+def update_event_compose_progress(
+    event_id: str,
+    payload: ComposeUpdateSchema,
+    db: Session = Depends(get_db)
+):
+    """
+    Orchestration progress persistence for the Compose Celebration flow.
+    - Saves current step and shortlist venue picks to metadata_json.
+    - If muhurat_time is selected, locks it to the primary sub_event (is_muhurat_locked=True)
+      and writes to event.metadata_json['muhurat_time'].
+    - Explicit skip actions record skip flags without fabricating or carrying stale data.
+    """
+    event = db.query(Event).filter(Event.id == event_id).first()
+    if not event:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Event not found")
+
+    meta = dict(event.metadata_json or {})
+    compose_state = dict(meta.get("compose_celebration", {}))
+
+    if payload.step:
+        compose_state["current_step"] = payload.step
+
+    # Step A: Venue handling
+    if payload.skip_venue:
+        compose_state["venue_skipped"] = True
+        # If skipped, ensure we don't fabricate a venue
+        meta["compose_celebration"] = compose_state
+        event.metadata_json = meta
+    elif payload.venue_name:
+        venue_display = payload.venue_name
+        if payload.venue_locality:
+            venue_display = f"{payload.venue_name}, {payload.venue_locality}"
+        meta["venue"] = venue_display
+        compose_state["venue_name"] = payload.venue_name
+        compose_state["venue_locality"] = payload.venue_locality
+        compose_state["venue_status"] = "shortlist_pick"  # Honest note: shortlist pick, not confirmed booking
+        compose_state["venue_skipped"] = False
+
+        # If fact sheet exists, record address
+        if event.fact_sheet and payload.venue_address:
+            event.fact_sheet.venue_address = payload.venue_address
+
+    # Step B: Timing & Muhurat handling
+    if payload.skip_timing:
+        compose_state["timing_skipped"] = True
+        # If timing was explicitly skipped, remove any event-level muhurat_time override
+        # so M10 cleanly falls back to 'Time to be confirmed' / placeholder
+        meta.pop("muhurat_time", None)
+        compose_state["muhurat_locked"] = False
+    elif payload.muhurat_time:
+        meta["muhurat_time"] = payload.muhurat_time
+        compose_state["muhurat_time"] = payload.muhurat_time
+        compose_state["muhurat_locked"] = True
+        compose_state["timing_skipped"] = False
+
+        # If we have sub_events, lock the primary / first ceremony
+        from backend.app.models.models import SubEvent
+        target_sub = None
+        if payload.sub_event_name:
+            target_sub = db.query(SubEvent).filter(
+                SubEvent.event_id == event.id,
+                SubEvent.name.ilike(f"%{payload.sub_event_name}%")
+            ).first()
+        if not target_sub:
+            target_sub = db.query(SubEvent).filter(SubEvent.event_id == event.id).order_by(SubEvent.start_time).first()
+
+        if target_sub:
+            target_sub.is_muhurat_locked = True
+            if payload.muhurat_notes:
+                target_sub.muhurat_notes = payload.muhurat_notes
+            db.add(target_sub)
+
+    meta["compose_celebration"] = compose_state
+    event.metadata_json = meta
+    db.add(event)
+    db.commit()
+    db.refresh(event)
+
+    return get_event(event_id, db)
 
 
 @router.delete("/{event_id}", status_code=status.HTTP_200_OK)
