@@ -6,7 +6,7 @@ from pydantic import BaseModel, Field
 from typing import Optional, List, Dict, Any
 
 from backend.app.db.session import get_db
-from backend.app.models.models import Event, User
+from backend.app.models.models import Event, User, VendorProfile
 from backend.app.schemas.intake import (
     SubEventResponseSchema,
     BudgetItemResponseSchema,
@@ -64,6 +64,7 @@ class EventDetailResponseSchema(EventResponseSchema):
 
 class ComposeUpdateSchema(BaseModel):
     step: Optional[str] = Field(None, description="Current step: 'venue', 'timing', 'invitation'")
+    vendor_profile_id: Optional[str] = Field(None, description="UUID of real vendor_profile from discovery directory")
     venue_name: Optional[str] = None
     venue_locality: Optional[str] = None
     venue_address: Optional[str] = None
@@ -214,22 +215,37 @@ def update_event_compose_progress(
     # Step A: Venue handling
     if payload.skip_venue:
         compose_state["venue_skipped"] = True
-        # If skipped, ensure we don't fabricate a venue
-        meta["compose_celebration"] = compose_state
-        event.metadata_json = meta
-    elif payload.venue_name:
-        venue_display = payload.venue_name
-        if payload.venue_locality:
-            venue_display = f"{payload.venue_name}, {payload.venue_locality}"
+        compose_state.pop("vendor_profile_id", None)
+        compose_state.pop("venue_name", None)
+        compose_state.pop("venue_locality", None)
+        compose_state.pop("venue_city", None)
+        compose_state.pop("venue_status", None)
+        meta.pop("venue", None)
+    elif payload.vendor_profile_id:
+        vendor = db.query(VendorProfile).filter(VendorProfile.id == payload.vendor_profile_id).first()
+        if not vendor:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Vendor profile with ID '{payload.vendor_profile_id}' not found in discovery directory"
+            )
+        venue_display = f"{vendor.business_name}, {vendor.locality}" if vendor.locality else vendor.business_name
         meta["venue"] = venue_display
-        compose_state["venue_name"] = payload.venue_name
-        compose_state["venue_locality"] = payload.venue_locality
+        compose_state["vendor_profile_id"] = vendor.id
+        compose_state["venue_name"] = vendor.business_name
+        compose_state["venue_locality"] = vendor.locality
+        compose_state["venue_city"] = vendor.city
         compose_state["venue_status"] = "shortlist_pick"  # Honest note: shortlist pick, not confirmed booking
         compose_state["venue_skipped"] = False
 
-        # If fact sheet exists, record address
-        if event.fact_sheet and payload.venue_address:
+        if event.fact_sheet and getattr(vendor, "address", None):
+            event.fact_sheet.venue_address = vendor.address
+        elif event.fact_sheet and payload.venue_address:
             event.fact_sheet.venue_address = payload.venue_address
+    elif payload.step == "venue" and not payload.skip_venue:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Step A venue selection requires a valid vendor_profile_id from the discovery directory (or skip_venue: true)"
+        )
 
     # Step B: Timing & Muhurat handling
     if payload.skip_timing:

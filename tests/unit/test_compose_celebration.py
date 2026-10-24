@@ -5,7 +5,7 @@ from fastapi.testclient import TestClient
 
 from backend.app.main import app
 from backend.app.db.session import SessionLocal
-from backend.app.models.models import Event, User, SubEvent, InvitationCard
+from backend.app.models.models import Event, User, SubEvent, InvitationCard, VendorProfile
 from backend.app.services.invitation_renderer import InvitationCardRenderer
 
 client = TestClient(app)
@@ -53,15 +53,31 @@ def test_compose_celebration_happy_path():
     db.add(s1)
     db.commit()
 
-    # Step A: Select Venue
+    # Ensure real VendorProfile exists for Step A
+    vendor = db.query(VendorProfile).filter(VendorProfile.business_name == "Mahalaxmi Lawns").first()
+    if not vendor:
+        vendor = VendorProfile(
+            business_name="Mahalaxmi Lawns",
+            category="lawn",
+            city="Pune",
+            locality="Karve Nagar",
+            city_tier="tier_1",
+            latitude=18.485,
+            longitude=73.812
+        )
+        db.add(vendor)
+        db.commit()
+        db.refresh(vendor)
+
+    # Step A: Select Venue using real vendor_profile_id
     res_a = client.post(f"/api/v1/events/{ev.id}/compose", json={
         "step": "venue",
-        "venue_name": "Mahalaxmi Lawns",
-        "venue_locality": "Karve Nagar"
+        "vendor_profile_id": vendor.id
     })
     assert res_a.status_code == 200
     data_a = res_a.json()
     assert data_a["metadata_json"]["venue"] == "Mahalaxmi Lawns, Karve Nagar"
+    assert data_a["metadata_json"]["compose_celebration"]["vendor_profile_id"] == vendor.id
     assert data_a["metadata_json"]["compose_celebration"]["venue_status"] == "shortlist_pick"
 
     # Step B: Select Muhurat
@@ -185,12 +201,28 @@ def test_compose_celebration_partial_path_venue_selected_timing_skipped():
     db.commit()
     db.refresh(ev)
 
-    # 1. Select Venue
-    client.post(f"/api/v1/events/{ev.id}/compose", json={
+    # Ensure Fairmont Jaipur exists in VendorProfile
+    vendor = db.query(VendorProfile).filter(VendorProfile.business_name == "Fairmont Jaipur").first()
+    if not vendor:
+        vendor = VendorProfile(
+            business_name="Fairmont Jaipur",
+            category="venue",
+            city="Jaipur",
+            locality="Kukas",
+            city_tier="tier_2",
+            latitude=27.050,
+            longitude=75.880
+        )
+        db.add(vendor)
+        db.commit()
+        db.refresh(vendor)
+
+    # 1. Select Venue with real vendor_profile_id
+    res_v = client.post(f"/api/v1/events/{ev.id}/compose", json={
         "step": "venue",
-        "venue_name": "Fairmont Jaipur",
-        "venue_locality": "Kukas"
+        "vendor_profile_id": vendor.id
     })
+    assert res_v.status_code == 200
 
     # 2. Skip Timing
     client.post(f"/api/v1/events/{ev.id}/compose", json={
@@ -210,5 +242,53 @@ def test_compose_celebration_partial_path_venue_selected_timing_skipped():
     res_gen = client.post(f"/api/v1/events/{ev.id}/invitations/generate", json={"layout_variant": "floral_festive"})
     assert res_gen.status_code == 201
     assert res_gen.json()["total_generated"] == 1
+
+    db.close()
+
+
+def test_compose_celebration_venue_requires_real_vendor_profile_id():
+    """
+    Test 4: Integrity Guard
+    Verifies that Step A rejects arbitrary strings or fake vendor_profile_ids.
+    """
+    db = SessionLocal()
+    phone = f"+9199{random.randint(10000000, 99999999)}"
+    user = User(phone_number=phone, full_name="Integrity Host", role="host")
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+
+    ev = Event(
+        owner_id=user.id,
+        name="Security Audit Wedding",
+        event_type="wedding",
+        guest_count=50,
+        total_budget=500000.0,
+        city="Pune",
+        pincode="411038",
+        start_date=date.today() + timedelta(days=20),
+        end_date=date.today() + timedelta(days=21),
+        metadata_json={}
+    )
+    db.add(ev)
+    db.commit()
+    db.refresh(ev)
+
+    # 1. Non-existent vendor_profile_id must return 404
+    fake_id = "00000000-0000-0000-0000-000000000000"
+    res_fake = client.post(f"/api/v1/events/{ev.id}/compose", json={
+        "step": "venue",
+        "vendor_profile_id": fake_id
+    })
+    assert res_fake.status_code == 404
+    assert "not found in discovery directory" in res_fake.json()["detail"]
+
+    # 2. Free text without vendor_profile_id and skip_venue=False must return 400
+    res_bare = client.post(f"/api/v1/events/{ev.id}/compose", json={
+        "step": "venue",
+        "venue_name": "Fabricated Banquets"
+    })
+    assert res_bare.status_code == 400
+    assert "requires a valid vendor_profile_id" in res_bare.json()["detail"]
 
     db.close()

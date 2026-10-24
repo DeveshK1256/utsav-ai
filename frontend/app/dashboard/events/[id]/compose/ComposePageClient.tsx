@@ -85,32 +85,30 @@ export default function ComposePageClient() {
         setCurrentStep('timing');
       }
 
-      // Populate candidate muhurat windows for Step B
+      // Populate candidate muhurat windows for Step B from real M5 ephemeris
       const eventDate = data.start_date || new Date().toISOString().split('T')[0];
-      fetch(`${API_BASE_URL}/rituals/panchang?event_date=${eventDate}`)
+      const cityCoords: Record<string, { lat: number; lng: number }> = {
+        pune: { lat: 18.5204, lng: 73.8567 },
+        jaipur: { lat: 26.9124, lng: 75.7873 },
+        delhi: { lat: 28.6139, lng: 77.2090 },
+        mumbai: { lat: 18.9220, lng: 72.8347 },
+        bengaluru: { lat: 12.9716, lng: 77.5946 },
+      };
+      const cityKey = (data.city || 'pune').toLowerCase();
+      const coords = cityCoords[cityKey] || { lat: 18.5204, lng: 73.8567 };
+
+      fetch(`${API_BASE_URL}/rituals/muhurat-candidates?event_date=${eventDate}&latitude=${coords.lat}&longitude=${coords.lng}`)
         .then((r) => r.json())
-        .then((p) => {
-          if (p && p.abhijit_muhurat) {
-            setMuhuratOptions([
-              {
-                name: 'Abhijit Muhurat (Auspicious Midday Window)',
-                time: `${p.abhijit_muhurat.start} - ${p.abhijit_muhurat.end}`,
-                type: 'solar_auspicious',
-                notes: 'Astrologically auspicious midday muhurat window computed from ephemeris'
-              },
-              {
-                name: 'Pratah Shubh Window (Morning Ceremony)',
-                time: '09:30 AM - 11:00 AM',
-                type: 'morning_traditional',
-                notes: 'Traditional morning window recommended for Vedic vivah / rituals'
-              },
-              {
-                name: 'Godhuli / Sandhya Window (Sunset Auspicious)',
-                time: '05:30 PM - 07:00 PM',
-                type: 'evening_celebration',
-                notes: 'Auspicious twilight transition window for warm festive gatherings'
-              }
-            ]);
+        .then((res) => {
+          if (res && res.candidate_windows && res.candidate_windows.length > 0) {
+            setMuhuratOptions(
+              res.candidate_windows.map((w: any) => ({
+                name: w.name,
+                time: `${w.start_time} - ${w.end_time}`,
+                type: w.quality,
+                notes: w.notes
+              }))
+            );
           }
         })
         .catch(() => {});
@@ -125,10 +123,11 @@ export default function ComposePageClient() {
   const handleConfirmVenue = async (skip: boolean = false) => {
     setSaving(true);
     try {
-      const payload: any = { step: 'timing' };
+      const payload: any = { step: 'venue' };
       if (skip) {
         payload.skip_venue = true;
       } else if (selectedVenue) {
+        payload.vendor_profile_id = selectedVenue.id;
         payload.venue_name = selectedVenue.business_name;
         payload.venue_locality = selectedVenue.locality;
         payload.venue_city = selectedVenue.city;
