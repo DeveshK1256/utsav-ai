@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { Navbar } from '@/components/ui/Navbar';
+import { getAuthHeaders } from '@/lib/auth';
 
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL ||
@@ -133,7 +134,7 @@ export default function ChangeProposalDiffClient() {
     try {
       const res = await fetch(`${API_BASE_URL}/events/${eventId}/changes`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders(eventId, { 'Content-Type': 'application/json' }),
         body: JSON.stringify({
           change_type: changeType,
           payload: payload
@@ -164,6 +165,7 @@ export default function ChangeProposalDiffClient() {
     try {
       const res = await fetch(`${API_BASE_URL}/events/${eventId}/changes/${changeId}/accept`, {
         method: 'POST',
+        headers: getAuthHeaders(eventId),
       });
       if (!res.ok) {
         throw new Error(`Failed to apply proposal (${res.status})`);
@@ -183,6 +185,7 @@ export default function ChangeProposalDiffClient() {
     try {
       const res = await fetch(`${API_BASE_URL}/events/${eventId}/changes/${changeId}/reject`, {
         method: 'POST',
+        headers: getAuthHeaders(eventId),
       });
       if (!res.ok) {
         throw new Error(`Failed to reject proposal (${res.status})`);
@@ -202,7 +205,7 @@ export default function ChangeProposalDiffClient() {
     try {
       const res = await fetch(`${API_BASE_URL}/events/${eventId}/changes/${changeId}/overrides`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders(eventId, { 'Content-Type': 'application/json' }),
         body: JSON.stringify({ item_overrides: overrides }),
       });
       if (!res.ok) {

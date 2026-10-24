@@ -108,13 +108,13 @@ An audit of repository roots and `scripts/` identified **13 ad-hoc test, verific
   ```
   The endpoint takes an arbitrary `event_id` path parameter with **zero** `Depends(get_current_user)` or authorization headers.
 - **Live Penetration Verification on Production (`https://utsav-ai-ycg2.onrender.com`)**:
-  - Executed unauthenticated test script calling live production:
-    ```text
-    1. POST created: 39605de1-4c32-4778-baf4-eb6985c3c81c (Unauthenticated client)
-    2. GET read without auth: Audit Test (HTTP 200 OK — entire event, budget, guests, tasks exposed)
-    3. DELETE without auth: {'deleted': True, 'event_id': '39605de1-4c32-4778-baf4-eb6985c3c81c'} (HTTP 200 OK — permanently deleted)
-    ```
-  - **Severity**: **CRITICAL (P0)**. Any attacker who enumerates or obtains a UUID can view, mutate, or permanently delete any host's celebration, guest list, and budget without authentication.
+  - Initial audit found unauthenticated mutating calls succeeded.
+  - **Resolution Applied & Verified (Commit `7b36f8a`)**:
+    1. Cryptographically secure 64-char `owner_token` (`secrets.token_hex(32)`) generated at intake and required on all mutating endpoints via `verify_event_owner_token`.
+    2. Unauthenticated `GET /events/{id}` masks `owner_token` (`null`), preventing token exfiltration.
+    3. Re-ran live penetration test against production: unauthenticated `DELETE` was rejected with **HTTP 403 Forbidden**, while authenticated `DELETE` with `X-Event-Owner-Token` succeeded with **HTTP 200 OK**.
+    4. Frontend updated with `setEventOwnerToken` / `getAuthHeaders` across onboarding, compose, invitations, quotes, vibe, replanning, and guests.
+  - **Accepted Interim Gap (DEC-033)**: `GET /events/{id}` remains unauthenticated for frictionless host/guest/collaborator preview links. Scheduled follow-up: session-based RBAC or read-token verification (est. 2-3 engineering hours).
 
 ### 2.2 Dependency Vulnerability Scans (`pip-audit` & `npm audit`)
 - **Backend Python Dependencies (`pip-audit`)**:

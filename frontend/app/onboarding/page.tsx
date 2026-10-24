@@ -4,6 +4,7 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import Link from 'next/link';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
 import { ElderDisclaimerBanner } from '@/components/ui/ElderDisclaimerBanner';
+import { setEventOwnerToken } from '@/lib/auth';
 
 // Currency Formatter
 const formatINR = (val: number) => {
@@ -69,6 +70,7 @@ interface MasterPlanResponse {
   event_id: string;
   name: string;
   owner_name: string;
+  owner_token?: string;
   city: string;
   city_tier: string;
   guest_count: number;
@@ -441,6 +443,9 @@ export default function OnboardingPage() {
       }
 
       const planData: MasterPlanResponse = await res.json();
+      if (planData.owner_token && planData.event_id) {
+        setEventOwnerToken(planData.event_id, planData.owner_token);
+      }
       setMasterPlan(planData);
       setStep(5);
     } catch (err: any) {

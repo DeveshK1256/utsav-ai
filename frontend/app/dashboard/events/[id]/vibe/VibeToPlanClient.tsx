@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { Navbar } from '@/components/ui/Navbar';
+import { getAuthHeaders } from '@/lib/auth';
 
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL ||
@@ -123,6 +124,7 @@ export default function VibeToPlanClient() {
     try {
       const res = await fetch(`${API_BASE_URL}/events/${eventId}/vibe/upload`, {
         method: "POST",
+        headers: getAuthHeaders(eventId),
         body: formData,
       });
 
@@ -151,6 +153,7 @@ export default function VibeToPlanClient() {
     try {
       const res = await fetch(`${API_BASE_URL}/events/${eventId}/vibe/${activeProfile.profile_id}/generate-theme`, {
         method: "POST",
+        headers: getAuthHeaders(eventId),
       });
 
       if (!res.ok) {
@@ -172,6 +175,7 @@ export default function VibeToPlanClient() {
     try {
       const res = await fetch(`${API_BASE_URL}/events/${eventId}/vibe/decor-items/${itemId}/accept`, {
         method: "POST",
+        headers: getAuthHeaders(eventId),
       });
       if (res.ok) {
         const updatedItem: DecorItem = await res.json();
@@ -194,6 +198,7 @@ export default function VibeToPlanClient() {
     try {
       const res = await fetch(`${API_BASE_URL}/events/${eventId}/vibe/decor-items/${itemId}/reject`, {
         method: "POST",
+        headers: getAuthHeaders(eventId),
       });
       if (res.ok) {
         const updatedItem: DecorItem = await res.json();

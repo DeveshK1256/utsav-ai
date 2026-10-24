@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
+import { getAuthHeaders } from '@/lib/auth';
 
 interface RitualHubProps {
   eventId: string;
@@ -186,7 +187,8 @@ export const RitualIntelligenceHub: React.FC<RitualHubProps> = ({
     setTaskSuccessMsg(null);
     try {
       const res = await fetch(`${apiBase}/api/v1/rituals/events/${eventId}/generate-tasks`, {
-        method: 'POST'
+        method: 'POST',
+        headers: getAuthHeaders(eventId)
       });
       if (res.ok) {
         const data = await res.json();

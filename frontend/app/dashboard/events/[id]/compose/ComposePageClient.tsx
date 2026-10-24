@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { Navbar } from '@/components/ui/Navbar';
 import { VenueDiscoveryList, VendorDiscoveryItem } from '@/components/ui/VenueDiscoveryList';
+import { getAuthHeaders } from '@/lib/auth';
 
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL ||
@@ -135,7 +136,7 @@ export default function ComposePageClient() {
 
       const res = await fetch(`${API_BASE_URL}/events/${eventId}/compose`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders(eventId, { 'Content-Type': 'application/json' }),
         body: JSON.stringify(payload)
       });
       if (!res.ok) throw new Error('Failed to update venue selection');
@@ -163,7 +164,7 @@ export default function ComposePageClient() {
 
       const res = await fetch(`${API_BASE_URL}/events/${eventId}/compose`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders(eventId, { 'Content-Type': 'application/json' }),
         body: JSON.stringify(payload)
       });
       if (!res.ok) throw new Error('Failed to update timing selection');

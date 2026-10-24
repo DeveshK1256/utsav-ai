@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { getAuthHeaders } from '@/lib/auth';
 
 interface InvitationStudioProps {
   eventId: string;
@@ -164,7 +165,7 @@ export function InvitationStudio({
 
       const res = await fetch(`${apiBase}/api/v1/events/${eventId}/invitations/generate`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders(eventId, { 'Content-Type': 'application/json' }),
         body: JSON.stringify(payload)
       });
 

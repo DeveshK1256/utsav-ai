@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { Navbar } from '@/components/ui/Navbar';
+import { getAuthHeaders, getEventOwnerToken } from '@/lib/auth';
 
 interface LineItem {
   name: string;
@@ -183,6 +184,8 @@ export default function ScopedQuotesDashboardClient() {
     form.append('file', file);
     form.append('event_id', eventId);
     form.append('category', uploadCategory);
+    const ownerToken = getEventOwnerToken(eventId);
+    if (ownerToken) form.append('owner_token', ownerToken);
 
     setIsUploading(true);
     setErrorMsg(null);
@@ -191,6 +194,7 @@ export default function ScopedQuotesDashboardClient() {
       const apiBase = getApiBase();
       const res = await fetch(`${apiBase}/quotes/upload`, {
         method: 'POST',
+        headers: getAuthHeaders(eventId),
         body: form
       });
       if (!res.ok) {

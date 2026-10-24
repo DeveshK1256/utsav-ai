@@ -33,6 +33,8 @@ eggs/
 .eggs/
 lib/
 lib64/
+!frontend/lib/
+!frontend/lib/**
 parts/
 sdist/
 var/
@@ -46,6 +48,8 @@ htmlcov/
 
 # Node & Next.js
 node_modules/
+*.tsbuildinfo
+frontend/tsconfig.tsbuildinfo
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*

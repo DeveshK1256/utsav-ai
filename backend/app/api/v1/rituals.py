@@ -14,6 +14,7 @@ from backend.app.db.session import get_db
 from backend.app.models.models import Tradition, RitualItem, Event, SubEvent
 from backend.app.services.panchang_service import default_panchang_provider
 from backend.app.services.tradition_merge_service import TraditionMergeService
+from backend.app.core.security import verify_event_owner_token
 
 router = APIRouter(prefix="/rituals", tags=["Ritual & Cultural Intelligence"])
 
@@ -155,7 +156,11 @@ def merge_dual_traditions(payload: MergeTraditionsRequest, db: Session = Depends
 
 
 @router.post("/events/{event_id}/generate-tasks")
-def generate_ritual_tasks_for_event(event_id: str, db: Session = Depends(get_db)):
+def generate_ritual_tasks_for_event(
+    event_id: str,
+    event: Event = Depends(verify_event_owner_token),
+    db: Session = Depends(get_db)
+):
     """
     Generates structured preparation and procurement tasks for ritual samagri,
     inserting them into the event's DAG task graph.
@@ -163,8 +168,6 @@ def generate_ritual_tasks_for_event(event_id: str, db: Session = Depends(get_db)
     from backend.app.models.models import Task
     from backend.app.services.dag_scheduler import DAGScheduler
     import uuid
-
-    event = db.query(Event).filter(Event.id == event_id).first()
     if not event:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Event not found")
 

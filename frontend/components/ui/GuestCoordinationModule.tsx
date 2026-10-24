@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
+import { getAuthHeaders } from '@/lib/auth';
 
 interface Guest {
   id: string;
@@ -107,7 +108,7 @@ export function GuestCoordinationModule({ eventId, eventName, apiBase }: GuestCo
     try {
       const res = await fetch(`${apiBase}/events/${eventId}/guests/send-invitations`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders(eventId, { 'Content-Type': 'application/json' }),
         body: JSON.stringify({})
       });
 
@@ -152,7 +153,7 @@ export function GuestCoordinationModule({ eventId, eventName, apiBase }: GuestCo
     try {
       const res = await fetch(`${apiBase}/events/${eventId}/guests/import`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders(eventId, { 'Content-Type': 'application/json' }),
         body: JSON.stringify({ guests: rows })
       });
 
@@ -192,7 +193,7 @@ export function GuestCoordinationModule({ eventId, eventName, apiBase }: GuestCo
     try {
       const res = await fetch(`${apiBase}/events/${eventId}/fact-sheet`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders(eventId, { 'Content-Type': 'application/json' }),
         body: JSON.stringify(factSheet)
       });
       if (res.ok) {
@@ -218,7 +219,8 @@ export function GuestCoordinationModule({ eventId, eventName, apiBase }: GuestCo
 
     try {
       const res = await fetch(`${apiBase}/events/${eventId}/guests/${guestId}`, {
-        method: 'DELETE'
+        method: 'DELETE',
+        headers: getAuthHeaders(eventId)
       });
       if (res.ok) {
         setActionMessage({
