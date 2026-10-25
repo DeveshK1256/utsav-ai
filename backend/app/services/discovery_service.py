@@ -5,6 +5,7 @@ import urllib.request
 import urllib.parse
 import json
 import time
+import re
 from typing import Optional, List, Tuple
 from sqlalchemy.orm import Session
 from sqlalchemy import or_
@@ -19,6 +20,45 @@ from backend.app.schemas.discovery import (
 logger = logging.getLogger(__name__)
 
 OSM_USER_AGENT = "UtsavCelebrationApp/1.0 (utsav.celebrations@gmail.com)"
+
+
+def is_valid_venue_name(name: Optional[str]) -> bool:
+    """
+    Filters out nameless, un-named, pure address/digits, raw ID fallbacks,
+    or generic placeholder OSM results so only properly-named real celebration places reach the UI.
+    """
+    if not name or not isinstance(name, str):
+        return False
+    clean = name.strip()
+    if len(clean) < 3:
+        return False
+    if not any(c.isalpha() for c in clean):
+        return False
+    lower = clean.lower()
+    # Filter out raw OSM identifiers and fallbacks
+    if lower.startswith(("node/", "way/", "relation/", "osm node", "osm way", "osm relation", "osm/")):
+        return False
+    # Filter out pure numbers or address numbers like '14/2', '101'
+    if re.match(r"^[\d\s\/\-\.,#]+$", clean):
+        return False
+    # Filter out generic single-word placeholders with no distinct identity
+    if lower in {"unnamed", "unknown", "venue", "banquet", "hall", "marriage garden", "hotel", "resort", "palace"}:
+        return False
+    return True
+
+
+def extract_distinctive_tokens(name: str) -> set:
+    """Extracts distinctive name tokens, removing common venue descriptor stop words."""
+    stop_words = {
+        "the", "hotel", "resort", "and", "&", "palace", "hall", "banquet",
+        "garden", "gardens", "marriage", "jaipur", "pune", "bengaluru",
+        "bangalore", "indore", "mangal", "karyalay", "karyalaya", "kalyana",
+        "mandap", "mandapa", "mantap", "mantapa", "convention", "centre", "center",
+        "lawns", "lawn", "inn", "suites", "party", "plot"
+    }
+    tokens = set(re.findall(r"[a-z0-9]+", name.lower()))
+    distinctive = tokens - stop_words
+    return distinctive if distinctive else tokens
 
 
 def haversine_distance_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
@@ -171,31 +211,76 @@ class VendorDiscoveryService:
         # 3. Re-query all candidates in bounding box (seed + persisted OSM venues)
         all_candidates = db_query.all()
 
-        # 4. Compute Haversine distance, deduplicate, filter, and sort
-        items_with_distance: List[Tuple[VendorDiscoveryItem, float]] = []
-        seen_names = set()
+        # 4. Compute Haversine distance, deduplicate, filter nameless/garbage, and sort
+        # Prioritize curated baseline seeds (pickyourtrail/venuelook) first so duplicates from OSM are dropped
+        def candidate_priority(p: VendorProfile) -> int:
+            notes = (p.source_notes or "").lower()
+            if "pickyourtrail" in notes or "venuelook" in notes:
+                return 0  # Curated seed (highest priority)
+            if p.is_verified_profile:
+                return 1
+            return 2      # External OSM record
 
-        for p in all_candidates:
+        sorted_candidates = sorted(all_candidates, key=candidate_priority)
+
+        accepted_items: List[Tuple[VendorDiscoveryItem, float]] = []
+        seen_normalized_names = set()
+
+        for p in sorted_candidates:
             if p.latitude is None or p.longitude is None:
+                continue
+
+            # Check 2: Filter nameless/garbage/raw-ID venues
+            if not is_valid_venue_name(p.business_name):
                 continue
 
             dist = haversine_distance_km(
                 resolved_lat, resolved_lng,
                 float(p.latitude), float(p.longitude)
             )
-            if dist <= radius_km:
-                # Deduplicate: if curated seed exists with similar name, prioritize it over OSM node
-                name_key = p.business_name.strip().lower()
-                if name_key in seen_names:
-                    continue
-                seen_names.add(name_key)
+            if dist > radius_km:
+                continue
 
-                item = cls._profile_to_item(p, distance_km=dist)
-                items_with_distance.append((item, dist))
+            # Deduplication: Check against already accepted higher-priority venues
+            # Match A: exact normalized alphanumeric string
+            norm_name = re.sub(r"[^a-z0-9]", "", p.business_name.lower())
+            if norm_name in seen_normalized_names:
+                continue
 
-        # Sort
-        items_with_distance.sort(key=lambda x: x[1])
-        results = [item for item, _ in items_with_distance]
+            # Match B: Close geographic proximity (<= 350 meters) + distinctive token overlap
+            p_lat = float(p.latitude)
+            p_lng = float(p.longitude)
+            p_tokens = extract_distinctive_tokens(p.business_name)
+
+            is_duplicate = False
+            for accepted_item, _ in accepted_items:
+                if accepted_item.latitude and accepted_item.longitude:
+                    proximity_km = haversine_distance_km(
+                        p_lat, p_lng,
+                        accepted_item.latitude, accepted_item.longitude
+                    )
+                    # If within 350 meters
+                    if proximity_km <= 0.35:
+                        acc_tokens = extract_distinctive_tokens(accepted_item.business_name)
+                        shared_tokens = p_tokens & acc_tokens
+                        if shared_tokens:
+                            logger.info(
+                                "Deduplicating venue '%s' against higher-priority '%s' (proximity=%.2f km, shared=%s)",
+                                p.business_name, accepted_item.business_name, proximity_km, shared_tokens
+                            )
+                            is_duplicate = True
+                            break
+
+            if is_duplicate:
+                continue
+
+            seen_normalized_names.add(norm_name)
+            item = cls._profile_to_item(p, distance_km=dist)
+            accepted_items.append((item, dist))
+
+        # Sort by distance
+        accepted_items.sort(key=lambda x: x[1])
+        results = [item for item, _ in accepted_items]
 
         return VendorDiscoveryResponse(
             query_lat=resolved_lat,
@@ -250,7 +335,7 @@ out center 15;"""
                     for el in elements:
                         tags = el.get("tags", {})
                         v_name = tags.get("name") or tags.get("name:en")
-                        if not v_name:
+                        if not is_valid_venue_name(v_name):
                             continue
                         v_lat = el.get("lat") or el.get("center", {}).get("lat")
                         v_lon = el.get("lon") or el.get("center", {}).get("lon")
@@ -261,7 +346,7 @@ out center 15;"""
                         osm_venues.append({
                             "osm_type": osm_type,
                             "osm_id": osm_id,
-                            "name": v_name,
+                            "name": v_name.strip(),
                             "lat": float(v_lat),
                             "lng": float(v_lon),
                             "locality": tags.get("addr:suburb") or tags.get("addr:neighbourhood") or tags.get("addr:street"),
@@ -300,6 +385,8 @@ out center 15;"""
                         items = json.loads(resp.read().decode("utf-8"))
                         for it in items:
                             v_name = it.get("name") or it.get("display_name", "").split(",")[0]
+                            if not is_valid_venue_name(v_name):
+                                continue
                             osm_type = it.get("osm_type", "node")
                             osm_id = it.get("osm_id")
                             v_lat = float(it.get("lat"))
@@ -309,7 +396,7 @@ out center 15;"""
                                 osm_venues.append({
                                     "osm_type": osm_type,
                                     "osm_id": osm_id,
-                                    "name": v_name,
+                                    "name": v_name.strip(),
                                     "lat": v_lat,
                                     "lng": v_lng,
                                     "locality": it.get("display_name", "").split(",")[1].strip() if "," in it.get("display_name", "") else None,
@@ -325,6 +412,8 @@ out center 15;"""
         # Persist newly discovered OSM venues into vendor_profiles table
         new_profiles_count = 0
         for v in osm_venues:
+            if not is_valid_venue_name(v.get("name")):
+                continue
             # Deterministic UUID from OSM entity
             osm_uuid = str(uuid.uuid5(uuid.NAMESPACE_URL, f"osm_{v['osm_type']}_{v['osm_id']}"))
             existing = db.query(VendorProfile).filter(VendorProfile.id == osm_uuid).first()
@@ -390,7 +479,7 @@ out center 15;"""
             rating_tier=rating_tier,
             average_rating=avg_rating,
             rating_count=rating_count,
-            is_verified_profile=profile.is_verified_profile,
+            is_verified_profile=bool(profile.is_verified_profile or False),
             coordinate_precision=profile.coordinate_precision or "locality_approximate",
             cost_estimate=cost_est,
             source_notes=profile.source_notes

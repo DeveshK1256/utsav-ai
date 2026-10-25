@@ -72,6 +72,10 @@ class ComposeUpdateSchema(BaseModel):
     venue_locality: Optional[str] = None
     venue_address: Optional[str] = None
     venue_city: Optional[str] = None
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+    osm_id: Optional[str] = None
+    source_notes: Optional[str] = None
     muhurat_time: Optional[str] = None
     muhurat_date: Optional[date] = None
     muhurat_notes: Optional[str] = None
@@ -248,10 +252,34 @@ def update_event_compose_progress(
     elif payload.vendor_profile_id:
         vendor = db.query(VendorProfile).filter(VendorProfile.id == payload.vendor_profile_id).first()
         if not vendor:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Vendor profile with ID '{payload.vendor_profile_id}' not found in discovery directory"
-            )
+            # If not yet in DB (e.g. dynamically selected from OpenStreetMap search or client cache),
+            # dynamically INSERT a permanent row into vendor_profiles NOW so it has a real database identity
+            # for future quotes (F5) and reviews (F12) to attach via foreign key.
+            if payload.venue_name:
+                vendor = VendorProfile(
+                    id=payload.vendor_profile_id,
+                    business_name=payload.venue_name.strip()[:200],
+                    category="venue",
+                    latitude=payload.latitude,
+                    longitude=payload.longitude,
+                    city=(payload.venue_city or event.city or "Nearby")[:100],
+                    locality=payload.venue_locality[:150] if payload.venue_locality else None,
+                    city_tier=getattr(event, "city_tier", None) or "tier_2",
+                    is_verified_profile=False,
+                    average_rating=None,  # Honest unrated
+                    rating_count=0,
+                    coordinate_precision="exact_osm_node" if payload.latitude else "locality_approximate",
+                    source_notes=payload.source_notes or f"OpenStreetMap Selected (OSM Record: {payload.osm_id or 'user_selection'})",
+                    metadata_json={"address": payload.venue_address} if payload.venue_address else {}
+                )
+                db.add(vendor)
+                db.commit()
+                db.refresh(vendor)
+            else:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail=f"Vendor profile with ID '{payload.vendor_profile_id}' not found in discovery directory"
+                )
         venue_display = f"{vendor.business_name}, {vendor.locality}" if vendor.locality else vendor.business_name
         meta["venue"] = venue_display
         compose_state["vendor_profile_id"] = vendor.id

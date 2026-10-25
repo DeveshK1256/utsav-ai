@@ -135,7 +135,10 @@ export function LeafletVenueMap({
           <div style="font-size: 11px; color: #57534E;">
             📍 ${v.locality || v.city} • <span style="color: #8B1E28; font-weight: 600;">${distBadge}</span>
           </div>
-          <div style="display: inline-block; font-size: 10px; background: #F5F5F4; padding: 2px 6px; border-radius: 4px; color: #78716C;">
+          <div style="font-size: 11px; color: #78716C; margin-top: 2px;">
+            💰 Cost: <span style="font-weight: 600; color: #44403C;">Estimate (${v.cost_estimate?.estimated_cost_display || 'Limited data'})</span>
+          </div>
+          <div style="display: inline-block; font-size: 10px; background: #F5F5F4; padding: 2px 6px; border-radius: 4px; color: #78716C; margin-top: 3px;">
             ${sourceBadge}
           </div>
           <div style="margin-top: 6px;">

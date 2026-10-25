@@ -132,6 +132,9 @@ export default function ComposePageClient() {
         payload.venue_name = selectedVenue.business_name;
         payload.venue_locality = selectedVenue.locality;
         payload.venue_city = selectedVenue.city;
+        payload.latitude = selectedVenue.latitude;
+        payload.longitude = selectedVenue.longitude;
+        payload.source_notes = selectedVenue.source_notes;
       }
 
       const res = await fetch(`${API_BASE_URL}/events/${eventId}/compose`, {
