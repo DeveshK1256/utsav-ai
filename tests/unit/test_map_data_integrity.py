@@ -57,7 +57,7 @@ def test_filter_nameless_and_garbage_osm_results():
 
 def test_deduplication_rambagh_palace_overlapping_test_case():
     """
-    Check 1: Dedup check.
+    Check 1: Dedup check (Positive Match).
     Confirms that when Rambagh Palace exists in the curated seed list,
     any overlapping Overpass candidate (e.g. 'The Rambagh Palace, Jaipur' 20 meters away)
     is deduplicated down so a physical venue NEVER appears twice.
@@ -108,7 +108,7 @@ def test_deduplication_rambagh_palace_overlapping_test_case():
         rambagh_results = [r for r in res.results if "rambagh" in r.business_name.lower()]
         after_count = len(rambagh_results)
 
-        print(f"\n[DEDUP REPORT] Before deduplication: {before_count} candidates -> After deduplication: {after_count} venue")
+        print(f"\n[DEDUP POSITIVE REPORT] Before deduplication: {before_count} candidates -> After deduplication: {after_count} venue")
         assert after_count == 1, f"Expected exactly 1 deduplicated venue, got {after_count}"
         
         # Verify the retained venue is the curated seed, not the uncurated OSM node
@@ -119,6 +119,96 @@ def test_deduplication_rambagh_palace_overlapping_test_case():
 
     finally:
         db.query(VendorProfile).filter(VendorProfile.id == osm_id).delete(synchronize_session=False)
+        db.commit()
+        db.close()
+
+
+def test_distinct_venues_not_overmerged_within_350m():
+    """
+    Check 1b: Anti-Overmerging Protection (Negative Match).
+    Confirms that genuinely different venues within 350m sharing common words
+    (e.g., 'Bharti Banquet & Lawn' vs 'Bharti Vihar Community Hall', or
+    'Shree Ganesh Banquet Hall' vs 'Shree Krishna Banquet Hall')
+    are NOT erroneously collapsed into one. Both must be preserved as separate pins.
+    """
+    from backend.app.services.discovery_service import are_venues_duplicates
+    
+    # 1. Pure unit tests with are_venues_duplicates
+    # Case A: Two different "X Banquet Hall" businesses sharing the honorific prefix 'Shree'
+    assert not are_venues_duplicates(
+        "Shree Ganesh Banquet Hall", 18.5200, 73.8560,
+        "Shree Krishna Banquet Hall", 18.5210, 73.8570
+    ), "Two distinct halls sharing 'Shree' were incorrectly flagged as duplicates"
+
+    # Case B: Two venues with generic modifier 'Royal' vs 'Grand'
+    assert not are_venues_duplicates(
+        "Royal Banquet Hall", 18.5200, 73.8560,
+        "Grand Banquet Hall", 18.5210, 73.8570
+    ), "'Royal Banquet' and 'Grand Banquet' were incorrectly flagged as duplicates"
+
+    # Case C: Bharti Banquet & Lawn vs nearby Bharti Vihar Community Hall
+    assert not are_venues_duplicates(
+        "Bharti Banquet & Lawn", 18.4610, 73.8510,
+        "Bharti Vihar Community Hall", 18.4622, 73.8522
+    ), "'Bharti Banquet & Lawn' and 'Bharti Vihar Community Hall' were incorrectly flagged as duplicates"
+
+    # 2. Database End-to-End Search Test in Pune near Bharti Banquet
+    db = SessionLocal()
+    venue_a_id = str(uuid.uuid4())
+    venue_b_id = str(uuid.uuid4())
+
+    # Venue A: Seeded/curated Bharti Banquet & Lawn
+    venue_a = VendorProfile(
+        id=venue_a_id,
+        business_name="Bharti Banquet & Lawn",
+        category="venue",
+        city="Pune",
+        city_tier="tier_2",
+        latitude=18.4610,
+        longitude=73.8510,
+        source_notes="venuelook.com Pune locality listings; locality centroid approximation."
+    )
+
+    # Venue B: Distinct nearby community trust hall 180 meters away
+    venue_b = VendorProfile(
+        id=venue_b_id,
+        business_name="Bharti Vihar Community Hall",
+        category="community_centre",
+        city="Pune",
+        city_tier="tier_2",
+        latitude=18.4622,
+        longitude=73.8522,
+        source_notes="OpenStreetMap (Real OSM Record: node/777888999)"
+    )
+
+    db.add(venue_a)
+    db.add(venue_b)
+    db.commit()
+
+    try:
+        # Distance between A and B is ~180 meters
+        dist_between = haversine_distance_km(18.4610, 73.8510, 18.4622, 73.8522)
+        assert dist_between <= 0.35, f"Expected proximity <= 350m, got {dist_between} km"
+
+        res = VendorDiscoveryService.search_vendors(
+            db=db,
+            lat=18.4610,
+            lng=73.8510,
+            city="Pune",
+            radius_km=1.0
+        )
+
+        # Retrieve both venues
+        bharti_results = [r for r in res.results if "bharti" in r.business_name.lower()]
+        returned_names = {r.business_name for r in bharti_results}
+
+        print(f"\n[ANTI-OVERMERGE REPORT] Input candidates: 2 distinct venues -> Output: {len(bharti_results)} venues preserved: {returned_names}")
+        assert len(bharti_results) >= 2, f"Expected at least 2 distinct venues, got {len(bharti_results)}"
+        assert "Bharti Banquet & Lawn" in returned_names
+        assert "Bharti Vihar Community Hall" in returned_names
+
+    finally:
+        db.query(VendorProfile).filter(VendorProfile.id.in_([venue_a_id, venue_b_id])).delete(synchronize_session=False)
         db.commit()
         db.close()
 

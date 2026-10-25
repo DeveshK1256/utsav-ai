@@ -61,6 +61,84 @@ def extract_distinctive_tokens(name: str) -> set:
     return distinctive if distinctive else tokens
 
 
+# Corporate hotel chains and qualifiers allowable as additions to the same physical venue
+ALLOWABLE_CHAIN_QUALIFIERS = {
+    "taj", "oberoi", "itc", "leela", "hyatt", "marriott", "radisson",
+    "hilton", "novotel", "westin", "sheraton", "sofitel", "lalit",
+    "clarks", "road", "main", "near", "opp", "opposite"
+}
+
+# Generic modifiers / honorifics that are ubiquitous across Indian businesses
+# A shared token among these alone NEVER qualifies as a duplicate
+GENERIC_NAME_MODIFIERS = {
+    "grand", "royal", "new", "classic", "star", "city", "prime", "elite",
+    "golden", "silver", "crown", "shree", "shri", "sri", "om", "sai", "jai",
+    "best", "top", "central"
+}
+
+
+def are_venues_duplicates(
+    name1: str, lat1: float, lng1: float,
+    name2: str, lat2: float, lng2: float
+) -> bool:
+    """
+    Determines whether two venue profiles represent the exact same physical venue.
+    Guards strictly against over-merging distinct businesses while ensuring true duplicates
+    (e.g., 'Rambagh Palace' vs 'The Rambagh Palace, Jaipur') are cleanly collapsed.
+    """
+    # 1. Exact normalized alphanumeric match (ignoring case, spaces, punctuation)
+    norm1 = re.sub(r"[^a-z0-9]", "", name1.lower())
+    norm2 = re.sub(r"[^a-z0-9]", "", name2.lower())
+    if norm1 == norm2:
+        return True
+
+    # Check physical distance
+    dist_km = haversine_distance_km(lat1, lng1, lat2, lng2)
+    # Beyond 350 meters, two venues are never considered the same physical venue
+    if dist_km > 0.35:
+        return False
+
+    # Normalized prefix/suffix match with city name (e.g. 'rambaghpalacejaipur' vs 'rambaghpalace')
+    if (norm1.startswith(norm2) or norm2.startswith(norm1)) and abs(len(norm1) - len(norm2)) <= 10:
+        remainder = norm1.replace(norm2, "") if len(norm1) > len(norm2) else norm2.replace(norm1, "")
+        if remainder in {"jaipur", "pune", "bengaluru", "indore", "delhi", "mumbai"}:
+            return True
+
+    toks1 = extract_distinctive_tokens(name1)
+    toks2 = extract_distinctive_tokens(name2)
+
+    if not toks1 or not toks2:
+        return False
+
+    # 2. Distinctive token set equality (e.g. {'rambagh'} == {'rambagh'}, {'jw', 'marriott'} == {'jw', 'marriott'})
+    if toks1 == toks2:
+        # If the ONLY tokens are generic modifiers (e.g. {'royal'} or {'grand'}),
+        # do NOT merge without exact normalized match
+        if toks1.issubset(GENERIC_NAME_MODIFIERS):
+            return False
+        # Specific brand/proper noun match
+        return True
+
+    # 3. Subset match with corporate chain qualifiers (e.g. {'taj', 'rambagh'} vs {'rambagh'})
+    shared = toks1 & toks2
+    diff = toks1 ^ toks2
+
+    # If shared tokens are only generic modifiers (e.g. 'shree', 'sai', 'royal', 'grand'), do NOT merge
+    if not shared or shared.issubset(GENERIC_NAME_MODIFIERS):
+        return False
+
+    # Must share at least one substantial specific proper noun (>= 4 chars, not generic)
+    has_substantial_proper_noun = any(len(t) >= 4 and t not in GENERIC_NAME_MODIFIERS for t in shared)
+    if not has_substantial_proper_noun:
+        return False
+
+    # If all differing tokens are allowable hotel chain/qualifiers, they are the same physical venue
+    if diff.issubset(ALLOWABLE_CHAIN_QUALIFIERS):
+        return True
+
+    return False
+
+
 def haversine_distance_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
     """
     Computes great-circle distance between two points on Earth in kilometers
@@ -247,29 +325,28 @@ class VendorDiscoveryService:
             if norm_name in seen_normalized_names:
                 continue
 
-            # Match B: Close geographic proximity (<= 350 meters) + distinctive token overlap
+            # Match B: Intelligent deduplication (spatial proximity + specific proper nouns)
+            # Guards strictly against over-merging distinct businesses with short or generic words
             p_lat = float(p.latitude)
             p_lng = float(p.longitude)
-            p_tokens = extract_distinctive_tokens(p.business_name)
 
             is_duplicate = False
             for accepted_item, _ in accepted_items:
                 if accepted_item.latitude and accepted_item.longitude:
-                    proximity_km = haversine_distance_km(
-                        p_lat, p_lng,
-                        accepted_item.latitude, accepted_item.longitude
-                    )
-                    # If within 350 meters
-                    if proximity_km <= 0.35:
-                        acc_tokens = extract_distinctive_tokens(accepted_item.business_name)
-                        shared_tokens = p_tokens & acc_tokens
-                        if shared_tokens:
-                            logger.info(
-                                "Deduplicating venue '%s' against higher-priority '%s' (proximity=%.2f km, shared=%s)",
-                                p.business_name, accepted_item.business_name, proximity_km, shared_tokens
-                            )
-                            is_duplicate = True
-                            break
+                    if are_venues_duplicates(
+                        name1=p.business_name,
+                        lat1=p_lat,
+                        lng1=p_lng,
+                        name2=accepted_item.business_name,
+                        lat2=accepted_item.latitude,
+                        lng2=accepted_item.longitude
+                    ):
+                        logger.info(
+                            "Deduplicating duplicate venue '%s' against higher-priority '%s'",
+                            p.business_name, accepted_item.business_name
+                        )
+                        is_duplicate = True
+                        break
 
             if is_duplicate:
                 continue
