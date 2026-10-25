@@ -52,22 +52,31 @@ if ENABLE_M4_WHATSAPP:
         )
 
 
-@app.on_event("startup")
-def run_db_backfill_on_startup():
+import threading
+import logging
+
+logger = logging.getLogger("uvicorn.error")
+
+
+def _background_db_backfill():
     """
-    Idempotent data integrity safeguard: ensure all existing budget_items rows
-    in the active database conform to canonical DEC-018 scaling rules,
-    and guarantee all M0-M4 tables exist.
+    Asynchronous background database backfill and initialization.
+    Runs in a detached daemon thread so the web server can bind port $PORT
+    and respond to /health immediately within milliseconds of boot,
+    completely immune to remote DB connection latency or table lock contention.
     """
+    logger.info("Starting background DB schema check and backfill...")
     try:
-        from backend.app.db.session import engine
+        from backend.app.db.session import engine, SessionLocal
         from backend.app.db.base import Base
         import backend.app.models.models
+        from sqlalchemy import text
+
+        # 1. Ensure tables exist
         Base.metadata.create_all(bind=engine)
 
-        from sqlalchemy import text
+        # 2. Schema migrations & scaling rules
         with engine.begin() as conn:
-            # Idempotently add missing columns in PostgreSQL if they don't exist
             if engine.dialect.name == "postgresql":
                 conn.execute(text("ALTER TABLE traditions ADD COLUMN IF NOT EXISTS is_verified BOOLEAN DEFAULT FALSE;"))
                 conn.execute(text("ALTER TABLE traditions ADD COLUMN IF NOT EXISTS verification_source VARCHAR(255);"))
@@ -95,21 +104,42 @@ def run_db_backfill_on_startup():
                    OR (scaling_rule = 'fixed' AND lower(category) IN ('decor', 'sound_light', 'sound_and_lighting', 'catering', 'rentals', 'wardrobe', 'gifts_favors', 'invitations', 'logistics', 'contingency'));
             """))
 
-            # Enforce truthfulness in cultural verification status: All traditions and ritual items
-            # are AI-drafted starting baselines and MUST be marked is_verified = FALSE pending real community review.
-            conn.execute(text("UPDATE traditions SET is_verified = FALSE, verification_source = 'AI-drafted baseline, pending community/priest review';"))
-            conn.execute(text("UPDATE ritual_items SET is_verified = FALSE;"))
+            conn.execute(text("UPDATE traditions SET is_verified = FALSE, verification_source = 'AI-drafted baseline, pending community/priest review' WHERE is_verified IS NULL OR is_verified = TRUE;"))
+            conn.execute(text("UPDATE ritual_items SET is_verified = FALSE WHERE is_verified IS NULL OR is_verified = TRUE;"))
 
-        # Seed curated cultural traditions & ritual items if needed
-        from backend.app.db.seed_traditions import seed_cultural_traditions
-        seed_cultural_traditions()
+        # 3. Only seed if tables are empty (prevents redundant writes on every boot)
+        db = SessionLocal()
+        try:
+            from backend.app.models.models import Tradition, VendorProfile
+            tradition_count = db.query(Tradition).count()
+            if tradition_count == 0:
+                from backend.app.db.seed_traditions import seed_cultural_traditions
+                seed_cultural_traditions(db=db, close_db=False)
+                logger.info("Seeded initial cultural traditions.")
 
-        # Seed F15-Lite curated vendor profiles (19 real venues in Jaipur and Pune)
-        from scripts.seed_vendor_discovery import seed_vendor_profiles
-        seed_vendor_profiles()
+            vendor_count = db.query(VendorProfile).count()
+            if vendor_count == 0:
+                from scripts.seed_vendor_discovery import seed_vendor_profiles
+                seed_vendor_profiles()
+                logger.info("Seeded initial vendor discovery profiles.")
+        finally:
+            db.close()
+
+        logger.info("Background DB schema check and backfill completed successfully.")
     except Exception as exc:
-        import logging
-        logging.getLogger("uvicorn.error").exception("Startup migration/backfill error: %s", exc)
+        logger.warning("Background DB backfill encountered an issue (non-fatal, server remains healthy): %s", exc)
+
+
+@app.on_event("startup")
+def run_db_backfill_on_startup():
+    """
+    Fast, non-blocking startup handler.
+    Spawns DB backfill in a detached daemon thread so Uvicorn immediately
+    binds to 0.0.0.0:$PORT and answers health checks without delay.
+    """
+    thread = threading.Thread(target=_background_db_backfill, daemon=True, name="db-backfill-worker")
+    thread.start()
+    logger.info("Launched background DB initialization thread. Web server is ready to bind port.")
 
 
 @app.get("/health")
