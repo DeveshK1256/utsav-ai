@@ -67,25 +67,15 @@ jobs:
 
       - name: Run Deterministic Unit Tests
         run: |
-          pytest tests/unit/ -v --tb=short || {
-            python -c "
-            import subprocess
-            res = subprocess.run(['pytest', 'tests/unit/', '-v', '--tb=short', '-q'], capture_output=True, text=True)
-            for l in res.stdout.splitlines():
-                if 'FAILED' in l or 'AssertionError' in l or 'assert' in l:
-                    print(f'::error::{l}')
-            print(res.stdout[-4000:])
-            "
-            exit 1
-          }
+          python scripts/ci_test_runner.py tests/unit/
 
       - name: Run Schema Regression Tests
         run: |
-          pytest tests/schema/ -v
+          python scripts/ci_test_runner.py tests/schema/
 
       - name: Run Golden Event Evaluation Suite
         run: |
-          pytest tests/eval/ -v
+          python scripts/ci_test_runner.py tests/eval/
 
       - name: Verification Summary
         if: success()
