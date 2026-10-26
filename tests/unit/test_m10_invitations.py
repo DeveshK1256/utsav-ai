@@ -418,7 +418,7 @@ def test_pdf_lossless_pixel_diff():
     """
     import zlib
     import re
-    import numpy as np
+    from PIL import ImageChops
 
     png_bytes, pdf_bytes = InvitationCardRenderer.render_card(
         event_name="Pixel Test Vivah",
@@ -439,12 +439,10 @@ def test_pdf_lossless_pixel_diff():
     pdf_image = Image.frombytes("RGB", (1200, 1800), raw_stream)
     png_image = Image.open(io.BytesIO(png_bytes)).convert("RGB")
 
-    arr_pdf = np.array(pdf_image)
-    arr_png = np.array(png_image)
-
-    # Compare pixel arrays
-    diff = np.max(np.abs(arr_pdf.astype(int) - arr_png.astype(int)))
-    assert diff == 0, f"Expected 0 pixel difference, got max diff of {diff}"
+    # Compare pixel bytes and image diff directly without third-party math deps
+    assert raw_stream == png_image.tobytes(), "PDF raw image stream must be byte-for-byte identical to PNG pixels"
+    diff = ImageChops.difference(pdf_image, png_image)
+    assert diff.getbbox() is None, f"Expected 0 pixel difference, got diff bbox {diff.getbbox()}"
 
 
 def test_venue_skipped_card_generation_returns_valid_card_id():
