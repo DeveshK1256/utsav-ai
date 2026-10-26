@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { Navbar } from '@/components/ui/Navbar';
 import { InvitationStudio } from '@/components/ui/InvitationStudio';
+import { getAuthHeaders } from '@/lib/auth';
 
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL ||
@@ -38,7 +39,9 @@ export default function InvitationsPageClient() {
     if (resolvedId && resolvedId !== 'default') {
       setEventId(resolvedId);
       // Fetch basic event details
-      fetch(`${API_BASE_URL}/events/${resolvedId}`)
+      fetch(`${API_BASE_URL}/events/${resolvedId}`, {
+        headers: getAuthHeaders(resolvedId)
+      })
         .then((r) => r.json())
         .then((d) => {
           if (d && d.name) {

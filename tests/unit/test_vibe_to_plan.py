@@ -313,3 +313,34 @@ def test_vibe_to_plan_stub_workflow_and_granular_acceptance():
     )
     assert reject_res.status_code == 200
     assert reject_res.json()["status"] == "rejected"
+
+
+def test_vibe_upload_5mb_size_limit():
+    """Confirms files exceeding 5MB are rejected with 400 Bad Request."""
+    intake_res = client.post(
+        "/api/v1/events",
+        json={
+            "name": "Size Limit Wedding",
+            "event_type": "Wedding",
+            "city": "Mumbai",
+            "guest_count": 100,
+            "total_budget": 1000000.0,
+            "host_name": "Test Host",
+            "host_phone": "+919876543210"
+        }
+    )
+    assert intake_res.status_code == 201
+    event_id = intake_res.json()["id"]
+    auth_headers = {"X-Event-Owner-Token": intake_res.json()["owner_token"]}
+
+    # Create oversized 5.2 MB payload
+    oversized_bytes = b"0" * (5 * 1024 * 1024 + 200 * 1024)
+    files = [("files", ("huge_photo.jpg", oversized_bytes, "image/jpeg"))]
+
+    res = client.post(
+        f"/api/v1/events/{event_id}/vibe/upload",
+        files=files,
+        headers=auth_headers
+    )
+    assert res.status_code == 400
+    assert "exceeds 5MB" in res.json()["detail"]

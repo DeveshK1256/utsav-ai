@@ -7,6 +7,7 @@ class Settings(BaseSettings):
     PROJECT_NAME: str = "Utsav"
     VERSION: str = "1.0.0-RELEASE"
     API_V1_STR: str = "/api/v1"
+    ENVIRONMENT: str = "development"
     
     DATABASE_URL: str = "sqlite:///./utsav_dev.db"  # Defaults to SQLite for local development/testing, overridden by env for PostgreSQL
     

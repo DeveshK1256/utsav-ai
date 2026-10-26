@@ -27,7 +27,7 @@ export function Navbar({ badge, rightAction }: NavbarProps) {
                 {badge}
               </span>
             ) : (
-              <span className="text-xs ml-1.5 text-amber-600 dark:text-amber-400 font-semibold tracking-widest uppercase">
+              <span className="text-xs ml-1.5 text-amber-800 dark:text-amber-300 font-semibold tracking-widest uppercase">
                 उत्सव AI
               </span>
             )}

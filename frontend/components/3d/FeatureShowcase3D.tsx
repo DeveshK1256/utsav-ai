@@ -95,7 +95,7 @@ export function FeatureShowcase3D() {
               onChange={(e) => setGuestCount(parseInt(e.target.value, 10))}
               className="w-full h-2 bg-stone-300 dark:bg-stone-700 rounded-lg appearance-none cursor-pointer accent-emerald-600"
             />
-            <div className="flex justify-between text-[10px] text-stone-500 dark:text-stone-400 mt-1 font-mono">
+            <div className="flex justify-between text-[10px] text-stone-700 dark:text-stone-300 mt-1 font-mono font-medium">
               <span>100 (Intimate)</span>
               <span>200 (Baseline)</span>
               <span>350 (Grand Vivah)</span>
@@ -129,11 +129,11 @@ export function FeatureShowcase3D() {
             <div className="p-2.5 rounded-xl bg-stone-50 dark:bg-stone-950/80 border border-stone-200 dark:border-stone-800 flex justify-between items-center">
               <div>
                 <span className="font-bold text-stone-900 dark:text-stone-100">Catering (Per-Guest)</span>
-                <span className="block text-[10px] text-stone-500">Formula: ₹5,00,000 * ({guestCount}/200)</span>
+                <span className="block text-[10px] text-stone-700 dark:text-stone-300">Formula: ₹5,00,000 * ({guestCount}/200)</span>
               </div>
               <div className="text-right">
-                <span className="font-bold text-emerald-700 dark:text-emerald-400">₹{cateringAmount.toLocaleString('en-IN')}</span>
-                <span className="block text-[9px] text-emerald-600">Linear scaling</span>
+                <span className="font-bold text-emerald-800 dark:text-emerald-300">₹{cateringAmount.toLocaleString('en-IN')}</span>
+                <span className="block text-[9px] text-emerald-800 dark:text-emerald-300 font-medium">Linear scaling</span>
               </div>
             </div>
 
@@ -141,13 +141,13 @@ export function FeatureShowcase3D() {
             <div className="p-2.5 rounded-xl bg-stone-50 dark:bg-stone-950/80 border border-stone-200 dark:border-stone-800 flex justify-between items-center">
               <div>
                 <span className="font-bold text-stone-900 dark:text-stone-100">Decor (Tiered Space)</span>
-                <span className="block text-[10px] text-stone-500">
+                <span className="block text-[10px] text-stone-700 dark:text-stone-300">
                   {guestCount <= 150 ? 'Tier: Intimate (<150)' : guestCount <= 250 ? 'Tier: Standard (151-250)' : 'Tier: Grand Lawn (>250)'}
                 </span>
               </div>
               <div className="text-right">
-                <span className="font-bold text-amber-700 dark:text-amber-400">₹{decorAmount.toLocaleString('en-IN')}</span>
-                <span className="block text-[9px] text-amber-600">Tier bracket</span>
+                <span className="font-bold text-amber-800 dark:text-amber-300">₹{decorAmount.toLocaleString('en-IN')}</span>
+                <span className="block text-[9px] text-amber-800 dark:text-amber-300 font-medium">Tier bracket</span>
               </div>
             </div>
 
@@ -155,11 +155,11 @@ export function FeatureShowcase3D() {
             <div className="p-2.5 rounded-xl bg-stone-50 dark:bg-stone-950/80 border border-stone-200 dark:border-stone-800 flex justify-between items-center">
               <div>
                 <span className="font-bold text-stone-900 dark:text-stone-100">Venue Rental (Contracted)</span>
-                <span className="block text-[10px] text-stone-500">Fixed rate — invariant to guest count</span>
+                <span className="block text-[10px] text-stone-700 dark:text-stone-300">Fixed rate — invariant to guest count</span>
               </div>
               <div className="text-right">
-                <span className="font-bold text-stone-700 dark:text-stone-300">₹{venueFixed.toLocaleString('en-IN')}</span>
-                <span className="block text-[9px] text-stone-500">Fixed (Δ 0.0)</span>
+                <span className="font-bold text-stone-800 dark:text-stone-200">₹{venueFixed.toLocaleString('en-IN')}</span>
+                <span className="block text-[9px] text-stone-700 dark:text-stone-300 font-medium">Fixed (Δ 0.0)</span>
               </div>
             </div>
           </div>
@@ -297,11 +297,11 @@ export function FeatureShowcase3D() {
           <div className="space-y-3 font-mono text-xs">
             <div className="grid grid-cols-2 gap-2 text-[11px]">
               <div className="p-2.5 rounded-xl bg-stone-100 dark:bg-stone-950 border border-stone-200 dark:border-stone-800">
-                <span className="text-[10px] text-stone-500 block">Primary Tradition</span>
+                <span className="text-[10px] text-stone-700 dark:text-stone-300 block font-medium">Primary Tradition</span>
                 <span className="font-bold text-stone-900 dark:text-stone-100">Maharashtrian Vedic</span>
               </div>
               <div className="p-2.5 rounded-xl bg-stone-100 dark:bg-stone-950 border border-stone-200 dark:border-stone-800">
-                <span className="text-[10px] text-stone-500 block">Secondary Tradition</span>
+                <span className="text-[10px] text-stone-700 dark:text-stone-300 block font-medium">Secondary Tradition</span>
                 <span className="font-bold text-stone-900 dark:text-stone-100">Punjabi Anand Karaj</span>
               </div>
             </div>
@@ -309,19 +309,19 @@ export function FeatureShowcase3D() {
             <div className="p-3 rounded-2xl bg-stone-50 dark:bg-stone-950/80 border border-stone-200 dark:border-stone-800 space-y-2">
               <div className="text-[11px] font-bold text-stone-900 dark:text-stone-100 flex items-center justify-between">
                 <span>Unified Run-of-Show:</span>
-                <span className="text-emerald-600 text-[10px]">Harmonized DAG</span>
+                <span className="text-emerald-800 dark:text-emerald-300 font-semibold text-[10px]">Harmonized DAG</span>
               </div>
               <div className="space-y-1.5 text-[11px] text-stone-700 dark:text-stone-300">
                 <div className="flex items-center space-x-2">
-                  <span className="text-amber-500">09:00 AM</span>
+                  <span className="text-amber-800 dark:text-amber-300 font-bold">09:00 AM</span>
                   <span>Sakharpuda & Chooda Ceremony (Non-overlapping)</span>
                 </div>
                 <div className="flex items-center space-x-2">
-                  <span className="text-emerald-600 font-bold">11:30 AM</span>
+                  <span className="text-emerald-800 dark:text-emerald-300 font-bold">11:30 AM</span>
                   <span className="font-bold text-stone-900 dark:text-stone-100">Lagna Samaroh (Abhijit Muhurat Locked)</span>
                 </div>
                 <div className="flex items-center space-x-2">
-                  <span className="text-amber-500">07:00 PM</span>
+                  <span className="text-amber-800 dark:text-amber-300 font-bold">07:00 PM</span>
                   <span>Grand Sangeet & Milni Reception</span>
                 </div>
               </div>
@@ -358,7 +358,7 @@ export function FeatureShowcase3D() {
               📍 Mahalaxmi Lawns, Karve Nagar, Pune
             </div>
 
-            <div className="mt-4 flex justify-center space-x-2 text-[10px] font-mono text-stone-500">
+            <div className="mt-4 flex justify-center space-x-2 text-[10px] font-mono text-stone-800 dark:text-stone-200 font-medium">
               <span className="px-2 py-0.5 rounded bg-stone-100 dark:bg-stone-800">FlateDecode Lossless</span>
               <span className="px-2 py-0.5 rounded bg-stone-100 dark:bg-stone-800">300 DPI Print</span>
               <span className="px-2 py-0.5 rounded bg-stone-100 dark:bg-stone-800">Digital PNG</span>

@@ -70,7 +70,7 @@ def verify_event_owner_token(
     if not provided or not hmac.compare_digest(provided, expected):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Forbidden: Invalid or missing X-Event-Owner-Token. Unauthorized mutation attempt."
+            detail="Forbidden: Invalid or missing X-Event-Owner-Token. Unauthorized access attempt."
         )
 
     return event

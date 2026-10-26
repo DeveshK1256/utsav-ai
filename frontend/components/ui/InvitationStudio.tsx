@@ -89,7 +89,9 @@ export function InvitationStudio({
       setErrorMessage(null);
       try {
         // Fetch options
-        const optRes = await fetch(`${apiBase}/api/v1/events/${eventId}/invitations/options`);
+        const optRes = await fetch(`${apiBase}/api/v1/events/${eventId}/invitations/options`, {
+          headers: getAuthHeaders(eventId)
+        });
         if (!optRes.ok) throw new Error(`Failed to fetch invitation options: HTTP ${optRes.status}`);
         const optData = await optRes.json();
 
@@ -115,7 +117,9 @@ export function InvitationStudio({
         }
 
         // Fetch existing generated cards
-        const cardsRes = await fetch(`${apiBase}/api/v1/events/${eventId}/invitations`);
+        const cardsRes = await fetch(`${apiBase}/api/v1/events/${eventId}/invitations`, {
+          headers: getAuthHeaders(eventId)
+        });
         if (cardsRes.ok) {
           const cardsData: CardSummary[] = await cardsRes.json();
           if (isMounted) {

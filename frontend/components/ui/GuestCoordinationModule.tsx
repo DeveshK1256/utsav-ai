@@ -70,9 +70,9 @@ export function GuestCoordinationModule({ eventId, eventName, apiBase }: GuestCo
     setIsLoading(true);
     try {
       const [gRes, sRes, fRes] = await Promise.all([
-        fetch(`${apiBase}/events/${eventId}/guests`),
-        fetch(`${apiBase}/events/${eventId}/guests/rsvp-summary`),
-        fetch(`${apiBase}/events/${eventId}/fact-sheet`)
+        fetch(`${apiBase}/events/${eventId}/guests`, { headers: getAuthHeaders(eventId) }),
+        fetch(`${apiBase}/events/${eventId}/guests/rsvp-summary`, { headers: getAuthHeaders(eventId) }),
+        fetch(`${apiBase}/events/${eventId}/fact-sheet`, { headers: getAuthHeaders(eventId) })
       ]);
 
       if (gRes.ok) {

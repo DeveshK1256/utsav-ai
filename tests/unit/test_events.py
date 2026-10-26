@@ -27,11 +27,10 @@ def test_events_crud_endpoints():
     assert data["name"] == "Local Test Wedding"
     assert data["city"] == "Mumbai"
 
-    # 2. Get Event without auth (masks owner_token)
+    # 2. Get Event without auth is rejected (403 Forbidden)
     get_res = client.get(f"/api/v1/events/{event_id}")
-    assert get_res.status_code == 200
-    assert get_res.json()["id"] == event_id
-    assert get_res.json()["owner_token"] is None
+    assert get_res.status_code == 403
+    assert "Forbidden" in get_res.json()["detail"]
 
     # Get Event with auth token returns owner_token
     get_auth_res = client.get(f"/api/v1/events/{event_id}", headers={"X-Event-Owner-Token": owner_token})

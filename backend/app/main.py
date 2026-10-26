@@ -1,8 +1,11 @@
 import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
 
 from backend.app.core.config import settings
+from backend.app.core.limiter import limiter
 from backend.app.api.v1.intake import router as intake_router
 from backend.app.api.v1.events import router as events_router
 from backend.app.api.v1.quotes import router as quotes_router
@@ -18,10 +21,20 @@ app = FastAPI(
     description="Deterministic GenAI Event Planning Platform for Indian Celebrations"
 )
 
-# CORS Middleware (supports local development on localhost:3000 and production)
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+# CORS Middleware (restricted to real Netlify production domain, previews, and local development)
+ALLOWED_ORIGINS = [
+    "https://utsav-ai.netlify.app",
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=ALLOWED_ORIGINS,
+    allow_origin_regex=r"https:\/\/.*--utsav-ai\.netlify\.app",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -150,20 +163,4 @@ def health_check():
         "service": "utsav-backend",
         "version": settings.VERSION,
         "active_llm_provider": "gemini" if bool(gemini_key) else "stub"
-    }
-
-
-@app.get("/env-check")
-def env_check():
-    all_keys = sorted(list(os.environ.keys()))
-    matching_keys = [
-        k for k in all_keys
-        if any(term in k.upper() for term in ["GEMINI", "GOOGLE", "LLM", "API", "KEY", "AI"])
-    ]
-    return {
-        "all_env_key_names": all_keys,
-        "matching_env_keys": matching_keys,
-        "has_gemini_api_key": bool(os.getenv("GEMINI_API_KEY")),
-        "has_google_api_key": bool(os.getenv("GOOGLE_API_KEY")),
-        "has_database_url": bool(os.getenv("DATABASE_URL"))
     }

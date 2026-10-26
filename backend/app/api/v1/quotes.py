@@ -2,11 +2,12 @@ from datetime import datetime, timezone
 from typing import List, Optional, Dict, Any
 import os
 import hmac
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, Header, status
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, Header, status, Request
 from sqlalchemy.orm import Session
 from sqlalchemy import select
 
 from backend.app.db.session import get_db
+from backend.app.core.limiter import limiter
 from backend.app.models.models import Event, Vendor, QuoteDocument, QuoteLineItem, VendorBenchmarkSample
 from backend.app.schemas.quotes import (
     ExtractedLineItemSchema,
@@ -34,7 +35,9 @@ MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024  # 10 MB limit
 
 
 @router.post("/upload", response_model=QuoteDocumentResponseSchema, status_code=status.HTTP_201_CREATED)
+@limiter.limit("20/minute")
 async def upload_quote(
+    request: Request,
     event_id: str = Form(..., description="ID of the event this quote belongs to"),
     category: Optional[str] = Form(None, description="Optional vendor category override"),
     file: UploadFile = File(..., description="Quote file (PDF or image)"),

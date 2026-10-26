@@ -135,7 +135,9 @@ export default function ScopedQuotesDashboardClient() {
     const apiBase = getApiBase();
 
     // Fetch Event Metadata
-    fetch(`${apiBase}/events/${eventId}`)
+    fetch(`${apiBase}/events/${eventId}`, {
+      headers: getAuthHeaders(eventId)
+    })
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
         if (data) {
@@ -157,7 +159,9 @@ export default function ScopedQuotesDashboardClient() {
     setIsLoading(true);
     try {
       const apiBase = getApiBase();
-      const res = await fetch(`${apiBase}/quotes/event/${targetEventId}`);
+      const res = await fetch(`${apiBase}/quotes/event/${targetEventId}`, {
+        headers: getAuthHeaders(targetEventId)
+      });
       if (res.ok) {
         const data = await res.json();
         setQuotes(data);

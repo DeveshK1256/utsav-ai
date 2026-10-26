@@ -27,11 +27,42 @@ jobs:
           python-version: '3.12'
           cache: 'pip'
 
-      - name: Install dependencies
+      - name: Install Python dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r backend/requirements.txt
-          pip install jsonschema
+          pip install jsonschema ruff mypy
+
+      # Linting & Static Typing Quality Gates:
+      # Error threshold strategy: Ruff and MyPy provide continuous static analysis visibility.
+      # In this active prototype/evaluation phase, ruff and mypy run in report-or-warn mode
+      # (`continue-on-error: true`) to surface code quality issues without false-blocking urgent
+      # evaluation fixes, whereas deterministic unit/schema tests and frontend production build
+      # (`npm run build`) serve as non-negotiable hard blocking gates.
+      - name: Code Quality Lint (Ruff)
+        continue-on-error: true
+        run: |
+          ruff check backend/
+
+      - name: Static Type Check (MyPy)
+        continue-on-error: true
+        run: |
+          mypy backend/app --explicit-package-bases --ignore-missing-imports
+
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: frontend/package.json
+
+      - name: Install Frontend Dependencies
+        run: |
+          npm --prefix frontend install
+
+      - name: Frontend Production Build Gate (Hard Gate)
+        run: |
+          npm --prefix frontend run build
 
       - name: Run Deterministic Unit Tests
         run: |

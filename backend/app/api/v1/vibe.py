@@ -1,5 +1,5 @@
 from typing import List, Optional
-from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form, Response
+from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form, Response, Request
 from sqlalchemy.orm import Session
 
 from backend.app.db.session import get_db
@@ -11,6 +11,7 @@ from backend.app.schemas.vibe import (
 from backend.app.models.models import StyleProfile, ThemeProposal, DecorItem, Event
 from backend.app.services.vibe_service import VibeService
 from backend.app.core.security import verify_event_owner_token
+from backend.app.core.limiter import limiter
 
 router = APIRouter(tags=["Vibe-to-Plan (Theme & Decor)"])
 
@@ -85,7 +86,9 @@ def format_decor_item_response(d: DecorItem) -> DecorItemProposalSchema:
 
 
 @router.post("/events/{event_id}/vibe/upload", response_model=AggregatedStyleProfileSchema, status_code=status.HTTP_201_CREATED)
+@limiter.limit("20/minute")
 def upload_vibe_and_extract(
+    request: Request,
     event_id: str,
     files: List[UploadFile] = File([]),
     text_description: Optional[str] = Form(None),
@@ -107,7 +110,9 @@ def upload_vibe_and_extract(
 
 
 @router.post("/events/{event_id}/vibe/{profile_id}/generate-theme", response_model=ThemeProposalResponseSchema, status_code=status.HTTP_201_CREATED)
+@limiter.limit("20/minute")
 def generate_theme(
+    request: Request,
     event_id: str,
     profile_id: str,
     event: Event = Depends(verify_event_owner_token),

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Request
 from sqlalchemy.orm import Session
 from typing import List, Dict, Any
 
@@ -13,6 +13,7 @@ from backend.app.schemas.intake import (
 from backend.app.services.intake_service import IntakeService
 from backend.app.services.budget_engine import BudgetScalingEngine
 from backend.app.models.models import Tradition
+from backend.app.core.limiter import limiter
 
 router = APIRouter(prefix="/intake", tags=["Intake"])
 
@@ -58,7 +59,8 @@ def calculate_budget(payload: BudgetCalculationRequestSchema):
 
 
 @router.post("/generate", response_model=MasterPlanResponseSchema, status_code=status.HTTP_201_CREATED)
-def generate_plan(payload: IntakeRequestSchema, db: Session = Depends(get_db)):
+@limiter.limit("20/minute")
+def generate_plan(request: Request, payload: IntakeRequestSchema, db: Session = Depends(get_db)):
     """
     Submits conversational intake questionnaire and deterministically generates
     the multi-day master itinerary, itemized budget, and scheduled task dependencies.

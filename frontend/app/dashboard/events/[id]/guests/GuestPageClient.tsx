@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { Navbar } from '@/components/ui/Navbar';
 import { GuestCoordinationModule } from '@/components/ui/GuestCoordinationModule';
 import { ElderDisclaimerBanner } from '@/components/ui/ElderDisclaimerBanner';
+import { getAuthHeaders } from '@/lib/auth';
 
 export default function GuestPageClient() {
   const params = useParams();
@@ -46,7 +47,9 @@ export default function GuestPageClient() {
     // Fetch event basic metadata
     const fetchMeta = async () => {
       try {
-        const res = await fetch(`${getApiBase()}/events/${resolvedId}`);
+        const res = await fetch(`${getApiBase()}/events/${resolvedId}`, {
+          headers: getAuthHeaders(resolvedId)
+        });
         if (res.ok) {
           const data = await res.json();
           setEventName(data.name || 'Celebration');

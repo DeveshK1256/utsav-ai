@@ -579,8 +579,10 @@ export default function OnboardingPage() {
 
             <div className="grid sm:grid-cols-2 gap-5 pt-2">
               <div className="sm:col-span-2">
-                <label className={labelClasses}>Celebration Name</label>
+                <label htmlFor="celebration-name" className={labelClasses}>Celebration Name</label>
                 <input
+                  id="celebration-name"
+                  aria-label="Celebration Name"
                   type="text"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
@@ -590,8 +592,10 @@ export default function OnboardingPage() {
               </div>
 
               <div>
-                <label className={labelClasses}>Primary Host / Committee Lead</label>
+                <label htmlFor="host-name" className={labelClasses}>Primary Host / Committee Lead</label>
                 <input
+                  id="host-name"
+                  aria-label="Primary Host / Committee Lead"
                   type="text"
                   value={formData.hostName}
                   onChange={(e) => setFormData({ ...formData, hostName: e.target.value })}
@@ -601,8 +605,10 @@ export default function OnboardingPage() {
               </div>
 
               <div>
-                <label className={labelClasses}>Host WhatsApp Number (for call sheets & alerts)</label>
+                <label htmlFor="host-phone" className={labelClasses}>Host WhatsApp Number (for call sheets & alerts)</label>
                 <input
+                  id="host-phone"
+                  aria-label="Host WhatsApp Number"
                   type="text"
                   value={formData.phone}
                   onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
@@ -612,9 +618,11 @@ export default function OnboardingPage() {
               </div>
 
               <div>
-                <label className={labelClasses}>Celebration City</label>
+                <label htmlFor="celebration-city" className={labelClasses}>Celebration City</label>
                 <div className="relative">
                   <input
+                    id="celebration-city"
+                    aria-label="Celebration City"
                     type="text"
                     value={formData.city}
                     onChange={(e) => setFormData({ ...formData, city: e.target.value })}
@@ -630,8 +638,10 @@ export default function OnboardingPage() {
               </div>
 
               <div>
-                <label className={labelClasses}>Venue Pincode</label>
+                <label htmlFor="venue-pincode" className={labelClasses}>Venue Pincode</label>
                 <input
+                  id="venue-pincode"
+                  aria-label="Venue Pincode"
                   type="text"
                   value={formData.pincode}
                   onChange={(e) => setFormData({ ...formData, pincode: e.target.value })}
@@ -641,8 +651,10 @@ export default function OnboardingPage() {
               </div>
 
               <div>
-                <label className={labelClasses}>Celebration Start Date</label>
+                <label htmlFor="celebration-start-date" className={labelClasses}>Celebration Start Date</label>
                 <input
+                  id="celebration-start-date"
+                  aria-label="Celebration Start Date"
                   type="date"
                   value={formData.startDate}
                   onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
@@ -651,8 +663,10 @@ export default function OnboardingPage() {
               </div>
 
               <div>
-                <label className={labelClasses}>Celebration End Date</label>
+                <label htmlFor="celebration-end-date" className={labelClasses}>Celebration End Date</label>
                 <input
+                  id="celebration-end-date"
+                  aria-label="Celebration End Date"
                   type="date"
                   value={formData.endDate}
                   onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}

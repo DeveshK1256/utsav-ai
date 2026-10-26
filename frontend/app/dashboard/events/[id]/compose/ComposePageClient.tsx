@@ -75,7 +75,9 @@ export default function ComposePageClient() {
 
   const loadEvent = async (id: string) => {
     try {
-      const res = await fetch(`${API_BASE_URL}/events/${id}`);
+      const res = await fetch(`${API_BASE_URL}/events/${id}`, {
+        headers: getAuthHeaders(id)
+      });
       if (!res.ok) throw new Error('Event not found');
       const data: EventState = await res.json();
       setEventData(data);
@@ -207,12 +209,12 @@ export default function ComposePageClient() {
             <span className={`px-3 py-1 rounded-full border ${currentStep === 'venue' ? 'bg-[#8B1E28] text-white border-[#8B1E28]' : 'bg-stone-100 text-stone-700 dark:bg-stone-800 dark:text-stone-300'}`}>
               Step A: Venue
             </span>
-            <span className="text-stone-400">→</span>
+            <span className="text-stone-600 dark:text-stone-400 font-bold">→</span>
             <span className={`px-3 py-1 rounded-full border ${currentStep === 'timing' ? 'bg-[#8B1E28] text-white border-[#8B1E28]' : 'bg-stone-100 text-stone-700 dark:bg-stone-800 dark:text-stone-300'}`}>
               Step B: Timing
             </span>
-            <span className="text-stone-400">→</span>
-            <span className="px-3 py-1 rounded-full border bg-stone-100 text-stone-400 dark:bg-stone-800 dark:text-stone-500">
+            <span className="text-stone-600 dark:text-stone-400 font-bold">→</span>
+            <span className={`px-3 py-1 rounded-full border ${currentStep === 'invitation' ? 'bg-[#8B1E28] text-white border-[#8B1E28]' : 'bg-stone-100 text-stone-700 dark:bg-stone-800 dark:text-stone-300'}`}>
               Step C: Invitation
             </span>
           </div>

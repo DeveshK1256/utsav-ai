@@ -45,10 +45,16 @@ class VibeService:
         image_records = []
         raw_images_for_provider: List[Dict[str, Any]] = []
 
+        MAX_IMAGE_SIZE_BYTES = 5 * 1024 * 1024  # 5 MB limit per image
         for f in files:
             content = f.file.read()
             if not content:
                 continue
+            if len(content) > MAX_IMAGE_SIZE_BYTES:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Image '{f.filename or 'upload'}' exceeds 5MB limit ({len(content)} bytes)"
+                )
             m_type = f.content_type or "image/jpeg"
             raw_images_for_provider.append({
                 "bytes": content,

@@ -122,29 +122,10 @@ def create_event(payload: EventCreateSchema, db: Session = Depends(get_db)):
 @router.get("/{event_id}", response_model=EventDetailResponseSchema)
 def get_event(
     event_id: str,
-    x_event_owner_token: Optional[str] = Header(None, alias="X-Event-Owner-Token"),
-    owner_token: Optional[str] = Query(None),
-    authorization: Optional[str] = Header(None),
+    event: Event = Depends(verify_event_owner_token),
     db: Session = Depends(get_db)
 ):
-    event = db.query(Event).filter(Event.id == event_id).first()
-    if not event:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Event not found")
-
-    provided = None
-    if isinstance(x_event_owner_token, str):
-        provided = x_event_owner_token
-    elif isinstance(owner_token, str):
-        provided = owner_token
-    elif isinstance(authorization, str) and authorization.lower().startswith("bearer "):
-        provided = authorization[7:].strip()
-
-    expected = getattr(event, "owner_token", None) or (event.metadata_json or {}).get("owner_token")
-    # Only reveal owner_token in GET response if caller proved they already possess it
-    returned_token = None
-    if provided and expected and isinstance(expected, str) and hmac.compare_digest(provided, expected):
-        returned_token = expected
-
+    returned_token = event.owner_token or (event.metadata_json or {}).get("owner_token")
     tier = BudgetScalingEngine.resolve_city_tier(event.city)
     owner_name = (
         event.owner.full_name
@@ -337,9 +318,7 @@ def update_event_compose_progress(
 
     return get_event(
         event_id=event.id,
-        x_event_owner_token=event.owner_token,
-        owner_token=None,
-        authorization=None,
+        event=event,
         db=db
     )
 

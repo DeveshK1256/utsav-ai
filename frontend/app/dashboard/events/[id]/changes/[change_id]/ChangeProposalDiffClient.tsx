@@ -73,7 +73,9 @@ export default function ChangeProposalDiffClient() {
     }
 
     // 1. Fetch Event Info
-    fetch(`${API_BASE_URL}/events/${eventId}`)
+    fetch(`${API_BASE_URL}/events/${eventId}`, {
+      headers: getAuthHeaders(eventId)
+    })
       .then((r) => (r.ok ? r.json() : null))
       .then((data) => {
         if (data) {
@@ -89,7 +91,9 @@ export default function ChangeProposalDiffClient() {
       .catch((e) => console.warn('Could not fetch event context:', e));
 
     // 2. Fetch Existing Proposals for this Event
-    fetch(`${API_BASE_URL}/events/${eventId}/changes`)
+    fetch(`${API_BASE_URL}/events/${eventId}/changes`, {
+      headers: getAuthHeaders(eventId)
+    })
       .then((r) => (r.ok ? r.json() : []))
       .then((proposals) => {
         if (Array.isArray(proposals)) {

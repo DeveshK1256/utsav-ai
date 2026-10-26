@@ -191,11 +191,11 @@ export function WalkthroughVideoPlayer() {
         )}
       </div>
 
-      <div className="flex flex-wrap items-center justify-between gap-3 mt-4 text-xs text-stone-500 dark:text-stone-400 px-1">
+      <div className="flex flex-wrap items-center justify-between gap-3 mt-4 text-xs text-stone-700 dark:text-stone-300 font-medium px-1">
         <p>
           Recorded live against Utsav v1.0. Audio voiceover generated via local Piper TTS with verified phonetic timing.
         </p>
-        <span className="font-mono text-amber-700 dark:text-amber-400 font-medium">
+        <span className="font-mono text-amber-800 dark:text-amber-300 font-medium">
           Captions: WebVTT Synced
         </span>
       </div>

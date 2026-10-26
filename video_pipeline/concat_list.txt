@@ -1,0 +1,7 @@
+file 'D:/Utsav/video_pipeline/trimmed/beat1_chaos.mp4'
+file 'D:/Utsav/video_pipeline/trimmed/beat2_onboarding.mp4'
+file 'D:/Utsav/video_pipeline/trimmed/beat3_dashboard.mp4'
+file 'D:/Utsav/video_pipeline/trimmed/beat4_budget.mp4'
+file 'D:/Utsav/video_pipeline/trimmed/beat5_map.mp4'
+file 'D:/Utsav/video_pipeline/trimmed/beat6_muhurat.mp4'
+file 'D:/Utsav/video_pipeline/trimmed/beat7_invitation_cta.mp4'

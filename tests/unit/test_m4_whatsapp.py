@@ -431,6 +431,21 @@ def test_webhook_hmac_signature_security():
     finally:
         settings.WHATSAPP_APP_SECRET = orig_secret
 
+    # When secret is unset in non-test mode, must fail-closed (return False)
+    import os
+    saved_test_env = os.environ.pop("PYTEST_CURRENT_TEST", None)
+    saved_env_setting = settings.ENVIRONMENT
+    settings.ENVIRONMENT = "production"
+    settings.WHATSAPP_APP_SECRET = None
+    try:
+        assert WhatsAppWebhookService.verify_meta_signature(raw_payload, "sha256=forged") is False
+        assert WhatsAppWebhookService.verify_meta_signature(raw_payload, None) is False
+    finally:
+        if saved_test_env:
+            os.environ["PYTEST_CURRENT_TEST"] = saved_test_env
+        settings.ENVIRONMENT = saved_env_setting
+        settings.WHATSAPP_APP_SECRET = orig_secret
+
 
 def test_non_wedding_event_type_coordination():
     """

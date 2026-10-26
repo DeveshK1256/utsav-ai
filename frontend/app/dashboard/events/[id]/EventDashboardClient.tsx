@@ -9,6 +9,7 @@ import { GuestCoordinationModule } from '@/components/ui/GuestCoordinationModule
 import { RitualIntelligenceHub } from '@/components/ui/RitualIntelligenceHub';
 import { InvitationStudio } from '@/components/ui/InvitationStudio';
 import { VenueDiscoveryList } from '@/components/ui/VenueDiscoveryList';
+import { getAuthHeaders } from '@/lib/auth';
 
 // Currency Formatter
 const formatINR = (val: number) => {
@@ -140,7 +141,9 @@ export default function EventDashboardClient() {
 
     try {
       const apiBase = getApiBase();
-      const res = await fetch(`${apiBase}/events/${targetId}`);
+      const res = await fetch(`${apiBase}/events/${targetId}`, {
+        headers: getAuthHeaders(targetId)
+      });
 
       if (res.status === 404) {
         setIsLoading(false);
@@ -184,7 +187,9 @@ export default function EventDashboardClient() {
 
       // Try fetching style profiles for this event
       try {
-        const vibeRes = await fetch(`${apiBase}/events/${targetId}/vibe/profiles`);
+        const vibeRes = await fetch(`${apiBase}/events/${targetId}/vibe/profiles`, {
+          headers: getAuthHeaders(targetId)
+        });
         if (vibeRes.ok) {
           const profiles = await vibeRes.json();
           if (profiles && profiles.length > 0) {

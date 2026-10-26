@@ -1,3 +1,4 @@
+import os
 import hmac
 import hashlib
 import logging
@@ -29,12 +30,16 @@ class WhatsAppWebhookService:
     def verify_meta_signature(cls, raw_payload: bytes, signature_header: Optional[str]) -> bool:
         """
         Verifies Meta X-Hub-Signature-256 HMAC SHA256 header.
-        Rejects unsigned or forged requests when WHATSAPP_APP_SECRET is configured.
+        Rejects unsigned or forged requests (fail-closed).
         """
+        is_test_env = bool(os.getenv("PYTEST_CURRENT_TEST")) or getattr(settings, "ENVIRONMENT", "").lower() in ("test", "testing")
         app_secret = getattr(settings, "WHATSAPP_APP_SECRET", None)
         if not app_secret:
-            # In test/mock mode without configured secret, allow through
-            return True
+            if is_test_env:
+                # Allowed only during automated test suite execution without secret
+                return True
+            logger.error("WHATSAPP_APP_SECRET is not configured; rejecting webhook (fail-closed)")
+            return False
 
         if not signature_header:
             return False

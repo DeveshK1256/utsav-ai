@@ -74,7 +74,9 @@ export default function VibeToPlanClient() {
   useEffect(() => {
     if (!eventId || eventId === 'default') return;
 
-    fetch(`${API_BASE_URL}/events/${eventId}/vibe/profiles`)
+    fetch(`${API_BASE_URL}/events/${eventId}/vibe/profiles`, {
+      headers: getAuthHeaders(eventId)
+    })
       .then(res => res.ok ? res.json() : [])
       .then((data: StyleProfile[]) => {
         setProfiles(data);
@@ -87,7 +89,9 @@ export default function VibeToPlanClient() {
   }, [eventId]);
 
   const loadThemes = (profileId: string) => {
-    fetch(`${API_BASE_URL}/events/${eventId}/vibe/${profileId}/themes`)
+    fetch(`${API_BASE_URL}/events/${eventId}/vibe/${profileId}/themes`, {
+      headers: getAuthHeaders(eventId)
+    })
       .then(res => res.ok ? res.json() : [])
       .then((data: ThemeProposal[]) => {
         if (data && data.length > 0) {

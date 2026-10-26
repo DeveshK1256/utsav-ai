@@ -87,7 +87,7 @@ export function HeroChaosToComposed() {
           <button
             type="button"
             onClick={() => setIsComposed(prev => !prev)}
-            className="text-xs text-stone-500 hover:text-stone-900 dark:hover:text-stone-300 inline-flex items-center space-x-1 underline underline-offset-4"
+            className="text-xs text-stone-700 dark:text-stone-300 hover:text-stone-900 dark:hover:text-stone-100 inline-flex items-center space-x-1 underline underline-offset-4"
           >
             <RefreshCw className="w-3 h-3" />
             <span>Click to toggle state</span>
@@ -114,7 +114,7 @@ export function HeroChaosToComposed() {
                 <p className="text-xs text-stone-700 dark:text-stone-300 italic mb-2">
                   “Panditji says Abhijit Muhurat is at 11:30 sharp! But Caterer says lunch counter won’t open before 1 PM! Also, who confirmed the Dholwala??”
                 </p>
-                <div className="text-[10px] text-stone-400 flex items-center justify-between">
+                <div className="text-[10px] text-stone-600 dark:text-stone-400 font-medium flex items-center justify-between">
                   <span>Mami (Wedding Group #4)</span>
                   <span>10:48 PM</span>
                 </div>
@@ -148,11 +148,11 @@ export function HeroChaosToComposed() {
                   <span className="text-xs font-bold text-stone-800 dark:text-stone-200">📊 Wedding_Budget_Final_v19.xlsx</span>
                 </div>
                 <div className="font-mono text-xs space-y-1 bg-stone-100 dark:bg-stone-950 p-2 rounded">
-                  <div className="flex justify-between text-stone-600 dark:text-stone-400">
+                  <div className="flex justify-between text-stone-800 dark:text-stone-300 font-medium">
                     <span>Venue Rent:</span>
                     <span>₹6,00,000</span>
                   </div>
-                  <div className="flex justify-between text-rose-600 dark:text-rose-400 font-bold">
+                  <div className="flex justify-between text-rose-800 dark:text-rose-300 font-bold">
                     <span>Catering (250p):</span>
                     <span>#REF! Error</span>
                   </div>

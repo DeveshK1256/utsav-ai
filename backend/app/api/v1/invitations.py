@@ -2,10 +2,11 @@ import io
 import logging
 from typing import List, Optional
 from datetime import datetime, timezone
-from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, status, Request
 from sqlalchemy.orm import Session
 
 from backend.app.db.session import get_db
+from backend.app.core.limiter import limiter
 from backend.app.models.models import (
     Event, Guest, InvitationCard, ThemeProposal, SubEvent, EventFactSheet, User
 )
@@ -172,7 +173,9 @@ def get_invitation_studio_options(
 
 
 @router.post("/generate", response_model=InvitationBatchResponse, status_code=status.HTTP_201_CREATED)
+@limiter.limit("20/minute")
 def generate_invitation_cards(
+    request: Request,
     event_id: str,
     payload: InvitationGenerateRequest,
     event: Event = Depends(verify_event_owner_token),
