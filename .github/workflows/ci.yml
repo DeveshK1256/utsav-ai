@@ -16,6 +16,7 @@ jobs:
       DATABASE_URL: sqlite:///./ci_test.db
       WHATSAPP_PROVIDER: mock
       ENABLE_M4_WHATSAPP: "true"
+      TESTING: "true"
 
     steps:
       - name: Check out repository
@@ -66,7 +67,17 @@ jobs:
 
       - name: Run Deterministic Unit Tests
         run: |
-          pytest tests/unit/ -v
+          pytest tests/unit/ -v --tb=short || {
+            python -c "
+            import subprocess
+            res = subprocess.run(['pytest', 'tests/unit/', '-v', '--tb=short', '-q'], capture_output=True, text=True)
+            for l in res.stdout.splitlines():
+                if 'FAILED' in l or 'AssertionError' in l or 'assert' in l:
+                    print(f'::error::{l}')
+            print(res.stdout[-4000:])
+            "
+            exit 1
+          }
 
       - name: Run Schema Regression Tests
         run: |
