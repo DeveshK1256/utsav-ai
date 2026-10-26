@@ -35,7 +35,7 @@ export default function ComposePageClient() {
 
   const [eventId, setEventId] = useState<string>(rawEventId);
   const [eventData, setEventData] = useState<EventState | null>(null);
-  const [currentStep, setCurrentStep] = useState<'venue' | 'timing'>('venue');
+  const [currentStep, setCurrentStep] = useState<'venue' | 'timing' | 'invitation'>('venue');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
