@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { Navbar } from '@/components/ui/Navbar';
 import { ElderDisclaimerBanner } from '@/components/ui/ElderDisclaimerBanner';
 import { HeroChaosToComposed } from '@/components/3d/HeroChaosToComposed';
+import { WalkthroughVideoPlayer } from '@/components/ui/WalkthroughVideoPlayer';
 import { FeatureShowcase3D } from '@/components/3d/FeatureShowcase3D';
 import { DiyaLightingInteraction } from '@/components/3d/DiyaLightingInteraction';
 
@@ -28,15 +29,18 @@ export default function HomePage() {
         {/* 1. Hero: From Planning Chaos to Composed Celebration */}
         <HeroChaosToComposed />
 
-        {/* 2. Feature Showcase: 4 Depth-First 3D Interactive Feature Sections */}
+        {/* 2. Real Product Walkthrough Video (Synchronized Voiceover & Captions) */}
+        <WalkthroughVideoPlayer />
+
+        {/* 3. Feature Showcase: 4 Depth-First 3D Interactive Feature Sections */}
         <FeatureShowcase3D />
 
-        {/* 3. Mandatory Cultural Elder Verification Safeguard Banner */}
+        {/* 4. Mandatory Cultural Elder Verification Safeguard Banner */}
         <div className="max-w-3xl mx-auto px-4 sm:px-6 my-12">
           <ElderDisclaimerBanner />
         </div>
 
-        {/* 4. Auspicious Interactive Diya Lighting Micro-Interaction */}
+        {/* 5. Auspicious Interactive Diya Lighting Micro-Interaction */}
         <DiyaLightingInteraction />
       </main>
 

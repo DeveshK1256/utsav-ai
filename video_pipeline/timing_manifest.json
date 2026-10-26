@@ -1,0 +1,83 @@
+{
+  "total_duration": 60.68,
+  "master_wav": "video_pipeline/master_voiceover.wav",
+  "beats": [
+    {
+      "index": 1,
+      "id": "beat1_chaos",
+      "title": "Chaos to Calm",
+      "display_text": "Planning an Indian celebration usually means endless WhatsApp groups, scattered vendor quotes, and budget chaos. Utsav changes that completely.",
+      "spoken_text": "Planning an Indian celebration usually means endless WhatsApp groups, scattered vendor quotes, and budget chaos. Oot-sav changes that completely.",
+      "wav_path": "video_pipeline/beats/beat1_chaos.wav",
+      "duration": 8.58,
+      "start_time": 0.0,
+      "end_time": 8.58
+    },
+    {
+      "index": 2,
+      "id": "beat2_onboarding",
+      "title": "Guided Onboarding",
+      "display_text": "In just a minute, you share your celebration type, city, guest count, and budget. Our smart planner creates a tailored foundation instantly.",
+      "spoken_text": "In just a minute, you share your celebration type, city, guest count, and budget. Our smart planner creates a tailored foundation instantly.",
+      "wav_path": "video_pipeline/beats/beat2_onboarding.wav",
+      "duration": 8.36,
+      "start_time": 9.03,
+      "end_time": 17.39
+    },
+    {
+      "index": 3,
+      "id": "beat3_dashboard",
+      "title": "Unified Celebration Hub",
+      "display_text": "Your unified dashboard brings everything together in one serene place: real-time budgets, guest coordination, and cultural milestones.",
+      "spoken_text": "Your unified dashboard brings everything together in one serene place: real-time budgets, guest coordination, and cultural milestones.",
+      "wav_path": "video_pipeline/beats/beat3_dashboard.wav",
+      "duration": 8.34,
+      "start_time": 17.84,
+      "end_time": 26.18
+    },
+    {
+      "index": 4,
+      "id": "beat4_budget",
+      "title": "Deterministic Budget Breakdown",
+      "display_text": "Every expense is tracked deterministically across catering, decor, and photography, with transparent quote comparisons and zero hidden markups.",
+      "spoken_text": "Every expense is tracked deterministically across catering, decor, and photography, with transparent quote comparisons and zero hidden markups.",
+      "wav_path": "video_pipeline/beats/beat4_budget.wav",
+      "duration": 8.87,
+      "start_time": 26.63,
+      "end_time": 35.5
+    },
+    {
+      "index": 5,
+      "id": "beat5_map",
+      "title": "Nationwide Nearby Venue Map",
+      "display_text": "Explore real wedding lawns and banquet halls nationwide. Our live map pinpoints authentic celebration spaces near you with zero paid placement bias.",
+      "spoken_text": "Explore real wedding lawns and banquet halls nationwide. Our live map pinpoints authentic celebration spaces near you with zero paid placement bias.",
+      "wav_path": "video_pipeline/beats/beat5_map.wav",
+      "duration": 9.14,
+      "start_time": 35.95,
+      "end_time": 45.09
+    },
+    {
+      "index": 6,
+      "id": "beat6_muhurat",
+      "title": "Auspicious Muhurat Timing",
+      "display_text": "Honor traditions with confidence. Auspicious muhurat timings align your sacred rituals according to traditional calendar wisdom.",
+      "spoken_text": "Honor traditions with confidence. Auspicious moo-hoo-rat timings align your sacred rituals according to traditional calendar wisdom.",
+      "wav_path": "video_pipeline/beats/beat6_muhurat.wav",
+      "duration": 7.04,
+      "start_time": 45.540000000000006,
+      "end_time": 52.580000000000005
+    },
+    {
+      "index": 7,
+      "id": "beat7_invitation_cta",
+      "title": "Invitation Cards & Closing",
+      "display_text": "Generate beautiful bespoke invitations in English and Devanagari with one click. Welcome to mindful celebration planning with Utsav.",
+      "spoken_text": "Generate beautiful bespoke invitations in English and Devanagari with one click. Welcome to mindful celebration planning with Oot-sav.",
+      "wav_path": "video_pipeline/beats/beat7_invitation_cta.wav",
+      "duration": 7.21,
+      "start_time": 53.03000000000001,
+      "end_time": 60.24000000000001
+    }
+  ]
+}
