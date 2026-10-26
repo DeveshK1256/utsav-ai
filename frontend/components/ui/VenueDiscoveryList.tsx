@@ -339,8 +339,8 @@ export const VenueDiscoveryList: React.FC<VenueDiscoveryListProps> = ({
 
       {/* Venues Grid / Honest Empty State */}
       {loading ? (
-        <div className="py-12 text-center text-stone-700 dark:text-stone-300 font-medium text-xs sm:text-sm animate-pulse space-y-2">
-          <div className="text-2xl">⏳</div>
+        <div className="py-12 text-center text-stone-900 dark:text-stone-100 font-medium text-xs sm:text-sm space-y-2">
+          <div className="text-2xl animate-spin inline-block">⏳</div>
           <p>Scanning OpenStreetMap and curated directory within 25 km of {city}...</p>
         </div>
       ) : error ? (
