@@ -426,8 +426,8 @@ out center 15;"""
                             "name": v_name.strip(),
                             "lat": float(v_lat),
                             "lng": float(v_lon),
-                            "locality": tags.get("addr:suburb") or tags.get("addr:neighbourhood") or tags.get("addr:street"),
-                            "city": tags.get("addr:city") or city_hint or "Nearby",
+                            "locality": tags.get("addr:suburb") or tags.get("addr:neighbourhood") or tags.get("addr:street") or (tags.get("addr:city") if city_hint and tags.get("addr:city") != city_hint else None),
+                            "city": city_hint.title() if city_hint else (tags.get("addr:city") or "Nearby"),
                             "category": "events_venue" if tags.get("amenity") == "events_venue" else "venue"
                         })
                     if osm_venues:

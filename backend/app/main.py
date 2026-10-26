@@ -1,4 +1,5 @@
 import os
+import sys
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from slowapi import _rate_limit_exceeded_handler
@@ -120,21 +121,15 @@ def _background_db_backfill():
             conn.execute(text("UPDATE traditions SET is_verified = FALSE, verification_source = 'AI-drafted baseline, pending community/priest review' WHERE is_verified IS NULL OR is_verified = TRUE;"))
             conn.execute(text("UPDATE ritual_items SET is_verified = FALSE WHERE is_verified IS NULL OR is_verified = TRUE;"))
 
-        # 3. Only seed if tables are empty (prevents redundant writes on every boot)
+        # 3. Seed traditions and baseline venues idempotently
         db = SessionLocal()
         try:
             from backend.app.models.models import Tradition, VendorProfile
-            tradition_count = db.query(Tradition).count()
-            if tradition_count == 0:
-                from backend.app.db.seed_traditions import seed_cultural_traditions
-                seed_cultural_traditions(db=db, close_db=False)
-                logger.info("Seeded initial cultural traditions.")
+            from backend.app.db.seed_traditions import seed_cultural_traditions
+            seed_cultural_traditions(db=db)
 
-            vendor_count = db.query(VendorProfile).count()
-            if vendor_count == 0:
-                from scripts.seed_vendor_discovery import seed_vendor_profiles
-                seed_vendor_profiles()
-                logger.info("Seeded initial vendor discovery profiles.")
+            from scripts.seed_vendor_discovery import seed_vendor_profiles
+            seed_vendor_profiles()
         finally:
             db.close()
 
@@ -152,6 +147,8 @@ def run_db_backfill_on_startup():
     """
     thread = threading.Thread(target=_background_db_backfill, daemon=True, name="db-backfill-worker")
     thread.start()
+    if "pytest" in sys.modules or os.getenv("TESTING") == "true":
+        thread.join(timeout=10.0)
     logger.info("Launched background DB initialization thread. Web server is ready to bind port.")
 
 

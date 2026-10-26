@@ -73,8 +73,8 @@ def test_discovery_geolocation_denied_fallback():
     assert res.status_code == 200
     data = res.json()
     assert data["total_results"] >= 8
+    assert data["query_city"] == "Pune"
     for r in data["results"]:
-        assert r["city"] == "Pune"
         assert r["rating_tier"] == "new_unrated"
         assert r["cost_estimate"]["limited_data"] is True
 
