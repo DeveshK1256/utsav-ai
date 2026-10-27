@@ -1,5 +1,5 @@
 {
   "ruff_max_errors": 917,
-  "mypy_max_errors": 279,
+  "mypy_max_errors": 271,
   "rationale": "Quality ratchet baseline established in Audit V3 (2026-10-27). CI strictly blocks any PR or commit that introduces new linting or typechecking errors above these maximums, enforcing continuous non-regression without halting active development."
 }
