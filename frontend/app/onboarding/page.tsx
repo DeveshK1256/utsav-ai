@@ -4,6 +4,7 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import Link from 'next/link';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
 import { ElderDisclaimerBanner } from '@/components/ui/ElderDisclaimerBanner';
+import { WakingUpNotice } from '@/components/ui/WakingUpNotice';
 import { setEventOwnerToken } from '@/lib/auth';
 
 // Currency Formatter
@@ -1029,6 +1030,7 @@ export default function OnboardingPage() {
                 )}
               </button>
             </div>
+            <WakingUpNotice isLoading={isSubmitting} timeoutMs={3500} className="mt-4" />
           </div>
         )}
 

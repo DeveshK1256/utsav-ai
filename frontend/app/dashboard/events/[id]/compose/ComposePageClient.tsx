@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { Navbar } from '@/components/ui/Navbar';
 import { VenueDiscoveryList, VendorDiscoveryItem } from '@/components/ui/VenueDiscoveryList';
+import { WakingUpNotice } from '@/components/ui/WakingUpNotice';
 import { getAuthHeaders } from '@/lib/auth';
 
 const API_BASE_URL =
@@ -183,11 +184,30 @@ export default function ComposePageClient() {
     }
   };
 
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-stone-50 dark:bg-stone-950 text-stone-900 dark:text-stone-100 flex flex-col font-sans">
+        <Navbar />
+        <main className="flex-1 max-w-lg w-full mx-auto px-4 pt-24 text-center space-y-4">
+          <div className="w-12 h-12 border-4 border-amber-500 border-t-transparent rounded-full animate-spin mx-auto" />
+          <h2 className="text-xl font-serif font-bold text-stone-900 dark:text-stone-100">
+            Loading Celebration Workspace...
+          </h2>
+          <p className="text-xs text-stone-500 dark:text-stone-400 font-mono">
+            Fetching event #{eventId || rawEventId} configuration
+          </p>
+          <WakingUpNotice isLoading={loading} timeoutMs={3500} className="mt-6" />
+        </main>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-stone-50 dark:bg-stone-950 text-stone-900 dark:text-stone-100 flex flex-col font-sans">
       <Navbar />
 
       <main className="flex-1 max-w-5xl w-full mx-auto px-4 py-8 space-y-8">
+        <WakingUpNotice isLoading={saving} timeoutMs={3500} />
         {/* Breadcrumb / Top Bar */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-stone-200 dark:border-stone-800 pb-4">
           <div>

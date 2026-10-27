@@ -32,7 +32,12 @@ def test_events_crud_endpoints():
     assert get_res.status_code == 403
     assert "Forbidden" in get_res.json()["detail"]
 
-    # Get Event with auth token returns owner_token
+    # Get Event with query param token is REJECTED (CWE-598 compliance)
+    get_query_res = client.get(f"/api/v1/events/{event_id}?owner_token={owner_token}")
+    assert get_query_res.status_code == 403
+    assert "Forbidden" in get_query_res.json()["detail"]
+
+    # Get Event with valid auth token header succeeds
     get_auth_res = client.get(f"/api/v1/events/{event_id}", headers={"X-Event-Owner-Token": owner_token})
     assert get_auth_res.status_code == 200
     assert get_auth_res.json()["owner_token"] == owner_token

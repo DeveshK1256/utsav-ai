@@ -120,7 +120,12 @@ export function LeafletVenueMap({
           iconAnchor: [isSelected ? 18 : 15, isSelected ? 36 : 30]
         });
 
-        const marker = L.marker([v.latitude, v.longitude], { icon: markerIcon }).addTo(markersLayer);
+        const marker = L.marker([v.latitude, v.longitude], {
+          icon: markerIcon,
+          keyboard: true,
+          title: `${v.business_name} (${v.locality || v.city}) - Press Enter to select`,
+          alt: `${v.business_name} marker`
+        }).addTo(markersLayer);
 
         // Interactive Popup
         const distBadge = v.distance_km !== undefined ? `<strong>${v.distance_km.toFixed(1)} km</strong> away` : 'Distance approximate';
@@ -160,6 +165,16 @@ export function LeafletVenueMap({
 
         marker.bindPopup(popupContent);
 
+        // Keyboard activation on Enter / Space
+        marker.on('keypress', (e: any) => {
+          if (e.originalEvent && (e.originalEvent.key === 'Enter' || e.originalEvent.key === ' ')) {
+            if (onSelectVenue) {
+              onSelectVenue(v);
+            }
+            marker.openPopup();
+          }
+        });
+
         // Bind button click inside popup
         marker.on('popupopen', () => {
           const btn = document.getElementById(`select-pin-btn-${v.id}`);
@@ -193,6 +208,27 @@ export function LeafletVenueMap({
           map.fitBounds(boundsCoords, { padding: [40, 40], maxZoom: 14 });
         }
       }
+
+      // Ensure controls and container have accessible labels and non-trapping tab navigation
+      const container = mapContainerRef.current;
+      if (container) {
+        container.setAttribute('role', 'region');
+        container.setAttribute('aria-label', 'Celebration Venues Interactive Map');
+        
+        // Ensure zoom controls have accessible aria-labels
+        setTimeout(() => {
+          const zoomIn = container.querySelector('.leaflet-control-zoom-in') as HTMLElement | null;
+          const zoomOut = container.querySelector('.leaflet-control-zoom-out') as HTMLElement | null;
+          if (zoomIn) {
+            zoomIn.setAttribute('aria-label', 'Zoom map in');
+            zoomIn.setAttribute('title', 'Zoom map in');
+          }
+          if (zoomOut) {
+            zoomOut.setAttribute('aria-label', 'Zoom map out');
+            zoomOut.setAttribute('title', 'Zoom map out');
+          }
+        }, 100);
+      }
     });
 
     return () => {
@@ -206,7 +242,21 @@ export function LeafletVenueMap({
 
   return (
     <div className={className}>
-      <div ref={mapContainerRef} className="w-full h-full min-h-[400px]" />
+      {/* Skip map controls accessible bypass link to prevent keyboard focus trap */}
+      <a
+        href="#venue-cards-list"
+        className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-[1000] focus:px-3 focus:py-1.5 focus:bg-amber-800 focus:text-white focus:text-xs focus:font-semibold focus:rounded-lg focus:shadow-lg focus:outline-none focus:ring-2 focus:ring-amber-400"
+      >
+        Skip map controls to venue list
+      </a>
+      
+      <div 
+        ref={mapContainerRef} 
+        className="w-full h-full min-h-[400px]" 
+        tabIndex={0} 
+        role="region"
+        aria-label="Interactive venue map. Use Tab to navigate venue markers or skip to venue list."
+      />
       
       {/* Map Legend Overlay */}
       <div className="absolute bottom-3 left-3 z-[400] bg-white/90 dark:bg-stone-900/90 backdrop-blur-xs p-2 rounded-xl border border-stone-200 dark:border-stone-800 text-[10px] space-y-1 shadow-md pointer-events-none">

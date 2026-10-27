@@ -9,6 +9,7 @@ import { GuestCoordinationModule } from '@/components/ui/GuestCoordinationModule
 import { RitualIntelligenceHub } from '@/components/ui/RitualIntelligenceHub';
 import { InvitationStudio } from '@/components/ui/InvitationStudio';
 import { VenueDiscoveryList } from '@/components/ui/VenueDiscoveryList';
+import { WakingUpNotice } from '@/components/ui/WakingUpNotice';
 import { getAuthHeaders } from '@/lib/auth';
 
 // Currency Formatter
@@ -249,6 +250,7 @@ export default function EventDashboardClient() {
           <p className="text-xs text-stone-500 dark:text-stone-400 font-mono">
             Resolving live event #{rawEventId} • Zero invented facts policy active
           </p>
+          <WakingUpNotice isLoading={isLoading} timeoutMs={3500} className="mt-6" />
         </div>
       </div>
     );

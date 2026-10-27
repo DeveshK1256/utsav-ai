@@ -34,21 +34,18 @@ jobs:
           pip install -r backend/requirements.txt
           pip install jsonschema ruff mypy
 
-      # Linting & Static Typing Quality Gates:
-      # Error threshold strategy: Ruff and MyPy provide continuous static analysis visibility.
-      # In this active prototype/evaluation phase, ruff and mypy run in report-or-warn mode
-      # (`continue-on-error: true`) to surface code quality issues without false-blocking urgent
-      # evaluation fixes, whereas deterministic unit/schema tests and frontend production build
-      # (`npm run build`) serve as non-negotiable hard blocking gates.
-      - name: Code Quality Lint (Ruff)
-        continue-on-error: true
+      # Linting & Static Typing Quality Ratchet Gates:
+      # Rather than permanent pass-through (`continue-on-error: true`), we enforce a strict quality
+      # ratchet against `.github/ci_baseline.json` (established in Audit V3: 932 Ruff, 279 MyPy).
+      # If any commit introduces new linting or typing regressions exceeding the baseline, this step
+      # fails and blocks the build, preventing code quality rot while allowing incremental cleanup.
+      - name: Code Quality Lint Ratchet Gate (Ruff)
         run: |
-          ruff check backend/
+          python scripts/ci_ratchet.py ruff
 
-      - name: Static Type Check (MyPy)
-        continue-on-error: true
+      - name: Static Type Check Ratchet Gate (MyPy)
         run: |
-          mypy backend/app --explicit-package-bases --ignore-missing-imports
+          python scripts/ci_ratchet.py mypy
 
       - name: Set up Node.js 20
         uses: actions/setup-node@v4

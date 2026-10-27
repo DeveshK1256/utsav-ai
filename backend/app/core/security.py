@@ -2,7 +2,7 @@ import os
 import hmac
 import secrets
 from typing import Optional
-from fastapi import Header, Query, Request, HTTPException, status, Depends
+from fastapi import Header, Request, HTTPException, status, Depends
 from sqlalchemy.orm import Session
 
 from backend.app.db.session import get_db
@@ -17,14 +17,15 @@ def generate_owner_token() -> str:
 def verify_event_owner_token(
     request: Request,
     x_event_owner_token: Optional[str] = Header(None, alias="X-Event-Owner-Token"),
-    owner_token: Optional[str] = Query(None),
     authorization: Optional[str] = Header(None),
     db: Session = Depends(get_db)
 ) -> Event:
     """
-    Guards mutating event operations (POST, PATCH, DELETE).
+    Guards mutating event operations (POST, PATCH, DELETE) and private reads (GET).
     Resolves event_id from path_params ('event_id' or 'id') or query params.
     Validates provided token against event.owner_token / event.metadata_json['owner_token'].
+    Tokens must strictly be provided via HTTP headers (X-Event-Owner-Token or Authorization: Bearer).
+    URL query parameter token transmission is permanently disabled to comply with CWE-598.
     Rejects with 403 Forbidden if invalid or missing.
     """
     event_id = request.path_params.get("event_id") or request.path_params.get("id")
@@ -44,7 +45,7 @@ def verify_event_owner_token(
             detail=f"Event with id '{event_id}' not found"
         )
 
-    provided = x_event_owner_token or owner_token
+    provided = x_event_owner_token
     if not provided and authorization and authorization.lower().startswith("bearer "):
         provided = authorization[7:].strip()
 

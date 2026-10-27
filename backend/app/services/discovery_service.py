@@ -6,6 +6,7 @@ import urllib.parse
 import json
 import time
 import re
+import threading
 from typing import Optional, List, Tuple
 from sqlalchemy.orm import Session
 from sqlalchemy import or_
@@ -20,6 +21,13 @@ from backend.app.schemas.discovery import (
 logger = logging.getLogger(__name__)
 
 OSM_USER_AGENT = "UtsavCelebrationApp/1.0 (utsav.celebrations@gmail.com)"
+
+# In-Process Free-Tier TTL Cache (15-Minute Expiry per DEC-035)
+# Key: (round(lat, 2), round(lng, 2), int(radius_km), (city_hint or "").lower().strip())
+# Value: (timestamp, list_of_osm_venues)
+_OVERPASS_CACHE: dict = {}
+_OVERPASS_CACHE_LOCK = threading.Lock()
+OVERPASS_CACHE_TTL_SECONDS = 15 * 60  # 15 minutes
 
 
 def is_valid_venue_name(name: Optional[str]) -> bool:
@@ -380,10 +388,21 @@ class VendorDiscoveryService:
     ) -> None:
         """
         Queries OpenStreetMap (via Overpass API with Nominatim fallback) for real venue records.
+        Uses in-process thread-safe TTL caching (15 minutes) to avoid redundant external network round trips.
         Any newly discovered OSM venue is persisted into `vendor_profiles` with a deterministic UUID,
         guaranteeing that `POST /events/{id}/compose` can reference it via `vendor_profile_id`
         with 100% database relational integrity.
         """
+        cache_key = (round(lat, 2), round(lng, 2), int(radius_km), (city_hint or "").lower().strip())
+        now = time.time()
+
+        with _OVERPASS_CACHE_LOCK:
+            if cache_key in _OVERPASS_CACHE:
+                cached_time, _ = _OVERPASS_CACHE[cache_key]
+                if now - cached_time < OVERPASS_CACHE_TTL_SECONDS:
+                    logger.info("Overpass in-process TTL cache HIT for key %s (age: %.1fs) - skipping external network query", cache_key, now - cached_time)
+                    return
+
         osm_venues: List[dict] = []
         radius_m = int(min(radius_km, 35.0) * 1000)
 
@@ -520,6 +539,10 @@ out center 15;"""
             except Exception as e:
                 db.rollback()
                 logger.warning("Failed to commit OSM venues: %s", e)
+
+        # Store in in-process TTL cache
+        with _OVERPASS_CACHE_LOCK:
+            _OVERPASS_CACHE[cache_key] = (now, osm_venues)
 
     @staticmethod
     def _profile_to_item(profile: VendorProfile, distance_km: Optional[float]) -> VendorDiscoveryItem:

@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import dynamic from "next/dynamic";
 import { Search, MapPin, Navigation, ListFilter, AlertCircle, Sparkles } from "lucide-react";
+import { WakingUpNotice } from "./WakingUpNotice";
 
 // Dynamically import Leaflet map to guarantee zero SSR 'window is not defined' crashes
 const LeafletVenueMap = dynamic(
@@ -339,9 +340,12 @@ export const VenueDiscoveryList: React.FC<VenueDiscoveryListProps> = ({
 
       {/* Venues Grid / Honest Empty State */}
       {loading ? (
-        <div className="py-12 text-center text-stone-900 dark:text-stone-100 font-medium text-xs sm:text-sm space-y-2">
+        <div className="py-12 text-center text-stone-900 dark:text-stone-100 font-medium text-xs sm:text-sm space-y-3">
           <div className="text-2xl animate-spin inline-block">⏳</div>
           <p>Scanning OpenStreetMap and curated directory within 25 km of {city}...</p>
+          <div className="max-w-md mx-auto">
+            <WakingUpNotice isLoading={loading} timeoutMs={3500} />
+          </div>
         </div>
       ) : error ? (
         <div className="p-4 bg-red-50 dark:bg-red-950/50 text-red-700 dark:text-red-300 text-xs rounded-xl border border-red-200 dark:border-red-800">
@@ -362,7 +366,7 @@ export const VenueDiscoveryList: React.FC<VenueDiscoveryListProps> = ({
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div id="venue-cards-list" className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {venues.map((venue) => {
             const isSelected = selectedVenueId === venue.id;
             const isCuratedSeed = (venue.source_notes || "").includes("pickyourtrail") || (venue.source_notes || "").includes("venuelook");
@@ -370,8 +374,18 @@ export const VenueDiscoveryList: React.FC<VenueDiscoveryListProps> = ({
             return (
               <div
                 key={venue.id}
+                tabIndex={0}
+                role="button"
+                aria-pressed={isSelected}
+                aria-label={`Select venue ${venue.business_name}, ${venue.locality || venue.city}`}
                 onClick={() => onSelectVenue && onSelectVenue(venue)}
-                className={`p-4 rounded-2xl border text-left transition-all cursor-pointer relative ${
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    if (onSelectVenue) onSelectVenue(venue);
+                  }
+                }}
+                className={`p-4 rounded-2xl border text-left transition-all cursor-pointer relative focus:outline-none focus:ring-2 focus:ring-amber-500 ${
                   isSelected
                     ? "border-emerald-500 bg-emerald-50/40 dark:bg-emerald-950/20 shadow-md ring-2 ring-emerald-500/30"
                     : "border-stone-200 dark:border-stone-800 hover:border-amber-400 dark:hover:border-amber-600 bg-stone-50/40 dark:bg-stone-950/40"

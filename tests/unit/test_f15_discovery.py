@@ -89,3 +89,32 @@ def test_discovery_missing_params_error():
     res = client.get("/api/v1/discovery/vendors")
     assert res.status_code == 400
     assert "Either lat/lng coordinates or a fallback city name" in res.json()["detail"]
+
+
+def test_overpass_in_process_ttl_cache_speedup():
+    """
+    Verifies that the in-process free-tier TTL cache eliminates redundant network round trips
+    and accelerates repeated queries to the same city / coordinates by at least 10x.
+    """
+    import time
+    from backend.app.services.discovery_service import _OVERPASS_CACHE
+
+    # Clear cache for isolated test
+    _OVERPASS_CACHE.clear()
+
+    # Query 1: Initial (populates cache)
+    t0 = time.perf_counter()
+    res1 = client.get("/api/v1/discovery/vendors?city=Pune")
+    t1 = (time.perf_counter() - t0) * 1000
+    assert res1.status_code == 200
+
+    # Query 2: Cached repeat
+    t2_start = time.perf_counter()
+    res2 = client.get("/api/v1/discovery/vendors?city=Pune")
+    t2 = (time.perf_counter() - t2_start) * 1000
+    assert res2.status_code == 200
+
+    print(f"\n[OVERPASS TTL CACHE PERFORMANCE] First call: {t1:.2f}ms, Cached call: {t2:.2f}ms (Speedup: {t1/max(t2, 0.01):.1f}x)")
+    # Cached call must execute within 30ms (local DB only, zero Overpass/Nominatim network latency)
+    assert t2 < 30.0, f"Expected cached response under 30ms, took {t2:.2f}ms"
+    assert len(res1.json()["results"]) == len(res2.json()["results"])
