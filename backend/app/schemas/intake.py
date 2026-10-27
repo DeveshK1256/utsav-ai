@@ -1,5 +1,6 @@
 from datetime import date, datetime
-from typing import List, Optional, Dict, Any
+from typing import Any
+
 from pydantic import BaseModel, Field, field_validator
 
 
@@ -16,7 +17,7 @@ class BudgetItemCalculationSchema(BaseModel):
     planned_amount: float
     city_tier: str
     city_tier_multiplier: float
-    reasoning_spec: Dict[str, Any]
+    reasoning_spec: dict[str, Any]
 
 
 class BudgetCalculationResponseSchema(BaseModel):
@@ -25,7 +26,7 @@ class BudgetCalculationResponseSchema(BaseModel):
     city_tier_multiplier: float
     total_budget: float
     scaled_envelope: float
-    items: List[BudgetItemCalculationSchema]
+    items: list[BudgetItemCalculationSchema]
 
 
 class IntakeRequestSchema(BaseModel):
@@ -58,7 +59,7 @@ class SubEventResponseSchema(BaseModel):
     venue_name: str
     is_outdoor: bool
     is_muhurat_locked: bool
-    muhurat_notes: Optional[str] = None
+    muhurat_notes: str | None = None
     sort_order: int
 
 
@@ -69,22 +70,22 @@ class BudgetItemResponseSchema(BaseModel):
     planned_amount: float
     actual_amount: float
     percentage: float
-    reasoning_spec: Optional[Dict[str, Any]] = None
+    reasoning_spec: dict[str, Any] | None = None
 
 
 class TaskResponseSchema(BaseModel):
     id: str
     title: str
     status: str
-    scheduled_start: Optional[datetime] = None
-    scheduled_end: Optional[datetime] = None
-    duration_minutes: Optional[int] = None
-    assigned_role: Optional[str] = None
+    scheduled_start: datetime | None = None
+    scheduled_end: datetime | None = None
+    duration_minutes: int | None = None
+    assigned_role: str | None = None
 
 
 class MasterPlanResponseSchema(BaseModel):
     event_id: str
-    owner_token: Optional[str] = None
+    owner_token: str | None = None
     name: str
     owner_name: str
     status: str
@@ -96,7 +97,7 @@ class MasterPlanResponseSchema(BaseModel):
         "Auspicious timings & ritual checklists are algorithmic estimates computed via astronomical "
         "ephemeris models. Please verify with your family Guruji or elders."
     )
-    sub_events: List[SubEventResponseSchema]
-    budget_breakdown: List[BudgetItemResponseSchema]
-    tasks: List[TaskResponseSchema]
+    sub_events: list[SubEventResponseSchema]
+    budget_breakdown: list[BudgetItemResponseSchema]
+    tasks: list[TaskResponseSchema]
     created_at: datetime

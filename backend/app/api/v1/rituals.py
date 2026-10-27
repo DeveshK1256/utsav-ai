@@ -5,16 +5,16 @@ cross-tradition fusion merging, and priest/guruji export formats.
 """
 
 from datetime import date
-from typing import Optional, List
+
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
+from backend.app.core.security import verify_event_owner_token
 from backend.app.db.session import get_db
-from backend.app.models.models import Tradition, RitualItem, Event, SubEvent
+from backend.app.models.models import Event, RitualItem, SubEvent, Tradition
 from backend.app.services.panchang_service import default_panchang_provider
 from backend.app.services.tradition_merge_service import TraditionMergeService
-from backend.app.core.security import verify_event_owner_token
 
 router = APIRouter(prefix="/rituals", tags=["Ritual & Cultural Intelligence"])
 
@@ -38,9 +38,9 @@ class PanchangResponseSchema(BaseModel):
 class MergeTraditionsRequest(BaseModel):
     primary_tradition_code: str = Field(..., description="Primary cultural code, e.g. maharashtrian_vedic")
     secondary_tradition_code: str = Field(..., description="Secondary cultural code, e.g. punjabi_traditional")
-    start_date: Optional[date] = None
-    event_id: Optional[str] = None
-    notes: Optional[str] = None
+    start_date: date | None = None
+    event_id: str | None = None
+    notes: str | None = None
 
 
 @router.get("/panchang", response_model=PanchangResponseSchema)
@@ -165,9 +165,10 @@ def generate_ritual_tasks_for_event(
     Generates structured preparation and procurement tasks for ritual samagri,
     inserting them into the event's DAG task graph.
     """
+    import uuid
+
     from backend.app.models.models import Task
     from backend.app.services.dag_scheduler import DAGScheduler
-    import uuid
     if not event:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Event not found")
 
@@ -227,7 +228,7 @@ def get_muhurat_candidates(
         elevation_meters=elevation_meters
     )
 
-    from datetime import datetime, time, timedelta
+    from datetime import datetime, timedelta
     sunrise_dt = datetime.strptime(p_data["sunrise"], "%H:%M:%S")
 
     # Morning auspicious window: 1.5h to 3.5h post-sunrise
@@ -313,7 +314,7 @@ def generate_pandit_guide(event_id: str, db: Session = Depends(get_db)):
             "name": se.name,
             "start_time": se.start_time.isoformat() if se.start_time else None,
             "end_time": se.end_time.isoformat() if se.end_time else None,
-            "location_name": se.location_name,
+            "location_name": se.venue_name,
             "is_outdoor": se.is_outdoor,
         }
         for se in sub_events

@@ -1,21 +1,22 @@
-from typing import List, Optional
+import contextlib
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
+from backend.app.core.security import verify_event_owner_token
 from backend.app.db.session import get_db
 from backend.app.models.models import Event
-from backend.app.core.security import verify_event_owner_token
 from backend.app.schemas.replanning import (
-    ChangeRequestSchema,
     ChangeProposalResponseSchema,
-    PatchChangeProposalSchema
+    ChangeRequestSchema,
+    PatchChangeProposalSchema,
 )
 from backend.app.services.replanning_service import ReplanningService
 
 router = APIRouter(prefix="/events/{id}/changes", tags=["Replanning (Plan B)"])
 
 
-@router.get("", response_model=List[ChangeProposalResponseSchema])
+@router.get("", response_model=list[ChangeProposalResponseSchema])
 def list_change_proposals(
     id: str,
     db: Session = Depends(get_db)
@@ -27,10 +28,8 @@ def list_change_proposals(
     changes = db.query(ChangeEvent).filter(ChangeEvent.event_id == id).order_by(ChangeEvent.created_at.desc()).all()
     results = []
     for c in changes:
-        try:
+        with contextlib.suppress(Exception):
             results.append(ReplanningService.get_change_proposal(db, event_id=id, change_id=c.id))
-        except Exception:
-            pass
     return results
 
 
@@ -51,7 +50,7 @@ def submit_change_event(
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
     except Exception as e:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Replanning error: {str(e)}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Replanning error: {e!s}")
 
 
 @router.get("/{change_id}", response_model=ChangeProposalResponseSchema)
@@ -85,7 +84,7 @@ def accept_change_proposal(
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
     except Exception as e:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Accept error: {str(e)}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Accept error: {e!s}")
 
 
 @router.post("/{change_id}/reject", response_model=ChangeProposalResponseSchema)
@@ -103,7 +102,7 @@ def reject_change_proposal(
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
     except Exception as e:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Reject error: {str(e)}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Reject error: {e!s}")
 
 
 @router.patch("/{change_id}", response_model=ChangeProposalResponseSchema)
@@ -122,4 +121,4 @@ def patch_change_proposal(
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
     except Exception as e:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Patch error: {str(e)}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Patch error: {e!s}")

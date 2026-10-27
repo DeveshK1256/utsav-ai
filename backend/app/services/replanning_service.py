@@ -1,15 +1,24 @@
-from datetime import datetime, date, timedelta, timezone
-from typing import Dict, Any, List, Optional
+from datetime import UTC, date, datetime, timedelta
+from typing import Any
+
 from sqlalchemy.orm import Session
 from sqlalchemy.orm.attributes import flag_modified
 
-from backend.app.models.models import Event, BudgetItem, Task, SubEvent, ChangeEvent, AISuggestion, EventLog
+from backend.app.models.models import (
+    AISuggestion,
+    BudgetItem,
+    ChangeEvent,
+    Event,
+    EventLog,
+    SubEvent,
+    Task,
+)
 from backend.app.schemas.replanning import (
-    ChangeRequestSchema,
     BudgetItemDiffSchema,
-    TaskDiffSchema,
     ChangeProposalResponseSchema,
-    PatchChangeProposalSchema
+    ChangeRequestSchema,
+    PatchChangeProposalSchema,
+    TaskDiffSchema,
 )
 from backend.app.services.budget_rescaling_engine import BudgetRescalingEngine
 from backend.app.services.dag_scheduler import DAGScheduler
@@ -24,7 +33,7 @@ class ReplanningService:
         db: Session,
         event_id: str,
         change_req: ChangeRequestSchema,
-        actor_id: Optional[str] = None
+        actor_id: str | None = None
     ) -> ChangeProposalResponseSchema:
         event = db.query(Event).filter(Event.id == event_id).first()
         if not event:
@@ -61,7 +70,7 @@ class ReplanningService:
                 "infeasibility_reason": infeasibility_reason,
                 "explanation": f"This change proposal cannot be applied because it is infeasible: {infeasibility_reason}",
                 "mitigation_suggestions": ["Revise parameters to valid ranges (e.g. valid future dates, positive guest counts, budget above committed costs)."],
-                "created_at": datetime.now(timezone.utc).isoformat()
+                "created_at": datetime.now(UTC).isoformat()
             }
 
             suggestion = AISuggestion(
@@ -103,18 +112,18 @@ class ReplanningService:
         current_status = "queued" if pending_existing else "pending"
 
         # 3. Dispatch deterministic math & scheduling handler
-        budget_diffs: List[Dict[str, Any]] = []
-        task_diff = {"added_tasks": [], "moved_tasks": [], "cancelled_tasks": []}
-        sub_event_diffs: List[Dict[str, Any]] = []
-        vendor_re_quote_cats: List[str] = []
-        capacity_warning: Optional[str] = None
+        budget_diffs: list[dict[str, Any]] = []
+        task_diff: dict[str, list[Any]] = {"added_tasks": [], "moved_tasks": [], "cancelled_tasks": []}
+        sub_event_diffs: list[dict[str, Any]] = []
+        vendor_re_quote_cats: list[str] = []
+        capacity_warning: str | None = None
         budget_old = float(event.total_budget)
         budget_new = float(event.total_budget)
         budget_delta = 0.0
 
         if change_type == "guest_count_changed":
             from_g = int(payload.get("from_guest_count", event.guest_count))
-            to_g = int(payload.get("to_guest_count"))
+            to_g = int(payload.get("to_guest_count") or event.guest_count or 100)
             result = BudgetRescalingEngine.rescale_for_guest_count_change(
                 old_guest_count=from_g,
                 new_guest_count=to_g,
@@ -166,7 +175,7 @@ class ReplanningService:
 
         elif change_type == "budget_cut":
             from_b = float(payload.get("from_budget", float(event.total_budget)))
-            to_b = float(payload.get("to_budget"))
+            to_b = float(payload.get("to_budget") or float(event.total_budget))
             result = BudgetRescalingEngine.rescale_for_budget_cut(
                 from_budget=from_b,
                 to_budget=to_b,
@@ -348,7 +357,7 @@ class ReplanningService:
         db: Session,
         event_id: str,
         change_id: str,
-        actor_id: Optional[str] = None
+        actor_id: str | None = None
     ) -> ChangeProposalResponseSchema:
         change_event = (
             db.query(ChangeEvent)
@@ -372,6 +381,8 @@ class ReplanningService:
             raise ValueError("Proposal payload missing.")
 
         event = db.query(Event).filter(Event.id == event_id).first()
+        if not event:
+            raise ValueError("Event not found.")
         payload = sugg.proposal_payload
 
         # 1. Mutate Budget Items
@@ -484,7 +495,7 @@ class ReplanningService:
         db: Session,
         event_id: str,
         change_id: str,
-        actor_id: Optional[str] = None
+        actor_id: str | None = None
     ) -> ChangeProposalResponseSchema:
         change_event = (
             db.query(ChangeEvent)
@@ -601,7 +612,7 @@ class ReplanningService:
         return cls.get_change_proposal(db, event_id, change_id)
 
     @classmethod
-    def _check_infeasibility(cls, event: Event, change_type: str, payload: Dict[str, Any]) -> Optional[str]:
+    def _check_infeasibility(cls, event: Event, change_type: str, payload: dict[str, Any]) -> str | None:
         if change_type == "guest_count_changed":
             to_g = payload.get("to_guest_count")
             if to_g is None or not isinstance(to_g, (int, float)) or int(to_g) <= 0:

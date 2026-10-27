@@ -1,6 +1,6 @@
 import logging
-from typing import Optional
-from fastapi import APIRouter, Depends, HTTPException, Header, Request, Query, Response
+
+from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request, Response
 from sqlalchemy.orm import Session
 
 from backend.app.core.config import settings
@@ -14,9 +14,9 @@ router = APIRouter(prefix="/webhooks", tags=["WhatsApp Webhooks"])
 
 @router.get("/whatsapp")
 def verify_whatsapp_webhook(
-    hub_mode: Optional[str] = Query(None, alias="hub.mode"),
-    hub_verify_token: Optional[str] = Query(None, alias="hub.verify_token"),
-    hub_challenge: Optional[str] = Query(None, alias="hub.challenge")
+    hub_mode: str | None = Query(None, alias="hub.mode"),
+    hub_verify_token: str | None = Query(None, alias="hub.verify_token"),
+    hub_challenge: str | None = Query(None, alias="hub.challenge")
 ):
     """
     Meta WhatsApp Cloud API Webhook Challenge Verification.
@@ -34,7 +34,7 @@ def verify_whatsapp_webhook(
 @router.post("/whatsapp")
 async def receive_whatsapp_webhook(
     request: Request,
-    x_hub_signature_256: Optional[str] = Header(None, alias="X-Hub-Signature-256"),
+    x_hub_signature_256: str | None = Header(None, alias="X-Hub-Signature-256"),
     db: Session = Depends(get_db)
 ):
     """

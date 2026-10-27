@@ -1,5 +1,5 @@
-from typing import Optional
-from fastapi import APIRouter, Depends, Query, HTTPException
+
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from backend.app.db.session import get_db
@@ -11,11 +11,11 @@ router = APIRouter(prefix="/discovery", tags=["Vendor & Venue Discovery (F15-Lit
 
 @router.get("/vendors", response_model=VendorDiscoveryResponse)
 def get_nearby_vendors(
-    lat: Optional[float] = Query(None, description="Latitude for geo-radius query"),
-    lng: Optional[float] = Query(None, description="Longitude for geo-radius query"),
-    city: Optional[str] = Query(None, description="City name fallback if geolocation consent is denied or unavailable"),
+    lat: float | None = Query(None, description="Latitude for geo-radius query"),
+    lng: float | None = Query(None, description="Longitude for geo-radius query"),
+    city: str | None = Query(None, description="City name fallback if geolocation consent is denied or unavailable"),
     radius_km: float = Query(25.0, ge=1.0, le=100.0, description="Search radius in kilometers"),
-    category: Optional[str] = Query(None, description="Optional vendor category filter (e.g. venue, lawn, banquet)"),
+    category: str | None = Query(None, description="Optional vendor category filter (e.g. venue, lawn, banquet)"),
     sort: str = Query("distance_asc", description="Sort order: distance_asc"),
     db: Session = Depends(get_db)
 ):

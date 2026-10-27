@@ -1,20 +1,21 @@
-import time
 import logging
-from typing import List, Dict, Any, Optional
-from datetime import datetime, timezone
-from sqlalchemy.orm import Session
-from pydantic import BaseModel
+import time
 
-from backend.app.models.models import Guest, Event, MessageLog, OptOut, MessageTemplate
-from backend.app.services.whatsapp.provider import WhatsAppProvider, get_whatsapp_provider
+from pydantic import BaseModel
+from sqlalchemy.orm import Session
+
+from backend.app.models.models import Event, Guest, MessageLog, OptOut
 from backend.app.services.whatsapp.phone_utils import normalize_e164_phone
+from backend.app.services.whatsapp.provider import (
+    WhatsAppProvider,
+    get_whatsapp_provider,
+)
 
 logger = logging.getLogger(__name__)
 
 
 class OptOutBlockedError(Exception):
     """Raised when an outbound WhatsApp send is attempted to a phone number in opt_outs."""
-    pass
 
 
 class BatchSendResult(BaseModel):
@@ -22,8 +23,8 @@ class BatchSendResult(BaseModel):
     sent_count: int
     blocked_opt_out_count: int
     failed_count: int
-    message_ids: List[str]
-    errors: List[Dict[str, str]]
+    message_ids: list[str]
+    errors: list[dict[str, str]]
 
 
 class WhatsAppSendService:
@@ -62,12 +63,12 @@ class WhatsAppSendService:
         cls,
         db: Session,
         event: Event,
-        guest: Optional[Guest],
+        guest: Guest | None,
         to_phone: str,
         message_body: str,
         message_type: str = "freeform",
-        template_name: Optional[str] = None,
-        provider: Optional[WhatsAppProvider] = None
+        template_name: str | None = None,
+        provider: WhatsAppProvider | None = None
     ) -> MessageLog:
         """
         Sends an individual message.
@@ -139,8 +140,8 @@ class WhatsAppSendService:
         cls,
         db: Session,
         event_id: str,
-        guest_ids: Optional[List[str]] = None,
-        provider: Optional[WhatsAppProvider] = None,
+        guest_ids: list[str] | None = None,
+        provider: WhatsAppProvider | None = None,
         rate_limit_delay_secs: float = 0.05
     ) -> BatchSendResult:
         """

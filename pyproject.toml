@@ -1,0 +1,59 @@
+[project]
+name = "utsav"
+version = "1.0.0"
+description = "Culture-native GenAI event planning assistant for Indian celebrations"
+requires-python = ">=3.11"
+
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+
+[tool.ruff.lint]
+select = [
+    "E",
+    "F",
+    "W",
+    "I",
+    "UP",
+    "B",
+    "C4",
+    "PIE",
+    "SIM",
+    "RUF"
+]
+ignore = [
+    "E501",   # Line too long (handled by formatter / long prompt strings)
+    "RUF001", # Ambiguous unicode character (Indian currency symbol, Devanagari script, em-dashes)
+    "E402",   # Module level import not at top of file (sys.path manipulation in Alembic / main)
+    "B904",   # Within an except clause, raise exceptions with raise ... from err (FastAPI HTTPExceptions)
+    "RUF012", # Mutable default value for class attribute (class constants)
+    "SIM116", # Use a dictionary instead of consecutive if statements
+]
+
+[tool.ruff.lint.flake8-bugbear]
+extend-immutable-calls = [
+    "fastapi.Depends",
+    "fastapi.Query",
+    "fastapi.Header",
+    "fastapi.File",
+    "fastapi.Security",
+    "fastapi.Body",
+    "fastapi.Path",
+    "Depends",
+    "Query",
+    "Header",
+    "File",
+    "Security",
+    "Body",
+    "Path"
+]
+
+[tool.mypy]
+python_version = "3.12"
+explicit_package_bases = true
+ignore_missing_imports = true
+warn_unused_configs = true
+check_untyped_defs = true
+disallow_untyped_defs = false
+disallow_incomplete_defs = false
+disable_error_code = ["attr-defined"]

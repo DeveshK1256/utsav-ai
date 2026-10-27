@@ -1,18 +1,18 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Request
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
 
+from backend.app.core.limiter import limiter
 from backend.app.db.session import get_db
+from backend.app.models.models import Tradition
 from backend.app.schemas.intake import (
-    IntakeRequestSchema,
-    MasterPlanResponseSchema,
     BudgetCalculationRequestSchema,
     BudgetCalculationResponseSchema,
-    BudgetItemCalculationSchema
+    BudgetItemCalculationSchema,
+    IntakeRequestSchema,
+    MasterPlanResponseSchema,
 )
-from backend.app.services.intake_service import IntakeService
 from backend.app.services.budget_engine import BudgetScalingEngine
-from backend.app.models.models import Tradition
-from backend.app.core.limiter import limiter
+from backend.app.services.intake_service import IntakeService
 
 router = APIRouter(prefix="/intake", tags=["Intake"])
 
@@ -54,7 +54,7 @@ def calculate_budget(payload: BudgetCalculationRequestSchema):
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
     except Exception as e:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Budget calculation failed: {str(e)}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Budget calculation failed: {e!s}")
 
 
 @router.post("/generate", response_model=MasterPlanResponseSchema, status_code=status.HTTP_201_CREATED)
@@ -69,7 +69,7 @@ def generate_plan(request: Request, payload: IntakeRequestSchema, db: Session = 
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
     except Exception as e:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Plan generation failed: {str(e)}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Plan generation failed: {e!s}")
 
 
 @router.get("/traditions")

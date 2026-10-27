@@ -1,16 +1,14 @@
-import os
 import json
+from decimal import ROUND_HALF_UP, Decimal
 from pathlib import Path
-from typing import Dict, List, Any, Optional
-from decimal import Decimal, ROUND_HALF_UP
-
+from typing import Any
 
 CONFIG_PATH = Path(__file__).resolve().parent.parent / "config" / "city_tiers.json"
 
 
-def load_city_tiers_config() -> Dict[str, Any]:
+def load_city_tiers_config() -> dict[str, Any]:
     if CONFIG_PATH.exists():
-        with open(CONFIG_PATH, "r", encoding="utf-8") as f:
+        with open(CONFIG_PATH, encoding="utf-8") as f:
             return json.load(f)
     # Default fallback
     return {
@@ -28,7 +26,7 @@ class BudgetScalingEngine:
     - Loads calibrated city-tier cost multipliers from config/city_tiers.json at runtime, not hardcoded literals.
     """
 
-    ALLOCATION_MODELS: Dict[str, Dict[str, Decimal]] = {
+    ALLOCATION_MODELS: dict[str, dict[str, Decimal]] = {
         "wedding": {
             "venue": Decimal("0.22"),
             "catering": Decimal("0.28"),
@@ -76,7 +74,7 @@ class BudgetScalingEngine:
     }
 
     @classmethod
-    def get_config(cls) -> Dict[str, Any]:
+    def get_config(cls) -> dict[str, Any]:
         return load_city_tiers_config()
 
     @classmethod
@@ -104,7 +102,7 @@ class BudgetScalingEngine:
         event_type: str = "wedding",
         city: str = "Pune",
         guest_count: int = 350
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         if total_envelope <= 0:
             raise ValueError("Total budget envelope must be strictly greater than 0")
         if guest_count <= 0:

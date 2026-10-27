@@ -1,21 +1,21 @@
 from backend.app.models.models import (
-    User,
-    Event,
-    SubEvent,
     BudgetItem,
+    Event,
+    EventLog,
+    RitualItem,
+    SubEvent,
     Task,
     Tradition,
-    RitualItem,
-    EventLog
+    User,
 )
 
 __all__ = [
-    "User",
-    "Event",
-    "SubEvent",
     "BudgetItem",
+    "Event",
+    "EventLog",
+    "RitualItem",
+    "SubEvent",
     "Task",
     "Tradition",
-    "RitualItem",
-    "EventLog"
+    "User"
 ]

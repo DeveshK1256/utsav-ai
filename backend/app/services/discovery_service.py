@@ -1,21 +1,20 @@
-import math
-import uuid
-import logging
-import urllib.request
-import urllib.parse
 import json
-import time
+import logging
+import math
 import re
 import threading
-from typing import Optional, List, Tuple
+import time
+import urllib.parse
+import urllib.request
+import uuid
+
 from sqlalchemy.orm import Session
-from sqlalchemy import or_
 
 from backend.app.models.models import VendorProfile
 from backend.app.schemas.discovery import (
+    CostEstimateResponse,
     VendorDiscoveryItem,
     VendorDiscoveryResponse,
-    CostEstimateResponse
 )
 
 logger = logging.getLogger(__name__)
@@ -30,7 +29,7 @@ _OVERPASS_CACHE_LOCK = threading.Lock()
 OVERPASS_CACHE_TTL_SECONDS = 15 * 60  # 15 minutes
 
 
-def is_valid_venue_name(name: Optional[str]) -> bool:
+def is_valid_venue_name(name: str | None) -> bool:
     """
     Filters out nameless, un-named, pure address/digits, raw ID fallbacks,
     or generic placeholder OSM results so only properly-named real celebration places reach the UI.
@@ -50,9 +49,7 @@ def is_valid_venue_name(name: Optional[str]) -> bool:
     if re.match(r"^[\d\s\/\-\.,#]+$", clean):
         return False
     # Filter out generic single-word placeholders with no distinct identity
-    if lower in {"unnamed", "unknown", "venue", "banquet", "hall", "marriage garden", "hotel", "resort", "palace"}:
-        return False
-    return True
+    return lower not in {"unnamed", "unknown", "venue", "banquet", "hall", "marriage garden", "hotel", "resort", "palace"}
 
 
 def extract_distinctive_tokens(name: str) -> set:
@@ -122,10 +119,8 @@ def are_venues_duplicates(
     if toks1 == toks2:
         # If the ONLY tokens are generic modifiers (e.g. {'royal'} or {'grand'}),
         # do NOT merge without exact normalized match
-        if toks1.issubset(GENERIC_NAME_MODIFIERS):
-            return False
         # Specific brand/proper noun match
-        return True
+        return not toks1.issubset(GENERIC_NAME_MODIFIERS)
 
     # 3. Subset match with corporate chain qualifiers (e.g. {'taj', 'rambagh'} vs {'rambagh'})
     shared = toks1 & toks2
@@ -141,10 +136,7 @@ def are_venues_duplicates(
         return False
 
     # If all differing tokens are allowable hotel chain/qualifiers, they are the same physical venue
-    if diff.issubset(ALLOWABLE_CHAIN_QUALIFIERS):
-        return True
-
-    return False
+    return bool(diff.issubset(ALLOWABLE_CHAIN_QUALIFIERS))
 
 
 def haversine_distance_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
@@ -194,7 +186,7 @@ class VendorDiscoveryService:
     """
 
     @classmethod
-    def geocode_query(cls, query_text: str) -> Optional[Tuple[float, float, str]]:
+    def geocode_query(cls, query_text: str) -> tuple[float, float, str] | None:
         """
         Geocodes a manual city name or 6-digit Indian pincode using OpenStreetMap Nominatim.
         Free, zero-billing, strictly adheres to 1 req/sec policy with identification header.
@@ -221,11 +213,11 @@ class VendorDiscoveryService:
     def search_vendors(
         cls,
         db: Session,
-        lat: Optional[float] = None,
-        lng: Optional[float] = None,
-        city: Optional[str] = None,
+        lat: float | None = None,
+        lng: float | None = None,
+        city: str | None = None,
         radius_km: float = 25.0,
-        category: Optional[str] = None,
+        category: str | None = None,
         sort_by: str = "distance_asc"
     ) -> VendorDiscoveryResponse:
         resolved_lat = lat
@@ -250,7 +242,7 @@ class VendorDiscoveryService:
                 query = query.filter(VendorProfile.city.ilike(f"%{city.strip()}%"))
             profiles = query.all()
 
-            results: List[VendorDiscoveryItem] = [
+            results: list[VendorDiscoveryItem] = [
                 cls._profile_to_item(p, distance_km=None) for p in profiles
             ]
             return VendorDiscoveryResponse(
@@ -282,7 +274,7 @@ class VendorDiscoveryService:
         if category:
             db_query = db_query.filter(VendorProfile.category.ilike(f"%{category.strip()}%"))
 
-        existing_candidates = db_query.all()
+        db_query.all()
 
         # 2. Query OpenStreetMap for nationwide venues (Overpass + Nominatim)
         # Extend real coverage anywhere in India without fabricating
@@ -309,7 +301,7 @@ class VendorDiscoveryService:
 
         sorted_candidates = sorted(all_candidates, key=candidate_priority)
 
-        accepted_items: List[Tuple[VendorDiscoveryItem, float]] = []
+        accepted_items: list[tuple[VendorDiscoveryItem, float]] = []
         seen_normalized_names = set()
 
         for p in sorted_candidates:
@@ -340,21 +332,20 @@ class VendorDiscoveryService:
 
             is_duplicate = False
             for accepted_item, _ in accepted_items:
-                if accepted_item.latitude and accepted_item.longitude:
-                    if are_venues_duplicates(
-                        name1=p.business_name,
-                        lat1=p_lat,
-                        lng1=p_lng,
-                        name2=accepted_item.business_name,
-                        lat2=accepted_item.latitude,
-                        lng2=accepted_item.longitude
-                    ):
-                        logger.info(
-                            "Deduplicating duplicate venue '%s' against higher-priority '%s'",
-                            p.business_name, accepted_item.business_name
-                        )
-                        is_duplicate = True
-                        break
+                if accepted_item.latitude and accepted_item.longitude and are_venues_duplicates(
+                    name1=p.business_name,
+                    lat1=p_lat,
+                    lng1=p_lng,
+                    name2=accepted_item.business_name,
+                    lat2=accepted_item.latitude,
+                    lng2=accepted_item.longitude
+                ):
+                    logger.info(
+                        "Deduplicating duplicate venue '%s' against higher-priority '%s'",
+                        p.business_name, accepted_item.business_name
+                    )
+                    is_duplicate = True
+                    break
 
             if is_duplicate:
                 continue
@@ -384,7 +375,7 @@ class VendorDiscoveryService:
         lat: float,
         lng: float,
         radius_km: float,
-        city_hint: Optional[str] = None
+        city_hint: str | None = None
     ) -> None:
         """
         Queries OpenStreetMap (via Overpass API with Nominatim fallback) for real venue records.
@@ -403,7 +394,7 @@ class VendorDiscoveryService:
                     logger.info("Overpass in-process TTL cache HIT for key %s (age: %.1fs) - skipping external network query", cache_key, now - cached_time)
                     return
 
-        osm_venues: List[dict] = []
+        osm_venues: list[dict] = []
         radius_m = int(min(radius_km, 35.0) * 1000)
 
         # Strategy A: Overpass API across mirrors (3.5s timeout)
@@ -545,7 +536,7 @@ out center 15;"""
             _OVERPASS_CACHE[cache_key] = (now, osm_venues)
 
     @staticmethod
-    def _profile_to_item(profile: VendorProfile, distance_km: Optional[float]) -> VendorDiscoveryItem:
+    def _profile_to_item(profile: VendorProfile, distance_km: float | None) -> VendorDiscoveryItem:
         # Determine rating tier strictly per DEC-013:
         # If average_rating is None or 0 or rating_count == 0 -> "new_unrated"
         avg_rating = float(profile.average_rating) if profile.average_rating is not None else None

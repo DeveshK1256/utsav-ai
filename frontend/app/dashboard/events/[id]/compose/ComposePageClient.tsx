@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { Navbar } from '@/components/ui/Navbar';
@@ -53,28 +53,7 @@ export default function ComposePageClient() {
   }>>([]);
   const [selectedMuhurat, setSelectedMuhurat] = useState<string>('');
 
-  useEffect(() => {
-    let resolvedId = rawEventId;
-    if (typeof window !== 'undefined') {
-      const segments = window.location.pathname.split('/').filter(Boolean);
-      const evIdx = segments.indexOf('events');
-      if (evIdx !== -1 && segments[evIdx + 1] && segments[evIdx + 1] !== 'default') {
-        resolvedId = segments[evIdx + 1];
-      } else if (!resolvedId || resolvedId === 'default') {
-        const stored = localStorage.getItem('current_event_id') || localStorage.getItem('last_event_id');
-        if (stored) resolvedId = stored;
-      }
-    }
-
-    if (resolvedId && resolvedId !== 'default') {
-      setEventId(resolvedId);
-      loadEvent(resolvedId);
-    } else {
-      setLoading(false);
-    }
-  }, [rawEventId]);
-
-  const loadEvent = async (id: string) => {
+  const loadEvent = useCallback(async (id: string) => {
     try {
       const res = await fetch(`${API_BASE_URL}/events/${id}`, {
         headers: getAuthHeaders(id)
@@ -121,7 +100,28 @@ export default function ComposePageClient() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    let resolvedId = rawEventId;
+    if (typeof window !== 'undefined') {
+      const segments = window.location.pathname.split('/').filter(Boolean);
+      const evIdx = segments.indexOf('events');
+      if (evIdx !== -1 && segments[evIdx + 1] && segments[evIdx + 1] !== 'default') {
+        resolvedId = segments[evIdx + 1];
+      } else if (!resolvedId || resolvedId === 'default') {
+        const stored = localStorage.getItem('current_event_id') || localStorage.getItem('last_event_id');
+        if (stored) resolvedId = stored;
+      }
+    }
+
+    if (resolvedId && resolvedId !== 'default') {
+      setEventId(resolvedId);
+      loadEvent(resolvedId);
+    } else {
+      setLoading(false);
+    }
+  }, [rawEventId, loadEvent]);
 
   // Step A: Save Venue or Skip
   const handleConfirmVenue = async (skip: boolean = false) => {
@@ -256,7 +256,7 @@ export default function ComposePageClient() {
                     Step A: Select or Shortlist a Celebration Venue
                   </h2>
                   <p className="text-xs text-stone-600 dark:text-stone-400 mt-0.5">
-                    Select a venue from our curated real directory, or skip to proceed with a "Venue to be confirmed" placeholder.
+                    Select a venue from our curated real directory, or skip to proceed with a &quot;Venue to be confirmed&quot; placeholder.
                   </p>
                 </div>
                 <div className="flex items-center gap-3">

@@ -1,33 +1,46 @@
-from datetime import datetime, timezone
-from typing import List, Optional, Dict, Any
-import os
 import hmac
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, Header, status, Request
-from sqlalchemy.orm import Session
-from sqlalchemy import select
+import os
+from datetime import UTC, datetime
 
-from backend.app.db.session import get_db
+from fastapi import (
+    APIRouter,
+    Depends,
+    File,
+    Form,
+    Header,
+    HTTPException,
+    Request,
+    UploadFile,
+    status,
+)
+from sqlalchemy import select
+from sqlalchemy.orm import Session
+
 from backend.app.core.limiter import limiter
-from backend.app.models.models import Event, Vendor, QuoteDocument, QuoteLineItem, VendorBenchmarkSample
+from backend.app.db.session import get_db
+from backend.app.models.models import (
+    Event,
+    QuoteDocument,
+    QuoteLineItem,
+    Vendor,
+    VendorBenchmarkSample,
+)
 from backend.app.schemas.quotes import (
     ExtractedLineItemSchema,
-    HiddenCostAlertSchema,
-    BenchmarkComparisonSchema,
-    QuoteDocumentResponseSchema,
-    QuoteComparisonRequestSchema,
-    QuoteComparisonResponseSchema,
     NegotiationDraftRequestSchema,
     NegotiationDraftResponseSchema,
-    NegotiationMessageVariantSchema
+    NegotiationMessageVariantSchema,
+    QuoteComparisonRequestSchema,
+    QuoteComparisonResponseSchema,
+    QuoteDocumentResponseSchema,
 )
-from backend.app.services.hidden_cost_engine import HiddenCostDetector
-from backend.app.services.quote_comparison_engine import QuoteComparisonEngine
 from backend.app.services.budget_engine import BudgetScalingEngine
+from backend.app.services.hidden_cost_engine import HiddenCostDetector
 from backend.app.services.llm_provider import (
-    get_quote_extraction_provider,
     get_negotiation_draft_provider,
-    ExtractionValidationError
+    get_quote_extraction_provider,
 )
+from backend.app.services.quote_comparison_engine import QuoteComparisonEngine
 
 router = APIRouter(prefix="/quotes", tags=["quotes"])
 
@@ -39,11 +52,11 @@ MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024  # 10 MB limit
 async def upload_quote(
     request: Request,
     event_id: str = Form(..., description="ID of the event this quote belongs to"),
-    category: Optional[str] = Form(None, description="Optional vendor category override"),
+    category: str | None = Form(None, description="Optional vendor category override"),
     file: UploadFile = File(..., description="Quote file (PDF or image)"),
-    owner_token: Optional[str] = Form(None),
-    x_event_owner_token: Optional[str] = Header(None, alias="X-Event-Owner-Token"),
-    authorization: Optional[str] = Header(None),
+    owner_token: str | None = Form(None),
+    x_event_owner_token: str | None = Header(None, alias="X-Event-Owner-Token"),
+    authorization: str | None = Header(None),
     db: Session = Depends(get_db)
 ):
     """
@@ -113,7 +126,7 @@ async def upload_quote(
         error_detail = str(e)
 
     # Fallback path if schema validation / extraction failed after retries
-    if extraction_failed:
+    if extraction_failed or extracted is None:
         fallback_category = (category or "caterer").lower()
         quote_doc = QuoteDocument(
             event_id=event_id,
@@ -127,7 +140,7 @@ async def upload_quote(
             raw_extracted_json={"error": error_detail, "retries_attempted": 2},
             total_quoted_amount=None,
             tax_amount=None,
-            uploaded_at=datetime.now(timezone.utc)
+            uploaded_at=datetime.now(UTC)
         )
         db.add(quote_doc)
         db.commit()
@@ -159,12 +172,12 @@ async def upload_quote(
     )
 
     # 5. Find or create vendor
-    vendor = db.scalar(
+    vendor = db.scalars(
         select(Vendor).where(
             Vendor.event_id == event_id,
             Vendor.business_name == extracted.vendor_name
         )
-    )
+    ).first()
     if not vendor:
         vendor = Vendor(
             event_id=event_id,
@@ -191,7 +204,7 @@ async def upload_quote(
         raw_extracted_json={**extracted.model_dump(), "deterministic_confidence_score": deterministic_confidence},
         total_quoted_amount=extracted.total_amount,
         tax_amount=extracted.tax_amount,
-        uploaded_at=datetime.now(timezone.utc)
+        uploaded_at=datetime.now(UTC)
     )
     db.add(quote_doc)
     db.flush()
@@ -251,7 +264,7 @@ async def upload_quote(
     )
 
 
-@router.get("/event/{event_id}", response_model=List[QuoteDocumentResponseSchema])
+@router.get("/event/{event_id}", response_model=list[QuoteDocumentResponseSchema])
 def list_event_quotes(
     event_id: str,
     db: Session = Depends(get_db)
@@ -369,7 +382,7 @@ def compare_quotes(
             detail=f"All quotes in a comparison must belong to the same category. Found: {list(categories)}"
         )
 
-    assigned_category = list(categories)[0]
+    assigned_category = next(iter(categories))
     first_event_id = quotes[0].event_id
     event = db.scalar(select(Event).where(Event.id == first_event_id))
     if not event:
@@ -428,7 +441,7 @@ def compare_quotes(
 @router.post("/{quote_id}/negotiate-draft", response_model=NegotiationDraftResponseSchema)
 def generate_negotiation_draft(
     quote_id: str,
-    payload: Optional[NegotiationDraftRequestSchema] = None,
+    payload: NegotiationDraftRequestSchema | None = None,
     db: Session = Depends(get_db)
 ):
     """
@@ -447,7 +460,7 @@ def generate_negotiation_draft(
     discount_pct = payload.target_discount_percentage if payload else 10.0
 
     # Build leverage points
-    leverage_points: List[str] = []
+    leverage_points: list[str] = []
 
     # 1. Missing hidden cost items
     items = [

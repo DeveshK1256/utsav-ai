@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { Navbar } from '@/components/ui/Navbar';
@@ -71,6 +71,19 @@ export default function VibeToPlanClient() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   // Fetch existing profiles on mount
+  const loadThemes = useCallback((profileId: string) => {
+    fetch(`${API_BASE_URL}/events/${eventId}/vibe/${profileId}/themes`, {
+      headers: getAuthHeaders(eventId)
+    })
+      .then(res => res.ok ? res.json() : [])
+      .then((data: ThemeProposal[]) => {
+        if (data && data.length > 0) {
+          setActiveTheme(data[0]);
+        }
+      })
+      .catch(err => console.error("Error loading themes:", err));
+  }, [eventId]);
+
   useEffect(() => {
     if (!eventId || eventId === 'default') return;
 
@@ -86,20 +99,7 @@ export default function VibeToPlanClient() {
         }
       })
       .catch(err => console.error("Error loading profiles:", err));
-  }, [eventId]);
-
-  const loadThemes = (profileId: string) => {
-    fetch(`${API_BASE_URL}/events/${eventId}/vibe/${profileId}/themes`, {
-      headers: getAuthHeaders(eventId)
-    })
-      .then(res => res.ok ? res.json() : [])
-      .then((data: ThemeProposal[]) => {
-        if (data && data.length > 0) {
-          setActiveTheme(data[0]);
-        }
-      })
-      .catch(err => console.error("Error loading themes:", err));
-  };
+  }, [eventId, loadThemes]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {

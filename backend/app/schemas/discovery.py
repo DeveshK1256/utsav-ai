@@ -1,4 +1,3 @@
-from typing import List, Optional, Dict, Any
 from pydantic import BaseModel, Field
 
 
@@ -6,8 +5,8 @@ class CostEstimateResponse(BaseModel):
     is_estimate: bool = Field(True, description="Always labeled estimate per DEC-014, never actual")
     limited_data: bool = Field(True, description="True when sample size is insufficient or unrated")
     estimated_cost_display: str = Field("Limited data", description="Honest placeholder copy when no real quote data exists")
-    min_amount: Optional[float] = None
-    max_amount: Optional[float] = None
+    min_amount: float | None = None
+    max_amount: float | None = None
     currency: str = "INR"
 
 
@@ -16,25 +15,25 @@ class VendorDiscoveryItem(BaseModel):
     business_name: str
     category: str
     city: str
-    locality: Optional[str] = None
-    city_tier: Optional[str] = None
-    latitude: Optional[float] = None
-    longitude: Optional[float] = None
-    distance_km: Optional[float] = None
+    locality: str | None = None
+    city_tier: str | None = None
+    latitude: float | None = None
+    longitude: float | None = None
+    distance_km: float | None = None
     rating_tier: str = Field("new_unrated", description="Rating tier per DEC-013: top_rated, highly_rated, rated, new_unrated")
-    average_rating: Optional[float] = None
+    average_rating: float | None = None
     rating_count: int = 0
     is_verified_profile: bool = False
     coordinate_precision: str = "locality_approximate"
     cost_estimate: CostEstimateResponse
-    source_notes: Optional[str] = None
+    source_notes: str | None = None
 
 
 class VendorDiscoveryResponse(BaseModel):
-    query_lat: Optional[float] = None
-    query_lng: Optional[float] = None
-    query_city: Optional[str] = None
+    query_lat: float | None = None
+    query_lng: float | None = None
+    query_city: str | None = None
     radius_km: float
-    category_filter: Optional[str] = None
+    category_filter: str | None = None
     total_results: int
-    results: List[VendorDiscoveryItem]
+    results: list[VendorDiscoveryItem]

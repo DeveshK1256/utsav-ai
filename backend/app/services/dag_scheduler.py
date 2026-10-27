@@ -1,5 +1,5 @@
-from datetime import date, datetime, time, timedelta, timezone
-from typing import Dict, List, Any, Optional, Set
+from datetime import UTC, date, datetime, time, timedelta
+from typing import Any
 
 
 class TaskNode:
@@ -10,8 +10,8 @@ class TaskNode:
         duration_minutes: int,
         offset_days: int,
         assigned_role: str,
-        sub_event_key: Optional[str] = None,
-        dependencies: Optional[List[str]] = None
+        sub_event_key: str | None = None,
+        dependencies: list[str] | None = None
     ):
         self.task_id = task_id
         self.title = title
@@ -735,24 +735,24 @@ class DAGScheduler:
     ]
 
     @classmethod
-    def get_sub_events_for_tradition(cls, tradition_code: str, start_date_val: date, event_type: str = "wedding") -> List[Dict[str, Any]]:
+    def get_sub_events_for_tradition(cls, tradition_code: str, start_date_val: date, event_type: str = "wedding") -> list[dict[str, Any]]:
         t_key = (tradition_code or "").lower()
         e_key = (event_type or "").lower()
 
         if t_key in cls.SUB_EVENT_TEMPLATES:
             template = cls.SUB_EVENT_TEMPLATES[t_key]
         elif "birthday" in e_key or "birthday" in t_key:
-            template = cls.SUB_EVENT_TEMPLATES.get("birthday_kids_carnival")
+            template = cls.SUB_EVENT_TEMPLATES.get("birthday_kids_carnival") or cls.SUB_EVENT_TEMPLATES["default"]
         elif any(k in e_key or k in t_key for k in ("community", "festival", "mela", "society", "ganesh", "navratri")):
-            template = cls.SUB_EVENT_TEMPLATES.get("community_sarvajanik")
+            template = cls.SUB_EVENT_TEMPLATES.get("community_sarvajanik") or cls.SUB_EVENT_TEMPLATES["default"]
         else:
             template = cls.SUB_EVENT_TEMPLATES.get(e_key, cls.SUB_EVENT_TEMPLATES["default"])
 
         result = []
         for idx, item in enumerate(template):
-            sub_date = start_date_val + timedelta(days=item["day_offset"])
-            start_dt = datetime.combine(sub_date, time(item["start_time_hour"], 0), tzinfo=timezone.utc)
-            end_dt = start_dt + timedelta(hours=item["duration_hours"])
+            sub_date = start_date_val + timedelta(days=int(str(item["day_offset"])))
+            start_dt = datetime.combine(sub_date, time(int(str(item["start_time_hour"])), 0), tzinfo=UTC)
+            end_dt = start_dt + timedelta(hours=float(str(item["duration_hours"])))
             result.append({
                 "name": item["name"],
                 "start_time": start_dt,
@@ -767,16 +767,16 @@ class DAGScheduler:
         return result
 
     @classmethod
-    def check_cycles(cls, task_nodes: List[TaskNode]) -> bool:
+    def check_cycles(cls, task_nodes: list[TaskNode]) -> bool:
         """Returns True if a circular dependency exists in the task graph."""
-        adj: Dict[str, List[str]] = {t.task_id: [] for t in task_nodes}
+        adj: dict[str, list[str]] = {t.task_id: [] for t in task_nodes}
         for t in task_nodes:
             for dep in t.dependencies:
                 if dep in adj:
                     adj[dep].append(t.task_id)
 
-        visited: Set[str] = set()
-        rec_stack: Set[str] = set()
+        visited: set[str] = set()
+        rec_stack: set[str] = set()
 
         def dfs(node: str) -> bool:
             visited.add(node)
@@ -790,14 +790,10 @@ class DAGScheduler:
             rec_stack.remove(node)
             return False
 
-        for node in adj:
-            if node not in visited:
-                if dfs(node):
-                    return True
-        return False
+        return any(node not in visited and dfs(node) for node in adj)
 
     @classmethod
-    def generate_scheduled_tasks(cls, start_date_val: date, event_type: str = "wedding") -> List[Dict[str, Any]]:
+    def generate_scheduled_tasks(cls, start_date_val: date, event_type: str = "wedding") -> list[dict[str, Any]]:
         e_key = (event_type or "").lower()
         if "birthday" in e_key:
             task_nodes = cls.BIRTHDAY_TASKS
@@ -812,7 +808,7 @@ class DAGScheduler:
         scheduled = []
         for task in task_nodes:
             task_date = start_date_val + timedelta(days=task.offset_days)
-            task_start = datetime.combine(task_date, time(10, 0), tzinfo=timezone.utc)
+            task_start = datetime.combine(task_date, time(10, 0), tzinfo=UTC)
             task_end = task_start + timedelta(minutes=task.duration_minutes)
 
             scheduled.append({
@@ -828,7 +824,7 @@ class DAGScheduler:
         return scheduled
 
     @classmethod
-    def shift_tasks_for_date_moved(cls, tasks: List[Any], days_delta: int) -> List[Dict[str, Any]]:
+    def shift_tasks_for_date_moved(cls, tasks: list[Any], days_delta: int) -> list[dict[str, Any]]:
         """
         Shifts scheduled timing of existing tasks by days_delta while preserving dependency ordering.
         Returns list of task diffs.
@@ -856,7 +852,7 @@ class DAGScheduler:
         return diffs
 
     @classmethod
-    def shift_sub_events_for_date_moved(cls, sub_events: List[Any], days_delta: int) -> List[Dict[str, Any]]:
+    def shift_sub_events_for_date_moved(cls, sub_events: list[Any], days_delta: int) -> list[dict[str, Any]]:
         """
         Shifts sub-event start and end timestamps by days_delta.
         Flags whether religious muhurats are preserved.
@@ -889,9 +885,9 @@ class DAGScheduler:
         cls,
         start_date_val: date,
         tradition_code: str,
-        secondary_tradition_code: Optional[str] = None,
-        db: Optional[Any] = None
-    ) -> List[Dict[str, Any]]:
+        secondary_tradition_code: str | None = None,
+        db: Any | None = None
+    ) -> list[dict[str, Any]]:
         """
         Generates structured preparation and procurement tasks for ritual samagri,
         anchored into the DAG schedule prior to event start.
@@ -914,11 +910,11 @@ class DAGScheduler:
 
         if not items:
             from backend.app.db.seed_traditions import CURATED_TRADITIONS
-            codes = {tradition_code}
+            tradition_set = {tradition_code}
             if secondary_tradition_code:
-                codes.add(secondary_tradition_code)
+                tradition_set.add(secondary_tradition_code)
             for t in CURATED_TRADITIONS:
-                if t["code"] in codes:
+                if t["code"] in tradition_set:
                     for name, reg, qty, cat, purp, rit in t["items"]:
                         items.append({
                             "item_name": name,
@@ -931,7 +927,7 @@ class DAGScheduler:
                         })
 
         tasks = []
-        rituals_grouped: Dict[str, List[Dict[str, Any]]] = {}
+        rituals_grouped: dict[str, list[dict[str, Any]]] = {}
         for it in items:
             rit = it.get("ritual_name") or "Main Sacred Ceremony"
             if rit not in rituals_grouped:
@@ -941,7 +937,7 @@ class DAGScheduler:
         for idx, (rit_name, group_items) in enumerate(rituals_grouped.items()):
             offset = -1 if idx % 2 == 0 else -2
             task_date = start_date_val + timedelta(days=offset)
-            task_start = datetime.combine(task_date, time(9 + (idx % 4), 0), tzinfo=timezone.utc)
+            task_start = datetime.combine(task_date, time(9 + (idx % 4), 0), tzinfo=UTC)
             task_end = task_start + timedelta(minutes=90)
 
             item_list_str = "; ".join([f"{it['item_name']} ({it['standard_quantity']})" for it in group_items[:4]])

@@ -1,26 +1,27 @@
 import logging
-from typing import List, Optional, Dict, Any
-from fastapi import UploadFile, HTTPException
+from typing import Any
+
+from fastapi import HTTPException, UploadFile
 from sqlalchemy.orm import Session
 
 from backend.app.models.models import (
-    Event,
-    StyleProfile,
-    UploadedImage,
-    ThemeProposal,
-    DecorItem,
     BudgetItem,
-    Task,
+    DecorItem,
+    Event,
     EventLog,
+    StyleProfile,
+    Task,
+    ThemeProposal,
+    UploadedImage,
     generate_uuid,
 )
-from backend.app.services.llm_provider import (
-    get_vibe_extraction_provider,
-    get_theme_generation_provider,
-)
-from backend.app.services.vibe_aggregation_engine import VibeAggregationEngine
 from backend.app.services.decor_cost_engine import DecorCostEngine
+from backend.app.services.llm_provider import (
+    get_theme_generation_provider,
+    get_vibe_extraction_provider,
+)
 from backend.app.services.moodboard_generator import MoodboardCollageGenerator
+from backend.app.services.vibe_aggregation_engine import VibeAggregationEngine
 
 logger = logging.getLogger(__name__)
 
@@ -31,8 +32,8 @@ class VibeService:
         cls,
         db: Session,
         event_id: str,
-        files: List[UploadFile],
-        text_description: Optional[str] = None
+        files: list[UploadFile],
+        text_description: str | None = None
     ) -> StyleProfile:
         event = db.query(Event).filter(Event.id == event_id).first()
         if not event:
@@ -43,7 +44,7 @@ class VibeService:
 
         # Read images into memory
         image_records = []
-        raw_images_for_provider: List[Dict[str, Any]] = []
+        raw_images_for_provider: list[dict[str, Any]] = []
 
         MAX_IMAGE_SIZE_BYTES = 5 * 1024 * 1024  # 5 MB limit per image
         for f in files:
@@ -265,7 +266,11 @@ class VibeService:
             return item
 
         theme = db.query(ThemeProposal).filter(ThemeProposal.id == item.theme_proposal_id).first()
+        if not theme:
+            raise HTTPException(status_code=404, detail="Theme proposal not found")
         profile = db.query(StyleProfile).filter(StyleProfile.id == theme.style_profile_id).first()
+        if not profile:
+            raise HTTPException(status_code=404, detail="Style profile not found")
         event_id = profile.event_id
 
         # 1. Map to BudgetItem

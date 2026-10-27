@@ -1,10 +1,11 @@
+import logging
 import os
 import uuid
-import logging
 from abc import ABC, abstractmethod
-from typing import Optional, List, Dict, Any
-from pydantic import BaseModel
+from typing import Any
+
 import httpx
+from pydantic import BaseModel
 
 from backend.app.core.config import settings
 
@@ -16,7 +17,7 @@ class WhatsAppSendResult(BaseModel):
     message_id: str
     status: str  # "sent", "failed", "queued"
     provider_used: str
-    error: Optional[str] = None
+    error: str | None = None
 
 
 class WhatsAppProvider(ABC):
@@ -28,7 +29,7 @@ class WhatsAppProvider(ABC):
         to_phone: str,
         template_name: str,
         language: str = "en",
-        parameters: Optional[List[str]] = None
+        parameters: list[str] | None = None
     ) -> WhatsAppSendResult:
         pass
 
@@ -45,7 +46,7 @@ class WhatsAppProvider(ABC):
         self,
         to_phone: str,
         body: str,
-        buttons: List[Dict[str, str]]  # [{"id": "yes", "title": "Attending"}]
+        buttons: list[dict[str, str]]  # [{"id": "yes", "title": "Attending"}]
     ) -> WhatsAppSendResult:
         pass
 
@@ -57,7 +58,7 @@ class MockWhatsAppProvider(WhatsAppProvider):
     """
 
     def __init__(self):
-        self.sent_messages: List[Dict[str, Any]] = []
+        self.sent_messages: list[dict[str, Any]] = []
 
     def clear(self):
         self.sent_messages.clear()
@@ -67,7 +68,7 @@ class MockWhatsAppProvider(WhatsAppProvider):
         to_phone: str,
         template_name: str,
         language: str = "en",
-        parameters: Optional[List[str]] = None
+        parameters: list[str] | None = None
     ) -> WhatsAppSendResult:
         msg_id = f"wamid.mock_{uuid.uuid4().hex[:16]}"
         record = {
@@ -114,7 +115,7 @@ class MockWhatsAppProvider(WhatsAppProvider):
         self,
         to_phone: str,
         body: str,
-        buttons: List[Dict[str, str]]
+        buttons: list[dict[str, str]]
     ) -> WhatsAppSendResult:
         msg_id = f"wamid.mock_{uuid.uuid4().hex[:16]}"
         record = {
@@ -146,7 +147,7 @@ class MetaCloudWhatsAppProvider(WhatsAppProvider):
         self.api_token = api_token
         self.base_url = f"https://graph.facebook.com/v21.0/{phone_number_id}/messages"
 
-    def _headers(self) -> Dict[str, str]:
+    def _headers(self) -> dict[str, str]:
         return {
             "Authorization": f"Bearer {self.api_token}",
             "Content-Type": "application/json"
@@ -157,7 +158,7 @@ class MetaCloudWhatsAppProvider(WhatsAppProvider):
         to_phone: str,
         template_name: str,
         language: str = "en",
-        parameters: Optional[List[str]] = None
+        parameters: list[str] | None = None
     ) -> WhatsAppSendResult:
         clean_to = to_phone.lstrip("+")
         components = []
@@ -253,7 +254,7 @@ class MetaCloudWhatsAppProvider(WhatsAppProvider):
         self,
         to_phone: str,
         body: str,
-        buttons: List[Dict[str, str]]
+        buttons: list[dict[str, str]]
     ) -> WhatsAppSendResult:
         clean_to = to_phone.lstrip("+")
         formatted_buttons = []
@@ -321,5 +322,5 @@ def get_whatsapp_provider() -> WhatsAppProvider:
 
     if provider_type == "cloud_api" and api_token and phone_number_id:
         return MetaCloudWhatsAppProvider(phone_number_id=phone_number_id, api_token=api_token)
-    
+
     return _default_mock_provider

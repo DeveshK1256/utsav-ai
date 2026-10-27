@@ -1,17 +1,26 @@
-from typing import List, Optional
-from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form, Response, Request
+
+from fastapi import (
+    APIRouter,
+    Depends,
+    File,
+    Form,
+    Request,
+    Response,
+    UploadFile,
+    status,
+)
 from sqlalchemy.orm import Session
 
+from backend.app.core.limiter import limiter
+from backend.app.core.security import verify_event_owner_token
 from backend.app.db.session import get_db
+from backend.app.models.models import DecorItem, Event, StyleProfile, ThemeProposal
 from backend.app.schemas.vibe import (
     AggregatedStyleProfileSchema,
-    ThemeProposalResponseSchema,
     DecorItemProposalSchema,
+    ThemeProposalResponseSchema,
 )
-from backend.app.models.models import StyleProfile, ThemeProposal, DecorItem, Event
 from backend.app.services.vibe_service import VibeService
-from backend.app.core.security import verify_event_owner_token
-from backend.app.core.limiter import limiter
 
 router = APIRouter(tags=["Vibe-to-Plan (Theme & Decor)"])
 
@@ -90,8 +99,8 @@ def format_decor_item_response(d: DecorItem) -> DecorItemProposalSchema:
 def upload_vibe_and_extract(
     request: Request,
     event_id: str,
-    files: List[UploadFile] = File([]),
-    text_description: Optional[str] = Form(None),
+    files: list[UploadFile] = File([]),
+    text_description: str | None = Form(None),
     event: Event = Depends(verify_event_owner_token),
     db: Session = Depends(get_db)
 ):
@@ -172,7 +181,7 @@ def reject_decor_item(
     return format_decor_item_response(item)
 
 
-@router.get("/events/{event_id}/vibe/profiles", response_model=List[AggregatedStyleProfileSchema])
+@router.get("/events/{event_id}/vibe/profiles", response_model=list[AggregatedStyleProfileSchema])
 def list_style_profiles(
     event_id: str,
     db: Session = Depends(get_db)
@@ -184,7 +193,7 @@ def list_style_profiles(
     return [format_profile_response(p) for p in profiles]
 
 
-@router.get("/events/{event_id}/vibe/{profile_id}/themes", response_model=List[ThemeProposalResponseSchema])
+@router.get("/events/{event_id}/vibe/{profile_id}/themes", response_model=list[ThemeProposalResponseSchema])
 def list_themes_for_profile(
     event_id: str,
     profile_id: str,

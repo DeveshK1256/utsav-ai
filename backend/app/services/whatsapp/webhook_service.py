@@ -1,18 +1,18 @@
-import os
-import hmac
 import hashlib
+import hmac
 import logging
-from typing import Dict, Any, Optional, Tuple
-from datetime import datetime, timezone
+import os
+from typing import Any
+
 from sqlalchemy.orm import Session
 
 from backend.app.core.config import settings
-from backend.app.models.models import OptOut, MessageLog, Guest, Event, EventFactSheet
-from backend.app.services.whatsapp.phone_utils import normalize_e164_phone
-from backend.app.services.whatsapp.rsvp_parser import RSVPParser
+from backend.app.models.models import Event, EventFactSheet, Guest, MessageLog, OptOut
 from backend.app.services.whatsapp.faq_bot import FAQBotService
-from backend.app.services.whatsapp.send_service import WhatsAppSendService
+from backend.app.services.whatsapp.phone_utils import normalize_e164_phone
 from backend.app.services.whatsapp.provider import WhatsAppProvider
+from backend.app.services.whatsapp.rsvp_parser import RSVPParser
+from backend.app.services.whatsapp.send_service import WhatsAppSendService
 
 logger = logging.getLogger(__name__)
 
@@ -21,13 +21,12 @@ STOP_KEYWORDS = {"stop", "unsubscribe", "halt", "cancel", "roko", "mat bhejo", "
 
 class WebhookSecurityError(Exception):
     """Raised when Meta webhook HMAC signature verification fails."""
-    pass
 
 
 class WhatsAppWebhookService:
 
     @classmethod
-    def verify_meta_signature(cls, raw_payload: bytes, signature_header: Optional[str]) -> bool:
+    def verify_meta_signature(cls, raw_payload: bytes, signature_header: str | None) -> bool:
         """
         Verifies Meta X-Hub-Signature-256 HMAC SHA256 header.
         Rejects unsigned or forged requests (fail-closed).
@@ -59,9 +58,9 @@ class WhatsAppWebhookService:
     def handle_inbound_payload(
         cls,
         db: Session,
-        payload: Dict[str, Any],
-        provider: Optional[WhatsAppProvider] = None
-    ) -> Dict[str, Any]:
+        payload: dict[str, Any],
+        provider: WhatsAppProvider | None = None
+    ) -> dict[str, Any]:
         """
         Parses Meta Cloud API inbound webhook payload.
         Handles:

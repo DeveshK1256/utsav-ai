@@ -5,10 +5,10 @@ Never invents facts (dates, venues, ceremonies) not present in the data.
 Provides a deterministic offline fallback stub when Gemini is unavailable.
 """
 
-import os
 import json
 import logging
-from typing import Optional, List, Dict, Any
+import os
+
 from pydantic import BaseModel, Field
 
 logger = logging.getLogger(__name__)
@@ -22,9 +22,9 @@ class WordingVariant(BaseModel):
 
 
 class InvitationWordingResponse(BaseModel):
-    variants: List[WordingVariant]
+    variants: list[WordingVariant]
     provider_used: str = Field("stub", description="gemini or stub")
-    fallback_warning: Optional[str] = None
+    fallback_warning: str | None = None
     content_review_note: str = (
         "Ceremony details and wording are AI-assisted starting baselines; "
         "please verify with your family and elders before printing."
@@ -41,13 +41,13 @@ class InvitationWordingAgent:
     def compose_wording(
         cls,
         event_name: str,
-        host_name: Optional[str],
+        host_name: str | None,
         event_type: str,
         date_str: str,
-        venue_str: Optional[str],
-        muhurat_time: Optional[str] = None,
-        ceremony_names: Optional[List[str]] = None,
-        design_brief: Optional[str] = None
+        venue_str: str | None,
+        muhurat_time: str | None = None,
+        ceremony_names: list[str] | None = None,
+        design_brief: str | None = None
     ) -> InvitationWordingResponse:
         # Check for Gemini API key
         gemini_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
@@ -93,12 +93,12 @@ class InvitationWordingAgent:
     def _deterministic_fallback(
         cls,
         event_name: str,
-        host_name: Optional[str],
+        host_name: str | None,
         event_type: str,
         date_str: str,
-        venue_str: Optional[str],
-        muhurat_time: Optional[str] = None,
-        ceremony_names: Optional[List[str]] = None
+        venue_str: str | None,
+        muhurat_time: str | None = None,
+        ceremony_names: list[str] | None = None
     ) -> InvitationWordingResponse:
         """Deterministic non-LLM template options conforming strictly to facts."""
         clean_event = event_name.strip() or "Celebration"
@@ -166,13 +166,13 @@ class InvitationWordingAgent:
         cls,
         gemini_key: str,
         event_name: str,
-        host_name: Optional[str],
+        host_name: str | None,
         event_type: str,
         date_str: str,
-        venue_str: Optional[str],
-        muhurat_time: Optional[str],
-        ceremony_names: Optional[List[str]],
-        design_brief: Optional[str]
+        venue_str: str | None,
+        muhurat_time: str | None,
+        ceremony_names: list[str] | None,
+        design_brief: str | None
     ) -> InvitationWordingResponse:
         import httpx
 

@@ -1,12 +1,12 @@
 import csv
 import io
 import logging
-from typing import List, Dict, Any, Tuple, Optional
-from datetime import datetime, timezone
-from sqlalchemy.orm import Session
-from pydantic import BaseModel
+from typing import Any
 
-from backend.app.models.models import Guest, Event
+from pydantic import BaseModel
+from sqlalchemy.orm import Session
+
+from backend.app.models.models import Event, Guest
 from backend.app.services.whatsapp.phone_utils import validate_and_normalize_guest_phone
 
 logger = logging.getLogger(__name__)
@@ -14,8 +14,8 @@ logger = logging.getLogger(__name__)
 
 class GuestImportError(BaseModel):
     row_number: int
-    name: Optional[str] = None
-    phone_raw: Optional[str] = None
+    name: str | None = None
+    phone_raw: str | None = None
     reason: str
 
 
@@ -24,8 +24,8 @@ class GuestImportResponse(BaseModel):
     successful_count: int
     skipped_duplicates_count: int
     invalid_rows_count: int
-    imported_guests: List[Dict[str, Any]]
-    errors: List[GuestImportError]
+    imported_guests: list[dict[str, Any]]
+    errors: list[GuestImportError]
 
 
 class RSVPSummary(BaseModel):
@@ -35,7 +35,7 @@ class RSVPSummary(BaseModel):
     maybe_count: int
     pending_count: int
     total_confirmed_headcount: int
-    diet_breakdown: Dict[str, int]
+    diet_breakdown: dict[str, int]
     mobility_needs_count: int
     kids_count: int
     accommodation_needed_count: int
@@ -48,7 +48,7 @@ class GuestService:
         cls,
         db: Session,
         event_id: str,
-        rows: List[Dict[str, Any]]
+        rows: list[dict[str, Any]]
     ) -> GuestImportResponse:
         """
         Validates, normalizes, and ingests guest rows.
@@ -65,7 +65,7 @@ class GuestService:
         }
 
         successful = []
-        errors: List[GuestImportError] = []
+        errors: list[GuestImportError] = []
         skipped_duplicates = 0
         seen_batch_phones = set()
 
@@ -124,7 +124,7 @@ class GuestService:
             headcount = 1 + kids
             try:
                 if row.get("headcount"):
-                    headcount = max(1, int(row.get("headcount")))
+                    headcount = max(1, int(str(row.get("headcount") or 1)))
             except (ValueError, TypeError):
                 pass
 
@@ -168,7 +168,7 @@ class GuestService:
         )
 
     @classmethod
-    def parse_csv_file(cls, csv_text: str) -> List[Dict[str, Any]]:
+    def parse_csv_file(cls, csv_text: str) -> list[dict[str, Any]]:
         """Parses CSV text into a list of row dicts."""
         reader = csv.DictReader(io.StringIO(csv_text.strip()))
         rows = []

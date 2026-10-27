@@ -1,5 +1,4 @@
 import re
-from typing import Tuple, Optional
 
 
 def normalize_e164_phone(phone_raw: str) -> str:
@@ -53,7 +52,7 @@ def normalize_e164_phone(phone_raw: str) -> str:
     raise ValueError(f"Unparseable phone number '{phone_raw}'. Provide a valid 10-digit Indian mobile or +E.164 format.")
 
 
-def validate_and_normalize_guest_phone(phone_raw: str) -> Tuple[bool, Optional[str], Optional[str]]:
+def validate_and_normalize_guest_phone(phone_raw: str) -> tuple[bool, str | None, str | None]:
     """
     Returns (is_valid, normalized_phone, error_message).
     Safe wrapper for batch imports without throwing exceptions.

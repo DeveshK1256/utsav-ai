@@ -1,19 +1,21 @@
 import os
-import json
 from abc import ABC, abstractmethod
-from typing import Dict, Any, Optional, List
-from backend.app.schemas.quotes import QuoteExtractionPayloadSchema, ExtractedLineItemSchema
+from typing import Any
+
+from backend.app.schemas.quotes import (
+    ExtractedLineItemSchema,
+    QuoteExtractionPayloadSchema,
+)
 from backend.app.schemas.vibe import (
-    VibeExtractionPayloadSchema,
+    DecorItemProposalSchema,
     SingleImageVibeSchema,
     ThemeGenerationPayloadSchema,
-    DecorItemProposalSchema,
+    VibeExtractionPayloadSchema,
 )
 
 
 class ExtractionValidationError(Exception):
     """Raised when an extraction provider fails schema validation after all retries."""
-    pass
 
 
 class BaseQuoteExtractionProvider(ABC):
@@ -23,10 +25,9 @@ class BaseQuoteExtractionProvider(ABC):
         file_bytes: bytes,
         file_name: str,
         mime_type: str,
-        category_hint: Optional[str] = None
+        category_hint: str | None = None
     ) -> QuoteExtractionPayloadSchema:
         """Extract structured quote payload from document bytes."""
-        pass
 
 
 class BaseNegotiationDraftProvider(ABC):
@@ -37,12 +38,11 @@ class BaseNegotiationDraftProvider(ABC):
         category: str,
         quoted_total: float,
         target_discount_pct: float,
-        leverage_points: List[str],
-        competing_vendor_name: Optional[str] = None,
-        competing_quote_total: Optional[float] = None
-    ) -> Dict[str, Dict[str, str]]:
+        leverage_points: list[str],
+        competing_vendor_name: str | None = None,
+        competing_quote_total: float | None = None
+    ) -> dict[str, dict[str, str]]:
         """Generate polite, firm, and bundle-ask negotiation draft variants in English and Hindi."""
-        pass
 
 
 class BaseReplanningExplanationProvider(ABC):
@@ -50,42 +50,39 @@ class BaseReplanningExplanationProvider(ABC):
     def generate_explanation_and_mitigations(
         self,
         change_type: str,
-        diff_summary: Dict[str, Any],
+        diff_summary: dict[str, Any],
         total_budget: float
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Generate plain-language explanation of calculated changes and mitigation suggestions
         if budget is exceeded. Grounded strictly in provided computed numbers.
         """
-        pass
 
 
 class BaseVibeExtractionProvider(ABC):
     @abstractmethod
     def extract_vibe_from_images(
         self,
-        images: List[Dict[str, Any]],
-        text_description: Optional[str] = None
+        images: list[dict[str, Any]],
+        text_description: str | None = None
     ) -> VibeExtractionPayloadSchema:
         """
         Extract aesthetic vibe (palettes, tags, materials, mood keywords) from a batch of images.
         Each image dict has: {'bytes': bytes, 'mime_type': str, 'file_name': str}.
         """
-        pass
 
 
 class BaseThemeGenerationProvider(ABC):
     @abstractmethod
     def generate_theme_proposal(
         self,
-        style_profile: Dict[str, Any],
-        event_details: Dict[str, Any]
+        style_profile: dict[str, Any],
+        event_details: dict[str, Any]
     ) -> ThemeGenerationPayloadSchema:
         """
         Generate a comprehensive theme proposal with >=10 concrete decor items with formulas,
         palettes, culinary directions, playlist genres, dress codes, and invitation briefs.
         """
-        pass
 
 
 class DeterministicStubQuoteExtractionProvider(BaseQuoteExtractionProvider):
@@ -99,7 +96,7 @@ class DeterministicStubQuoteExtractionProvider(BaseQuoteExtractionProvider):
         file_bytes: bytes,
         file_name: str,
         mime_type: str,
-        category_hint: Optional[str] = None
+        category_hint: str | None = None
     ) -> QuoteExtractionPayloadSchema:
         cat = (category_hint or "caterer").lower()
 
@@ -278,10 +275,10 @@ class DeterministicStubNegotiationDraftProvider(BaseNegotiationDraftProvider):
         category: str,
         quoted_total: float,
         target_discount_pct: float,
-        leverage_points: List[str],
-        competing_vendor_name: Optional[str] = None,
-        competing_quote_total: Optional[float] = None
-    ) -> Dict[str, Dict[str, str]]:
+        leverage_points: list[str],
+        competing_vendor_name: str | None = None,
+        competing_quote_total: float | None = None
+    ) -> dict[str, dict[str, str]]:
         target_amount = round(quoted_total * (1.0 - target_discount_pct / 100.0), 2)
         diff_amount = round(quoted_total - target_amount, 2)
         leverage_summary_en = "; ".join(leverage_points) if leverage_points else "standard regional festival rates"
@@ -343,7 +340,9 @@ def get_quote_extraction_provider() -> BaseQuoteExtractionProvider:
     gemini_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
     if gemini_key:
         try:
-            from backend.app.services.providers.gemini_provider import GeminiQuoteExtractionProvider
+            from backend.app.services.providers.gemini_provider import (
+                GeminiQuoteExtractionProvider,
+            )
             return GeminiQuoteExtractionProvider(api_key=gemini_key)
         except Exception:
             pass
@@ -351,7 +350,9 @@ def get_quote_extraction_provider() -> BaseQuoteExtractionProvider:
     openai_key = os.getenv("OPENAI_API_KEY")
     if openai_key:
         try:
-            from backend.app.services.providers.openai_provider import OpenAIQuoteExtractionProvider
+            from backend.app.services.providers.openai_provider import (
+                OpenAIQuoteExtractionProvider,
+            )
             return OpenAIQuoteExtractionProvider(api_key=openai_key)
         except Exception:
             pass
@@ -366,7 +367,9 @@ def get_negotiation_draft_provider() -> BaseNegotiationDraftProvider:
     gemini_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
     if gemini_key:
         try:
-            from backend.app.services.providers.gemini_provider import GeminiNegotiationDraftProvider
+            from backend.app.services.providers.gemini_provider import (
+                GeminiNegotiationDraftProvider,
+            )
             return GeminiNegotiationDraftProvider(api_key=gemini_key)
         except Exception:
             pass
@@ -383,9 +386,9 @@ class DeterministicStubReplanningExplanationProvider(BaseReplanningExplanationPr
     def generate_explanation_and_mitigations(
         self,
         change_type: str,
-        diff_summary: Dict[str, Any],
+        diff_summary: dict[str, Any],
         total_budget: float
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         delta = diff_summary.get("budget_total_delta", 0.0)
         new_total = diff_summary.get("budget_total_new", 0.0)
         over_budget = new_total > total_budget
@@ -462,7 +465,9 @@ def get_replanning_explanation_provider() -> BaseReplanningExplanationProvider:
     gemini_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
     if gemini_key:
         try:
-            from backend.app.services.providers.gemini_provider import GeminiReplanningExplanationProvider
+            from backend.app.services.providers.gemini_provider import (
+                GeminiReplanningExplanationProvider,
+            )
             return GeminiReplanningExplanationProvider(api_key=gemini_key)
         except Exception:
             pass
@@ -478,8 +483,8 @@ class DeterministicStubVibeProvider(BaseVibeExtractionProvider, BaseThemeGenerat
 
     def extract_vibe_from_images(
         self,
-        images: List[Dict[str, Any]],
-        text_description: Optional[str] = None
+        images: list[dict[str, Any]],
+        text_description: str | None = None
     ) -> VibeExtractionPayloadSchema:
         single_images = []
         count = max(len(images), 1)
@@ -509,8 +514,8 @@ class DeterministicStubVibeProvider(BaseVibeExtractionProvider, BaseThemeGenerat
 
     def generate_theme_proposal(
         self,
-        style_profile: Dict[str, Any],
-        event_details: Dict[str, Any]
+        style_profile: dict[str, Any],
+        event_details: dict[str, Any]
     ) -> ThemeGenerationPayloadSchema:
         palette = style_profile.get("extracted_palette") or ["#FF9933", "#800020", "#FFD700", "#2E8B57", "#FFF8DC"]
 
@@ -623,7 +628,9 @@ def get_vibe_extraction_provider() -> BaseVibeExtractionProvider:
     gemini_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
     if gemini_key:
         try:
-            from backend.app.services.providers.gemini_provider import GeminiVibeProvider
+            from backend.app.services.providers.gemini_provider import (
+                GeminiVibeProvider,
+            )
             return GeminiVibeProvider(api_key=gemini_key)
         except Exception:
             pass
@@ -638,7 +645,9 @@ def get_theme_generation_provider() -> BaseThemeGenerationProvider:
     gemini_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
     if gemini_key:
         try:
-            from backend.app.services.providers.gemini_provider import GeminiVibeProvider
+            from backend.app.services.providers.gemini_provider import (
+                GeminiVibeProvider,
+            )
             return GeminiVibeProvider(api_key=gemini_key)
         except Exception:
             pass

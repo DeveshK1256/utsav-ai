@@ -1,16 +1,14 @@
-import os
-import re
-import math
 import json
+import math
+import re
 from pathlib import Path
-from typing import Tuple, Dict, Any, Optional
 
 CONFIG_PATH = Path(__file__).resolve().parent.parent / "config" / "city_tiers.json"
 
 
 def get_city_multiplier(city: str) -> float:
     if CONFIG_PATH.exists():
-        with open(CONFIG_PATH, "r", encoding="utf-8") as f:
+        with open(CONFIG_PATH, encoding="utf-8") as f:
             cfg = json.load(f)
             c_norm = (city or "").strip().lower()
             tier_name = cfg.get("city_to_tier", {}).get(c_norm, cfg.get("city_to_tier", {}).get("default", "tier_2"))
@@ -29,7 +27,7 @@ class DecorCostEngine:
     SERVICE_CATEGORIES = {"cultural_performance"}
     DISTRIBUTED_CATEGORIES = {"lighting", "seating_lounges", "table_centerpiece", "default"}
 
-    BASE_UNIT_COSTS: Dict[str, Dict[str, Tuple[float, float]]] = {
+    BASE_UNIT_COSTS: dict[str, dict[str, tuple[float, float]]] = {
         # Structural Installations (typically 1-2 fixed units per celebration)
         "mandap": {
             "low": (25000.0, 45000.0),
@@ -89,20 +87,20 @@ class DecorCostEngine:
 
     # Rates for standalone fixed accent/display items when categorized under 'default'
     # Prevents 1-off focal pieces (e.g. welcome easel, brass display) from resolving to 1x distributed trinket rates
-    STANDALONE_DEFAULT_COSTS: Dict[str, Tuple[float, float]] = {
+    STANDALONE_DEFAULT_COSTS: dict[str, tuple[float, float]] = {
         "low": (1800.0, 3200.0),
         "medium": (3500.0, 6500.0),
         "high": (7500.0, 14000.0),
     }
 
     # Defensive absolute floors for any standalone/fixed line item before city multiplier
-    MIN_STANDALONE_FLOOR: Dict[str, Tuple[float, float]] = {
+    MIN_STANDALONE_FLOOR: dict[str, tuple[float, float]] = {
         "low": (1200.0, 2200.0),
         "medium": (2400.0, 4200.0),
         "high": (4800.0, 8500.0),
     }
 
-    LIGHTING_PACKAGE_COSTS: Dict[str, Tuple[float, float]] = {
+    LIGHTING_PACKAGE_COSTS: dict[str, tuple[float, float]] = {
         "low": (12000.0, 20000.0),
         "medium": (22000.0, 38000.0),
         "high": (45000.0, 75000.0),
@@ -149,9 +147,9 @@ class DecorCostEngine:
         cost_tier: str,
         computed_quantity: int = 1,
         city: str = "pune",
-        quantity: Optional[int] = None,
-        formula_str: Optional[str] = None
-    ) -> Tuple[float, float]:
+        quantity: int | None = None,
+        formula_str: str | None = None
+    ) -> tuple[float, float]:
         """
         Resolves unit cost based on category and tier, applies city multiplier,
         and multiplies by computed quantity.
@@ -188,10 +186,8 @@ class DecorCostEngine:
             min_floor_low, min_floor_high = cls.MIN_STANDALONE_FLOOR.get(tier_clean, cls.MIN_STANDALONE_FLOOR["medium"])
             scaled_floor_low = round(min_floor_low * city_mult, 2)
             scaled_floor_high = round(min_floor_high * city_mult, 2)
-            if total_low < scaled_floor_low:
-                total_low = scaled_floor_low
-            if total_high < scaled_floor_high:
-                total_high = scaled_floor_high
+            total_low = max(total_low, scaled_floor_low)
+            total_high = max(total_high, scaled_floor_high)
 
         return (total_low, total_high)
 

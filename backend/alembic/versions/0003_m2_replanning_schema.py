@@ -5,8 +5,8 @@ Revises: 0002_m1_quote_audit_schema
 Create Date: 2026-10-22 00:00:00.000000
 
 """
-from alembic import op
 import sqlalchemy as sa
+from alembic import op
 
 # revision identifiers, used by Alembic.
 revision = '0003_m2_replanning_schema'

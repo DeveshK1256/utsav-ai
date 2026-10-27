@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { Navbar } from '@/components/ui/Navbar';
@@ -125,6 +125,27 @@ export default function ScopedQuotesDashboardClient() {
       : 'https://utsav-ai-ycg2.onrender.com/api/v1';
   };
 
+  const loadQuotes = useCallback(async (targetEventId: string) => {
+    setIsLoading(true);
+    try {
+      const apiBase = getApiBase();
+      const res = await fetch(`${apiBase}/quotes/event/${targetEventId}`, {
+        headers: getAuthHeaders(targetEventId)
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setQuotes(data);
+        if (data.length > 0 && !activeQuote) {
+          setActiveQuote(data[0]);
+        }
+      }
+    } catch (err) {
+      console.error('Failed to load scoped quotes:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [activeQuote]);
+
   // 1. Fetch Event Metadata & Scoped Quotes
   useEffect(() => {
     if (!eventId || eventId === 'default') {
@@ -153,28 +174,7 @@ export default function ScopedQuotesDashboardClient() {
 
     // Fetch Quotes for this Event
     loadQuotes(eventId);
-  }, [eventId]);
-
-  async function loadQuotes(targetEventId: string) {
-    setIsLoading(true);
-    try {
-      const apiBase = getApiBase();
-      const res = await fetch(`${apiBase}/quotes/event/${targetEventId}`, {
-        headers: getAuthHeaders(targetEventId)
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setQuotes(data);
-        if (data.length > 0 && !activeQuote) {
-          setActiveQuote(data[0]);
-        }
-      }
-    } catch (err) {
-      console.error('Failed to load scoped quotes:', err);
-    } finally {
-      setIsLoading(false);
-    }
-  }
+  }, [eventId, loadQuotes]);
 
   // Upload quote file for THIS event
   async function handleFileUpload(files: FileList | null) {

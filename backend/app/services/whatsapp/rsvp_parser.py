@@ -1,13 +1,13 @@
 import re
-from typing import Optional
+
 from pydantic import BaseModel
 
 
 class ParsedRSVP(BaseModel):
     rsvp_status: str  # "attending", "declined", "maybe", "unknown"
     headcount: int
-    diet: Optional[str] = None  # "veg", "jain", "non_veg", "vegan"
-    notes: Optional[str] = None
+    diet: str | None = None  # "veg", "jain", "non_veg", "vegan"
+    notes: str | None = None
     confidence: float  # Deterministically computed 0.0 - 1.0
     needs_host_review: bool
     parsing_method: str  # "quick_reply" or "deterministic_nlp"
@@ -64,7 +64,7 @@ class RSVPParser:
                 needs_host_review=False,
                 parsing_method="quick_reply"
             )
-        
+
         return ParsedRSVP(
             rsvp_status="unknown",
             headcount=1,
@@ -81,11 +81,16 @@ class RSVPParser:
         """
         raw = text.strip()
         lower = raw.lower()
-        cleaned_words = set(re.findall(r"\b[a-zA-Z']+\b", lower))
+        tokens_set = set(re.findall(r"\b[a-zA-Z']+\b", lower))
 
-        has_attending = any(token in lower for token in cls.ATTENDING_TOKENS)
-        has_declined = any(token in lower for token in cls.DECLINED_TOKENS)
-        has_maybe = any(token in lower for token in cls.MAYBE_TOKENS)
+        def _has_token(token: str) -> bool:
+            if " " in token:
+                return bool(re.search(rf"\b{re.escape(token)}\b", lower))
+            return token in tokens_set
+
+        has_attending = any(_has_token(token) for token in cls.ATTENDING_TOKENS)
+        has_declined = any(_has_token(token) for token in cls.DECLINED_TOKENS)
+        has_maybe = any(_has_token(token) for token in cls.MAYBE_TOKENS)
 
         # 1. Resolve Status
         if has_attending and not has_declined and not has_maybe:
@@ -153,7 +158,7 @@ class RSVPParser:
 
         # 4. Deterministic Confidence Gating (DEC-002)
         confidence = 0.0
-        if status in ("attending", "declined", "maybe"):
+        if status in ("attending", "declined"):
             confidence += 0.6  # Base score for unambiguous status token
             if explicit_headcount_found and 1 <= headcount <= 15:
                 confidence += 0.25
@@ -164,6 +169,8 @@ class RSVPParser:
 
             if diet is not None:
                 confidence += 0.05
+        elif status == "maybe":
+            confidence = 0.55  # Tentative status requires host review per DEC-002
         else:
             confidence = 0.35  # Ambiguous or no clear intent
 

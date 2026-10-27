@@ -1,7 +1,7 @@
 import io
 import math
-from typing import List, Optional
-from PIL import Image, ImageDraw, ImageFont
+
+from PIL import Image, ImageDraw
 
 
 def hex_to_rgb(hex_str: str) -> tuple:
@@ -23,10 +23,10 @@ class MoodboardCollageGenerator:
     @classmethod
     def generate_collage(
         cls,
-        image_bytes_list: List[bytes],
-        palette: List[str],
+        image_bytes_list: list[bytes],
+        palette: list[str],
         theme_name: str = "Cultural Celebration Theme",
-        style_tags: Optional[List[str]] = None
+        style_tags: list[str] | None = None
     ) -> bytes:
         canvas_width = 1200
         canvas_height = 800

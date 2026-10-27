@@ -5,8 +5,8 @@ Revises: 0003_m2_replanning_schema
 Create Date: 2026-10-22 00:00:00.000000
 
 """
-from alembic import op
 import sqlalchemy as sa
+from alembic import op
 
 # revision identifiers, used by Alembic.
 revision = '0004_m3_vibe_to_plan_schema'

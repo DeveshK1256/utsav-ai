@@ -1,14 +1,12 @@
 import statistics
-from typing import List, Dict, Any, Optional
-from sqlalchemy.orm import Session
+from typing import Any
+
 from backend.app.schemas.quotes import (
-    ExtractedLineItemSchema,
-    HiddenCostAlertSchema,
     BenchmarkComparisonSchema,
+    HiddenCostAlertSchema,
     QuoteComparisonItemSchema,
-    QuoteComparisonResponseSchema
+    QuoteComparisonResponseSchema,
 )
-from backend.app.services.budget_engine import BudgetScalingEngine
 
 
 class QuoteComparisonEngine:
@@ -18,7 +16,7 @@ class QuoteComparisonEngine:
         cls,
         category: str,
         city_tier: str,
-        benchmark_samples: List[float],
+        benchmark_samples: list[float],
         quote_unit_cost: float
     ) -> BenchmarkComparisonSchema:
         """
@@ -101,14 +99,14 @@ class QuoteComparisonEngine:
         event_id: str,
         category: str,
         target_guest_count: int,
-        quotes_data: List[Dict[str, Any]],
-        benchmark_samples: List[float] = None
+        quotes_data: list[dict[str, Any]],
+        benchmark_samples: list[float] | None = None
     ) -> QuoteComparisonResponseSchema:
         """
         Compares multiple quotes side-by-side, adding conservative buffers for missing hidden costs.
         """
         benchmark_samples = benchmark_samples or []
-        compared_items: List[QuoteComparisonItemSchema] = []
+        compared_items: list[QuoteComparisonItemSchema] = []
 
         for q in quotes_data:
             quote_id = q["id"]
@@ -118,7 +116,7 @@ class QuoteComparisonEngine:
             normalized_base = cls.normalize_quote_to_guest_count(raw_total, quoted_guests, target_guest_count, category)
 
             # Analyze hidden cost risks
-            alerts: List[HiddenCostAlertSchema] = q.get("hidden_cost_alerts", [])
+            alerts: list[HiddenCostAlertSchema] = q.get("hidden_cost_alerts", [])
             missing_risks = [a.name for a in alerts if a.status == "missing_from_quote"]
 
             # Estimate conservative buffer (e.g. ₹15,000 per major missing unmentioned item)

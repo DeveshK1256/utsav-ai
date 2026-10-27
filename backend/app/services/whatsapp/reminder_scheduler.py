@@ -1,8 +1,8 @@
-from datetime import datetime, timedelta, time
-from typing import List, Dict, Any, Optional
+from datetime import datetime, time, timedelta
+
 from pydantic import BaseModel
 
-from backend.app.models.models import SubEvent, Event
+from backend.app.models.models import Event, SubEvent
 
 
 class ScheduledReminderPlan(BaseModel):
@@ -68,14 +68,14 @@ class ReminderScheduler:
     def generate_event_reminder_plans(
         cls,
         event: Event,
-        sub_events: List[SubEvent],
-        offsets: Optional[List[str]] = None
-    ) -> List[ScheduledReminderPlan]:
+        sub_events: list[SubEvent],
+        offsets: list[str] | None = None
+    ) -> list[ScheduledReminderPlan]:
         """
         Generates full deterministic reminder schedule for all active sub-events in an event.
         """
         target_offsets = offsets or cls.SUPPORTED_OFFSETS
-        plans: List[ScheduledReminderPlan] = []
+        plans: list[ScheduledReminderPlan] = []
 
         for sub in sub_events:
             for offset in target_offsets:

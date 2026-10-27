@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { Navbar } from '@/components/ui/Navbar';
@@ -66,6 +66,30 @@ export default function ChangeProposalDiffClient() {
   const [isSimulating, setIsSimulating] = useState<boolean>(false);
   const [customGuestCount, setCustomGuestCount] = useState<number>(300);
 
+  const fetchProposal = useCallback(async (targetChangeId: string) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch(`${API_BASE_URL}/events/${eventId}/changes/${targetChangeId}`, {
+        headers: getAuthHeaders(eventId)
+      });
+      if (!res.ok) {
+        throw new Error(`Failed to load change proposal (${res.status})`);
+      }
+      const data: ChangeProposal = await res.json();
+      setProposal(data);
+      const initialOverrides: Record<string, number> = {};
+      data.budget_diff?.forEach((item) => {
+        initialOverrides[item.budget_item_id] = item.new_amount;
+      });
+      setOverrides(initialOverrides);
+    } catch (err: any) {
+      setError(err.message || 'Error loading replanning diff');
+    } finally {
+      setLoading(false);
+    }
+  }, [eventId]);
+
   useEffect(() => {
     if (!eventId || eventId === 'default') {
       setLoading(false);
@@ -108,29 +132,7 @@ export default function ChangeProposalDiffClient() {
     } else {
       setLoading(false);
     }
-  }, [eventId, changeId]);
-
-  const fetchProposal = async (targetChangeId: string) => {
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await fetch(`${API_BASE_URL}/events/${eventId}/changes/${targetChangeId}`);
-      if (!res.ok) {
-        throw new Error(`Failed to load change proposal (${res.status})`);
-      }
-      const data: ChangeProposal = await res.json();
-      setProposal(data);
-      const initialOverrides: Record<string, number> = {};
-      data.budget_diff?.forEach((item) => {
-        initialOverrides[item.budget_item_id] = item.new_amount;
-      });
-      setOverrides(initialOverrides);
-    } catch (err: any) {
-      setError(err.message || 'Error loading replanning diff');
-    } finally {
-      setLoading(false);
-    }
-  };
+  }, [eventId, changeId, fetchProposal]);
 
   const handleSimulateScenario = async (changeType: string, payload: Record<string, any>) => {
     setIsSimulating(true);

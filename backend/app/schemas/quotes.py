@@ -1,6 +1,7 @@
-from datetime import datetime, date
-from typing import List, Optional, Dict, Any, Literal
-from pydantic import BaseModel, Field, ConfigDict
+from datetime import datetime
+from typing import Any, Literal
+
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class ExtractedLineItemSchema(BaseModel):
@@ -11,8 +12,8 @@ class ExtractedLineItemSchema(BaseModel):
     unit: str = Field(default="units", description="Unit of measurement (plates, days, sqft, units)")
     unit_price: float = Field(..., ge=0, description="Unit rate in INR")
     total: float = Field(..., ge=0, description="Line item total in INR")
-    category_tag: Optional[str] = Field(default=None, description="Granular category tag")
-    notes: Optional[str] = Field(default=None, description="Special conditions or specifications")
+    category_tag: str | None = Field(default=None, description="Granular category tag")
+    notes: str | None = Field(default=None, description="Special conditions or specifications")
 
 
 class QuoteExtractionPayloadSchema(BaseModel):
@@ -24,9 +25,9 @@ class QuoteExtractionPayloadSchema(BaseModel):
     subtotal: float = Field(..., ge=0, description="Pre-tax subtotal")
     tax_amount: float = Field(default=0.0, ge=0, description="Explicit tax amount")
     total_amount: float = Field(..., ge=0, description="Total payable amount quoted")
-    line_items: List[ExtractedLineItemSchema] = Field(default_factory=list)
-    terms_and_conditions: List[str] = Field(default_factory=list)
-    validity_date: Optional[str] = Field(default=None, description="Quote validity or expiration date")
+    line_items: list[ExtractedLineItemSchema] = Field(default_factory=list)
+    terms_and_conditions: list[str] = Field(default_factory=list)
+    validity_date: str | None = Field(default=None, description="Quote validity or expiration date")
     is_gst_included: bool = Field(default=False, description="Whether total explicitly includes GST")
     confidence_score: float = Field(default=0.95, ge=0.0, le=1.0)
 
@@ -73,19 +74,13 @@ class QuoteExtractionPayloadSchema(BaseModel):
         # 5. Math Consistency: sum(line_items) vs Subtotal / Total (0.45)
         if self.line_items and len(self.line_items) >= 1:
             items_sum = sum(it.total for it in self.line_items)
-            if self.subtotal > 0 and abs(items_sum - self.subtotal) <= 2.0:
-                score += 0.45
-            elif self.total_amount > 0 and abs(items_sum - self.total_amount) <= 2.0:
-                score += 0.45
-            elif self.total_amount > 0 and abs((items_sum + self.tax_amount) - self.total_amount) <= 2.0:
+            if (self.subtotal > 0 and abs(items_sum - self.subtotal) <= 2.0) or (self.total_amount > 0 and abs(items_sum - self.total_amount) <= 2.0) or (self.total_amount > 0 and abs((items_sum + self.tax_amount) - self.total_amount) <= 2.0):
                 score += 0.45
 
         # 6. Tax & Grand Total Integrity (0.15)
         if self.total_amount > 0:
             if self.subtotal > 0:
-                if abs((self.subtotal + self.tax_amount) - self.total_amount) <= 2.0:
-                    score += 0.15
-                elif self.is_gst_included and abs(self.subtotal - self.total_amount) <= 2.0:
+                if abs((self.subtotal + self.tax_amount) - self.total_amount) <= 2.0 or (self.is_gst_included and abs(self.subtotal - self.total_amount) <= 2.0):
                     score += 0.15
             elif self.tax_amount == 0.0:
                 score += 0.15
@@ -106,12 +101,12 @@ class BenchmarkComparisonSchema(BaseModel):
     category: str
     city_tier: str
     sample_size: int
-    median_unit_cost: Optional[float] = None
-    quote_unit_cost: Optional[float] = None
+    median_unit_cost: float | None = None
+    quote_unit_cost: float | None = None
     cost_status: str = Field(description="'above_median', 'near_median', 'below_median', or 'limited_data'")
-    percentage_diff_vs_median: Optional[float] = None
+    percentage_diff_vs_median: float | None = None
     is_limited_data: bool = Field(default=False, description="True if sample size < 5")
-    reasoning: Dict[str, Any]
+    reasoning: dict[str, Any]
 
 
 class QuoteDocumentResponseSchema(BaseModel):
@@ -119,7 +114,7 @@ class QuoteDocumentResponseSchema(BaseModel):
 
     id: str
     event_id: str
-    vendor_id: Optional[str] = None
+    vendor_id: str | None = None
     vendor_name: str
     category: str
     file_name: str
@@ -131,16 +126,16 @@ class QuoteDocumentResponseSchema(BaseModel):
             "or low clarity document), or 'failed_needs_manual_entry' (corrupted file, unparseable schema, or hard error)"
         )
     )
-    total_quoted_amount: Optional[float] = None
-    tax_amount: Optional[float] = None
-    line_items: List[ExtractedLineItemSchema] = Field(default_factory=list)
-    hidden_cost_alerts: List[HiddenCostAlertSchema] = Field(default_factory=list)
-    benchmark_comparison: Optional[BenchmarkComparisonSchema] = None
+    total_quoted_amount: float | None = None
+    tax_amount: float | None = None
+    line_items: list[ExtractedLineItemSchema] = Field(default_factory=list)
+    hidden_cost_alerts: list[HiddenCostAlertSchema] = Field(default_factory=list)
+    benchmark_comparison: BenchmarkComparisonSchema | None = None
     uploaded_at: datetime
 
 
 class QuoteComparisonRequestSchema(BaseModel):
-    quote_ids: List[str] = Field(..., min_length=2, description="At least two quote IDs to compare")
+    quote_ids: list[str] = Field(..., min_length=2, description="At least two quote IDs to compare")
 
 
 class QuoteComparisonItemSchema(BaseModel):
@@ -149,26 +144,26 @@ class QuoteComparisonItemSchema(BaseModel):
     raw_total: float
     effective_total_with_hidden_buffer: float
     normalized_cost_per_guest: float
-    line_items: List[ExtractedLineItemSchema]
+    line_items: list[ExtractedLineItemSchema]
     hidden_cost_risk_count: int
-    hidden_cost_risks: List[str]
+    hidden_cost_risks: list[str]
 
 
 class QuoteComparisonResponseSchema(BaseModel):
     event_id: str
     category: str
     guest_count: int
-    compared_quotes: List[QuoteComparisonItemSchema]
-    benchmark_median_unit_cost: Optional[float] = None
+    compared_quotes: list[QuoteComparisonItemSchema]
+    benchmark_median_unit_cost: float | None = None
     benchmark_sample_size: int = 0
     benchmark_is_limited_data: bool = False
-    best_value_quote_id: Optional[str] = None
-    reasoning: Dict[str, Any]
+    best_value_quote_id: str | None = None
+    reasoning: dict[str, Any]
 
 
 class NegotiationDraftRequestSchema(BaseModel):
     quote_id: str
-    competing_quote_id: Optional[str] = None
+    competing_quote_id: str | None = None
     target_discount_percentage: float = Field(default=10.0, ge=1.0, le=50.0)
 
 
@@ -181,6 +176,6 @@ class NegotiationDraftResponseSchema(BaseModel):
     quote_id: str
     vendor_name: str
     target_discount_percentage: float
-    leverage_points: List[str]
-    draft_variants: Dict[str, NegotiationMessageVariantSchema]  # 'polite', 'firm', 'bundle_ask'
+    leverage_points: list[str]
+    draft_variants: dict[str, NegotiationMessageVariantSchema]  # 'polite', 'firm', 'bundle_ask'
     disclaimer: str = "Draft messages are suggestions only. Utsav never sends messages autonomously."

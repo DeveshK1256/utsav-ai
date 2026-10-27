@@ -1,20 +1,22 @@
 import os
 import sys
-from fastapi import FastAPI
+from typing import Any, cast
+
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 
-from backend.app.core.config import settings
-from backend.app.core.limiter import limiter
-from backend.app.api.v1.intake import router as intake_router
+from backend.app.api.v1.discovery import router as discovery_router
 from backend.app.api.v1.events import router as events_router
+from backend.app.api.v1.intake import router as intake_router
+from backend.app.api.v1.invitations import router as invitations_router
 from backend.app.api.v1.quotes import router as quotes_router
 from backend.app.api.v1.replanning import router as replanning_router
-from backend.app.api.v1.vibe import router as vibe_router
 from backend.app.api.v1.rituals import router as rituals_router
-from backend.app.api.v1.invitations import router as invitations_router
-from backend.app.api.v1.discovery import router as discovery_router
+from backend.app.api.v1.vibe import router as vibe_router
+from backend.app.core.config import settings
+from backend.app.core.limiter import limiter
 
 app = FastAPI(
     title=f"{settings.PROJECT_NAME} API Engine",
@@ -23,7 +25,19 @@ app = FastAPI(
 )
 
 app.state.limiter = limiter
-app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+app.add_exception_handler(RateLimitExceeded, cast(Any, _rate_limit_exceeded_handler))
+
+@app.middleware("http")
+async def add_security_headers(request: Request, call_next):
+    response = await call_next(request)
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["X-XSS-Protection"] = "1; mode=block"
+    response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    response.headers["Permissions-Policy"] = "geolocation=(self), camera=(), microphone=()"
+    response.headers["Content-Security-Policy"] = "default-src 'self' https: data: 'unsafe-inline' 'unsafe-eval'; frame-ancestors 'none';"
+    return response
 
 # CORS Middleware (restricted to real Netlify production domain, previews, and local development)
 ALLOWED_ORIGINS = [
@@ -66,8 +80,9 @@ if ENABLE_M4_WHATSAPP:
         )
 
 
-import threading
+import contextlib
 import logging
+import threading
 
 logger = logging.getLogger("uvicorn.error")
 
@@ -81,10 +96,10 @@ def _background_db_backfill():
     """
     logger.info("Starting background DB schema check and backfill...")
     try:
-        from backend.app.db.session import engine, SessionLocal
-        from backend.app.db.base import Base
-        import backend.app.models.models
         from sqlalchemy import text
+
+        from backend.app.db.base import Base
+        from backend.app.db.session import SessionLocal, engine
 
         # 1. Ensure tables exist
         Base.metadata.create_all(bind=engine)
@@ -100,10 +115,8 @@ def _background_db_backfill():
                 conn.execute(text("ALTER TABLE events ADD COLUMN IF NOT EXISTS secondary_tradition_code VARCHAR(50);"))
                 conn.execute(text("ALTER TABLE events ADD COLUMN IF NOT EXISTS owner_token VARCHAR(64);"))
             elif engine.dialect.name == "sqlite":
-                try:
+                with contextlib.suppress(Exception):
                     conn.execute(text("ALTER TABLE events ADD COLUMN owner_token VARCHAR(64);"))
-                except Exception:
-                    pass
 
             conn.execute(text("""
                 UPDATE budget_items
@@ -113,7 +126,7 @@ def _background_db_backfill():
                     WHEN lower(category) IN ('catering', 'rentals', 'wardrobe', 'gifts_favors', 'invitations', 'logistics', 'contingency') THEN 'per_guest'
                     ELSE 'per_guest'
                 END
-                WHERE scaling_rule IS NULL 
+                WHERE scaling_rule IS NULL
                    OR (scaling_rule = 'per_guest' AND lower(category) IN ('venue', 'photography', 'entertainment', 'rituals', 'ritual_priest', 'decor', 'sound_light', 'sound_and_lighting'))
                    OR (scaling_rule = 'fixed' AND lower(category) IN ('decor', 'sound_light', 'sound_and_lighting', 'catering', 'rentals', 'wardrobe', 'gifts_favors', 'invitations', 'logistics', 'contingency'));
             """))
@@ -124,7 +137,6 @@ def _background_db_backfill():
         # 3. Seed traditions and baseline venues idempotently
         db = SessionLocal()
         try:
-            from backend.app.models.models import Tradition, VendorProfile
             from backend.app.db.seed_traditions import seed_cultural_traditions
             seed_cultural_traditions(db=db)
 

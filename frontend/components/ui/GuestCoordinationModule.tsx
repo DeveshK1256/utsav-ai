@@ -370,7 +370,7 @@ export function GuestCoordinationModule({ eventId, eventName, apiBase }: GuestCo
         <div className="text-xs text-amber-900 dark:text-amber-200 space-y-1">
           <div className="font-bold">WhatsApp Business Opt-Out & Privacy Guardrail (F3 Requirement)</div>
           <p className="leading-relaxed">
-            All outbound broadcasts are rate-limited to 20 msg/sec. If any guest replies with <strong>"STOP"</strong>, they are immediately added to the send-layer blocklist and will never receive further automated messages. Individual guest PII can be purged at any time using the Delete action below.
+            All outbound broadcasts are rate-limited to 20 msg/sec. If any guest replies with <strong>&quot;STOP&quot;</strong>, they are immediately added to the send-layer blocklist and will never receive further automated messages. Individual guest PII can be purged at any time using the Delete action below.
           </p>
         </div>
       </div>
@@ -526,7 +526,7 @@ export function GuestCoordinationModule({ eventId, eventName, apiBase }: GuestCo
                   <div className="max-h-28 overflow-y-auto space-y-1 text-[11px] text-rose-800 dark:text-rose-300 font-mono">
                     {importErrors.map((err, i) => (
                       <div key={i}>
-                        Row {err.row_number}: "{err.name}" ({err.phone_raw || 'empty'}) — {err.reason}
+                        Row {err.row_number}: &quot;{err.name}&quot; ({err.phone_raw || 'empty'}) — {err.reason}
                       </div>
                     ))}
                   </div>

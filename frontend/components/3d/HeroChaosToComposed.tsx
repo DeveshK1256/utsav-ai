@@ -133,7 +133,7 @@ export function HeroChaosToComposed() {
                 <div className="font-mono text-sm font-bold text-stone-900 dark:text-stone-100 mb-1">
                   Tent & Stage: ₹4,50,000
                 </div>
-                <div className="p-2 rounded-lg bg-rose-100/90 dark:bg-rose-950/80 border border-rose-300 dark:border-rose-800 text-[11px] text-rose-800 dark:text-rose-300 font-medium">
+                <div className="p-2 rounded-lg bg-rose-100/90 dark:bg-rose-950/80 border border-rose-300 dark:border-rose-800 text-[11px] text-rose-950 dark:text-rose-200 font-medium">
                   ⚠️ Surprise fine print: Generator diesel, extra lights past 10 PM, and breakage deposits NOT included (Typical +₹85,000 surprise).
                 </div>
               </div>
@@ -152,7 +152,7 @@ export function HeroChaosToComposed() {
                     <span>Venue Rent:</span>
                     <span>₹6,00,000</span>
                   </div>
-                  <div className="flex justify-between text-rose-800 dark:text-rose-300 font-bold">
+                  <div className="flex justify-between text-rose-950 dark:text-rose-200 font-bold">
                     <span>Catering (250p):</span>
                     <span>#REF! Error</span>
                   </div>
@@ -218,7 +218,7 @@ export function HeroChaosToComposed() {
                 <p className="text-xs text-stone-600 dark:text-stone-400 mb-2">
                   Abhijit Muhurat locked for Lagna Samaroh. Rahu Kaal window strictly bypassed.
                 </p>
-                <div className="text-[10px] text-amber-800 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/60 p-2 rounded-lg border border-amber-300 dark:border-amber-800">
+                <div className="text-[10px] text-amber-950 dark:text-amber-200 bg-amber-50 dark:bg-amber-950/60 p-2 rounded-lg border border-amber-300 dark:border-amber-800">
                   🙏 Mandatory Safeguard: Verified for guidance. Host confirmed with family Guruji before locking.
                 </div>
               </Interactive3DCard>
@@ -243,11 +243,11 @@ export function HeroChaosToComposed() {
               {/* Composed 4: Lossless 300 DPI Invitation */}
               <Interactive3DCard className="p-5 rounded-3xl glass-card border-2 border-rose-500/50 dark:border-rose-500/40 shadow-xl bg-white/95 dark:bg-stone-900/95">
                 <div className="flex items-center justify-between mb-3">
-                  <span className="text-xs font-bold uppercase tracking-wider text-rose-800 dark:text-rose-300 flex items-center space-x-1.5">
+                  <span className="text-xs font-bold uppercase tracking-wider text-rose-950 dark:text-rose-200 flex items-center space-x-1.5">
                     <CheckCircle2 className="w-4 h-4 text-rose-600 dark:text-rose-400" />
                     <span>Print-Quality Invitation</span>
                   </span>
-                  <span className="text-[10px] bg-rose-100 dark:bg-rose-950 text-rose-800 dark:text-rose-300 px-2 py-0.5 rounded-full font-bold">Flate Lossless PDF</span>
+                  <span className="text-[10px] bg-rose-100 dark:bg-rose-950 text-rose-950 dark:text-rose-200 px-2 py-0.5 rounded-full font-bold">Flate Lossless PDF</span>
                 </div>
                 <div className="font-serif text-xl font-bold text-stone-900 dark:text-stone-100 mb-1">
                   ॥ शुभ विवाह ॥

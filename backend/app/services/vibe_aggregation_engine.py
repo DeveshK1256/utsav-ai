@@ -1,11 +1,11 @@
 import re
 from collections import Counter
-from typing import List, Dict, Any, Optional
+from typing import Any
 
 from backend.app.schemas.vibe import SingleImageVibeSchema
 
 
-def normalize_hex(color_str: str) -> Optional[str]:
+def normalize_hex(color_str: str) -> str | None:
     """Normalizes hex color string to uppercase #RRGGBB format."""
     c = color_str.strip().upper()
     if not c.startswith("#"):
@@ -26,15 +26,15 @@ class VibeAggregationEngine:
     @classmethod
     def aggregate_vibe_profiles(
         cls,
-        image_vibes: List[SingleImageVibeSchema],
-        text_description: Optional[str] = None,
-        overall_mood_words: Optional[List[str]] = None
-    ) -> Dict[str, Any]:
-        color_counter = Counter()
-        tag_counter = Counter()
-        material_counter = Counter()
-        lighting_counter = Counter()
-        flower_counter = Counter()
+        image_vibes: list[SingleImageVibeSchema],
+        text_description: str | None = None,
+        overall_mood_words: list[str] | None = None
+    ) -> dict[str, Any]:
+        color_counter: Counter[str] = Counter()
+        tag_counter: Counter[str] = Counter()
+        material_counter: Counter[str] = Counter()
+        lighting_counter: Counter[str] = Counter()
+        flower_counter: Counter[str] = Counter()
 
         for vibe in image_vibes:
             for hex_code in vibe.palette:
@@ -114,8 +114,8 @@ class VibeAggregationEngine:
     def aggregate(
         cls,
         payload: Any,
-        text_description: Optional[str] = None
-    ) -> Dict[str, Any]:
+        text_description: str | None = None
+    ) -> dict[str, Any]:
         images = getattr(payload, "images", payload)
         overall_mood_words = getattr(payload, "overall_mood_words", None)
         return cls.aggregate_vibe_profiles(

@@ -5,8 +5,8 @@ Revises: 0007_m5_cultural_intelligence
 Create Date: 2026-10-23 20:20:00.000000
 
 """
-from alembic import op
 import sqlalchemy as sa
+from alembic import op
 
 # revision identifiers, used by Alembic.
 revision = '0008_f16_invitation_cards'

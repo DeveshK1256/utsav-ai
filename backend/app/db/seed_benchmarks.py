@@ -1,6 +1,6 @@
-import os
 from sqlalchemy import select
-from backend.app.db.session import engine, SessionLocal
+
+from backend.app.db.session import SessionLocal
 from backend.app.models.models import VendorBenchmarkSample
 
 BENCHMARK_SEEDS = [
@@ -58,7 +58,7 @@ def seed_benchmarks():
     try:
         count = db.scalar(select(VendorBenchmarkSample).limit(1))
         if count is not None:
-            print(f"Benchmarks already seeded.")
+            print("Benchmarks already seeded.")
             return
 
         print(f"Seeding {len(BENCHMARK_SEEDS)} benchmark samples...")

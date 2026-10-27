@@ -4,10 +4,11 @@ DEC-027: Deterministic ephemeris calculations using PyEphem and Lahiri (Chitrapa
 Zero LLM mathematical approximation.
 """
 
-from abc import ABC, abstractmethod
-from datetime import date, datetime, time, timedelta, timezone
-from typing import Dict, Any, Optional
 import math
+from abc import ABC, abstractmethod
+from datetime import UTC, date, datetime, time, timedelta, timezone
+from typing import Any
+
 import ephem
 
 
@@ -21,12 +22,11 @@ class PanchangProvider(ABC):
         latitude: float,
         longitude: float,
         elevation_meters: float = 0.0,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Calculates sunrise, sunset, Rahu Kaal, Abhijit Muhurat, Tithi, Nakshatra, and returns
         the mandatory priest verification disclaimer.
         """
-        pass
 
 
 class EphemPanchangProvider(PanchangProvider):
@@ -91,7 +91,7 @@ class EphemPanchangProvider(PanchangProvider):
         latitude: float,
         longitude: float,
         elevation_meters: float = 0.0,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Calculates precise panchang parameters for a given date and geographic location."""
         obs = ephem.Observer()
         obs.lat = str(latitude)
@@ -113,8 +113,8 @@ class EphemPanchangProvider(PanchangProvider):
         obs.date = sunrise_ephem
         sunset_ephem = obs.next_setting(sun)
 
-        sunrise_utc = sunrise_ephem.datetime().replace(tzinfo=timezone.utc)
-        sunset_utc = sunset_ephem.datetime().replace(tzinfo=timezone.utc)
+        sunrise_utc = sunrise_ephem.datetime().replace(tzinfo=UTC)
+        sunset_utc = sunset_ephem.datetime().replace(tzinfo=UTC)
 
         ist = timezone(timedelta(hours=5, minutes=30))
         sunrise_ist = sunrise_utc.astimezone(ist)

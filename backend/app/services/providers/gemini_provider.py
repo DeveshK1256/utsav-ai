@@ -1,29 +1,30 @@
-import json
-import time
 import base64
+import json
 import logging
-from typing import Dict, Any, Optional, List
+import time
+from typing import Any
+
 import httpx
 from pydantic import ValidationError
 
-from backend.app.schemas.quotes import QuoteExtractionPayloadSchema, ExtractedLineItemSchema
+from backend.app.schemas.quotes import (
+    QuoteExtractionPayloadSchema,
+)
 from backend.app.schemas.vibe import (
-    VibeExtractionPayloadSchema,
-    SingleImageVibeSchema,
     ThemeGenerationPayloadSchema,
-    DecorItemProposalSchema,
+    VibeExtractionPayloadSchema,
 )
 from backend.app.services.llm_provider import (
-    BaseQuoteExtractionProvider,
     BaseNegotiationDraftProvider,
+    BaseQuoteExtractionProvider,
     BaseReplanningExplanationProvider,
-    BaseVibeExtractionProvider,
     BaseThemeGenerationProvider,
-    DeterministicStubQuoteExtractionProvider,
+    BaseVibeExtractionProvider,
     DeterministicStubNegotiationDraftProvider,
+    DeterministicStubQuoteExtractionProvider,
     DeterministicStubReplanningExplanationProvider,
     DeterministicStubVibeProvider,
-    ExtractionValidationError
+    ExtractionValidationError,
 )
 
 logger = logging.getLogger(__name__)
@@ -45,7 +46,7 @@ class GeminiQuoteExtractionProvider(BaseQuoteExtractionProvider):
         file_bytes: bytes,
         file_name: str,
         mime_type: str,
-        category_hint: Optional[str] = None
+        category_hint: str | None = None
     ) -> QuoteExtractionPayloadSchema:
         if not self.api_key:
             logger.warning("No GEMINI_API_KEY provided; falling back to deterministic stub.")
@@ -85,7 +86,7 @@ class GeminiQuoteExtractionProvider(BaseQuoteExtractionProvider):
 
         # Prepare request payload
         encoded_data = base64.b64encode(file_bytes).decode("utf-8")
-        parts: List[Dict[str, Any]] = [
+        parts: list[dict[str, Any]] = [
             {"text": f"Document category hint: {category_hint or 'unknown'}. File name: {file_name}.\n\n{prompt_system}"},
             {
                 "inline_data": {
@@ -116,17 +117,14 @@ class GeminiQuoteExtractionProvider(BaseQuoteExtractionProvider):
                     )
                     resp.raise_for_status()
                     data = resp.json()
-                    
+
                     parts = data["candidates"][0]["content"]["parts"]
                     candidate_text = "".join(p.get("text", "") for p in parts).strip()
                     cleaned_json = candidate_text
-                    if cleaned_json.startswith("```json"):
-                        cleaned_json = cleaned_json[7:]
-                    if cleaned_json.startswith("```"):
-                        cleaned_json = cleaned_json[3:]
-                    if cleaned_json.endswith("```"):
-                        cleaned_json = cleaned_json[:-3]
-                    
+                    cleaned_json = cleaned_json.removeprefix("```json")
+                    cleaned_json = cleaned_json.removeprefix("```")
+                    cleaned_json = cleaned_json.removesuffix("```")
+
                     parsed_dict = json.loads(cleaned_json.strip())
                     validated = QuoteExtractionPayloadSchema.model_validate(parsed_dict)
                     # Zero LLM self-reported math: compute confidence deterministically in Python
@@ -161,10 +159,10 @@ class GeminiNegotiationDraftProvider(BaseNegotiationDraftProvider):
         category: str,
         quoted_total: float,
         target_discount_pct: float,
-        leverage_points: List[str],
-        competing_vendor_name: Optional[str] = None,
-        competing_quote_total: Optional[float] = None
-    ) -> Dict[str, Dict[str, str]]:
+        leverage_points: list[str],
+        competing_vendor_name: str | None = None,
+        competing_quote_total: float | None = None
+    ) -> dict[str, dict[str, str]]:
         if not self.api_key:
             return self.fallback_stub.generate_negotiation_drafts(
                 vendor_name, category, quoted_total, target_discount_pct, leverage_points, competing_vendor_name, competing_quote_total
@@ -215,12 +213,9 @@ class GeminiNegotiationDraftProvider(BaseNegotiationDraftProvider):
                     data = resp.json()
                     parts = data["candidates"][0]["content"]["parts"]
                     text = "".join(p.get("text", "") for p in parts).strip()
-                    if text.startswith("```json"):
-                        text = text[7:]
-                    if text.startswith("```"):
-                        text = text[3:]
-                    if text.endswith("```"):
-                        text = text[:-3]
+                    text = text.removeprefix("```json")
+                    text = text.removeprefix("```")
+                    text = text.removesuffix("```")
                     parsed = json.loads(text.strip())
                     if "polite" in parsed and "firm" in parsed and "bundle_ask" in parsed:
                         return parsed
@@ -248,9 +243,9 @@ class GeminiReplanningExplanationProvider(BaseReplanningExplanationProvider):
     def generate_explanation_and_mitigations(
         self,
         change_type: str,
-        diff_summary: Dict[str, Any],
+        diff_summary: dict[str, Any],
         total_budget: float
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         if not self.api_key:
             return self.fallback_stub.generate_explanation_and_mitigations(change_type, diff_summary, total_budget)
 
@@ -302,12 +297,9 @@ class GeminiReplanningExplanationProvider(BaseReplanningExplanationProvider):
                     data = resp.json()
                     parts = data["candidates"][0]["content"]["parts"]
                     text = "".join(p.get("text", "") for p in parts).strip()
-                    if text.startswith("```json"):
-                        text = text[7:]
-                    if text.startswith("```"):
-                        text = text[3:]
-                    if text.endswith("```"):
-                        text = text[:-3]
+                    text = text.removeprefix("```json")
+                    text = text.removeprefix("```")
+                    text = text.removesuffix("```")
                     parsed = json.loads(text.strip())
                     if "explanation" in parsed and "mitigation_suggestions" in parsed:
                         return {
@@ -355,13 +347,13 @@ class GeminiVibeProvider(BaseVibeExtractionProvider, BaseThemeGenerationProvider
     def __init__(self, api_key: str):
         self.api_key = api_key
         self.fallback_stub = DeterministicStubVibeProvider()
-        self.last_provider_used = "gemini-3-flash-preview"
-        self.last_fallback_warning = None
+        self.last_provider_used: str = "gemini-3-flash-preview"
+        self.last_fallback_warning: str | None = None
 
     def extract_vibe_from_images(
         self,
-        images: List[Dict[str, Any]],
-        text_description: Optional[str] = None
+        images: list[dict[str, Any]],
+        text_description: str | None = None
     ) -> VibeExtractionPayloadSchema:
         if not self.api_key:
             logger.warning("No GEMINI_API_KEY provided; falling back to deterministic stub for vibe extraction.")
@@ -391,7 +383,7 @@ class GeminiVibeProvider(BaseVibeExtractionProvider, BaseThemeGenerationProvider
             "4. Return strictly valid JSON."
         )
 
-        parts: List[Dict[str, Any]] = [
+        parts: list[dict[str, Any]] = [
             {"text": f"{system_instruction}\n\nUser Vision Description: {text_description or 'None provided'}"}
         ]
 
@@ -431,12 +423,9 @@ class GeminiVibeProvider(BaseVibeExtractionProvider, BaseThemeGenerationProvider
                     data = resp.json()
                     res_parts = data["candidates"][0]["content"]["parts"]
                     text = "".join(p.get("text", "") for p in res_parts).strip()
-                    if text.startswith("```json"):
-                        text = text[7:]
-                    if text.startswith("```"):
-                        text = text[3:]
-                    if text.endswith("```"):
-                        text = text[:-3]
+                    text = text.removeprefix("```json")
+                    text = text.removeprefix("```")
+                    text = text.removesuffix("```")
                     parsed = json.loads(text.strip())
                     validated = VibeExtractionPayloadSchema.model_validate(parsed)
                     self.last_provider_used = "gemini-3-flash-preview"
@@ -464,8 +453,8 @@ class GeminiVibeProvider(BaseVibeExtractionProvider, BaseThemeGenerationProvider
 
     def generate_theme_proposal(
         self,
-        style_profile: Dict[str, Any],
-        event_details: Dict[str, Any]
+        style_profile: dict[str, Any],
+        event_details: dict[str, Any]
     ) -> ThemeGenerationPayloadSchema:
         if not self.api_key:
             logger.warning("No GEMINI_API_KEY provided; falling back to deterministic stub for theme generation.")
@@ -543,12 +532,9 @@ class GeminiVibeProvider(BaseVibeExtractionProvider, BaseThemeGenerationProvider
                     data = resp.json()
                     res_parts = data["candidates"][0]["content"]["parts"]
                     text = "".join(p.get("text", "") for p in res_parts).strip()
-                    if text.startswith("```json"):
-                        text = text[7:]
-                    if text.startswith("```"):
-                        text = text[3:]
-                    if text.endswith("```"):
-                        text = text[:-3]
+                    text = text.removeprefix("```json")
+                    text = text.removeprefix("```")
+                    text = text.removesuffix("```")
                     parsed = json.loads(text.strip())
                     validated = ThemeGenerationPayloadSchema.model_validate(parsed)
                     if len(validated.decor_items) >= 10:

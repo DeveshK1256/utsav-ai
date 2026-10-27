@@ -1,8 +1,5 @@
-import os
-import re
-import json
 import logging
-from typing import Dict, Any, Optional
+
 from pydantic import BaseModel
 
 from backend.app.models.models import Event, EventFactSheet
@@ -16,9 +13,9 @@ class FAQResponse(BaseModel):
     answer: str
     is_in_scope: bool
     notified_host: bool
-    source_field: Optional[str] = None
+    source_field: str | None = None
     provider_used: str = "deterministic_retriever"
-    fallback_warning: Optional[str] = None
+    fallback_warning: str | None = None
 
 
 class FAQBotService:
@@ -41,7 +38,7 @@ class FAQBotService:
     def answer_question(
         cls,
         event: Event,
-        fact_sheet: Optional[EventFactSheet],
+        fact_sheet: EventFactSheet | None,
         question: str,
         use_llm: bool = False
     ) -> FAQResponse:
@@ -91,9 +88,8 @@ class FAQBotService:
         other_facts = fact_sheet.other_facts or {}
         for fact_key, fact_val in other_facts.items():
             clean_key = str(fact_key).lower().replace("_", " ")
-            if clean_key in q_clean or any(word in q_clean for word in clean_key.split()):
-                if fact_val and str(fact_val).strip():
-                    return FAQResponse(
+            if (clean_key in q_clean or any(word in q_clean for word in clean_key.split())) and (fact_val and str(fact_val).strip()):
+                return FAQResponse(
                         answer=f"{str(fact_key).replace('_', ' ').title()}: {fact_val}",
                         is_in_scope=True,
                         notified_host=False,

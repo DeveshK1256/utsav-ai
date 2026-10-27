@@ -211,8 +211,8 @@ export function FeatureShowcase3D() {
               <div className="p-2.5 rounded-xl bg-rose-50 dark:bg-rose-950/60 border border-rose-300 dark:border-rose-800 text-rose-900 dark:text-rose-200 text-xs flex items-start space-x-2">
                 <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
                 <div>
-                  <span className="font-bold">Missing: Crockery & Cutlery Breakage</span>
-                  <span className="block text-[11px] text-rose-800 dark:text-rose-300">
+                  <span className="font-bold text-rose-950 dark:text-rose-100">Missing: Crockery & Cutlery Breakage</span>
+                  <span className="block text-[11px] text-rose-950 dark:text-rose-200">
                     Quote mentions no replacement limit. Typical post-event shock: +₹25,000.
                   </span>
                 </div>
@@ -221,8 +221,8 @@ export function FeatureShowcase3D() {
               <div className="p-2.5 rounded-xl bg-amber-50 dark:bg-amber-950/60 border border-amber-300 dark:border-amber-800 text-amber-900 dark:text-amber-200 text-xs flex items-start space-x-2">
                 <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
                 <div>
-                  <span className="font-bold">Ambiguous: Staff Overtime Past Midnight</span>
-                  <span className="block text-[11px] text-amber-800 dark:text-amber-300">
+                  <span className="font-bold text-amber-950 dark:text-amber-100">Ambiguous: Staff Overtime Past Midnight</span>
+                  <span className="block text-[11px] text-amber-950 dark:text-amber-200">
                     Banquets typically run until 1:30 AM. Suggested ask: &quot;Fix ₹3,000/hr cap in contract.&quot;
                   </span>
                 </div>

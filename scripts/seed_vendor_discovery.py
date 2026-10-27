@@ -222,7 +222,7 @@ SEED_VENUES = [
 ]
 
 
-def seed_vendor_profiles(target_db_url: str = None):
+def seed_vendor_profiles(target_db_url: str | None = None):
     print("Ensuring tables exist...")
     Base.metadata.create_all(bind=engine)
 

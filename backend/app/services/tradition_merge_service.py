@@ -6,16 +6,17 @@ Cites origin tradition per ceremony, validates against strict Pydantic schemas,
 and implements the Gemini + deterministic fallback pattern.
 """
 
-import os
 import json
 import logging
+import os
 from abc import ABC, abstractmethod
 from datetime import date
-from typing import List, Dict, Any, Optional
+from typing import Any
+
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
-from backend.app.models.models import Tradition, RitualItem, Event
+from backend.app.models.models import RitualItem, Tradition
 from backend.app.services.dag_scheduler import DAGScheduler
 
 logger = logging.getLogger(__name__)
@@ -32,7 +33,7 @@ class CeremonyItemSchema(BaseModel):
     is_outdoor: bool = Field(False, description="Whether event is outdoor")
     is_muhurat_locked: bool = Field(False, description="Whether ceremony requires auspicious timing")
     cultural_significance: str = Field(..., description="Cultural meaning and purpose")
-    family_guidance: Optional[str] = Field(None, description="Actionable elder alignment note")
+    family_guidance: str | None = Field(None, description="Actionable elder alignment note")
 
 
 CEREMONY_CONTENT_ACCURACY_DISCLAIMER = (
@@ -52,8 +53,8 @@ class MergedRunOfShowSchema(BaseModel):
     fusion_title: str
     primary_tradition: str
     secondary_tradition: str
-    ceremonies: List[CeremonyItemSchema]
-    family_alignment_points: List[FamilyAlignmentPointSchema]
+    ceremonies: list[CeremonyItemSchema]
+    family_alignment_points: list[FamilyAlignmentPointSchema]
     content_accuracy_disclaimer: str = Field(default=CEREMONY_CONTENT_ACCURACY_DISCLAIMER)
     timing_disclaimer: str = Field(
         default="Panchang calculations are astronomical estimates based on Drik Ganita and Ephemeris models. Muhurat dates and ritual sequences must always be confirmed with your family's trusted priest, pandit, or religious officiant."
@@ -70,7 +71,7 @@ class BaseTraditionMergeAgent(ABC):
         primary: Tradition,
         secondary: Tradition,
         start_date: date,
-        notes: Optional[str] = None
+        notes: str | None = None
     ) -> MergedRunOfShowSchema:
         pass
 
@@ -86,14 +87,14 @@ class DeterministicStubTraditionMergeAgent(BaseTraditionMergeAgent):
         primary: Tradition,
         secondary: Tradition,
         start_date: date,
-        notes: Optional[str] = None
+        notes: str | None = None
     ) -> MergedRunOfShowSchema:
         p_code = primary.code.lower()
         s_code = secondary.code.lower()
         pair_set = {p_code, s_code}
 
-        ceremonies: List[CeremonyItemSchema] = []
-        alignment_points: List[FamilyAlignmentPointSchema] = []
+        ceremonies: list[CeremonyItemSchema] = []
+        alignment_points: list[FamilyAlignmentPointSchema] = []
 
         # 1. Spec Acceptance Case: Maharashtrian x Punjabi
         if any("maharashtrian" in c for c in pair_set) and any("punjabi" in c for c in pair_set):
@@ -200,31 +201,31 @@ class DeterministicStubTraditionMergeAgent(BaseTraditionMergeAgent):
             t_primary_subevents = DAGScheduler.SUB_EVENT_TEMPLATES.get(p_code, DAGScheduler.SUB_EVENT_TEMPLATES["default"])
             t_sec_subevents = DAGScheduler.SUB_EVENT_TEMPLATES.get(s_code, DAGScheduler.SUB_EVENT_TEMPLATES["default"])
 
-            for idx, se in enumerate(t_primary_subevents):
+            for _idx, se in enumerate(t_primary_subevents):
                 ceremonies.append(CeremonyItemSchema(
-                    name=se["name"],
+                    name=str(se["name"]),
                     origin_tradition=primary.regional_name,
-                    day_offset=se.get("day_offset", 0),
-                    start_time=f"{se.get('start_time_hour', 10):02d}:00",
-                    duration_hours=float(se.get("duration_hours", 3)),
-                    venue_type=se.get("venue_type", "Main Celebration Hall"),
-                    is_outdoor=se.get("is_outdoor", False),
-                    is_muhurat_locked=se.get("is_muhurat_locked", False),
+                    day_offset=int(str(se.get("day_offset", 0))),
+                    start_time=f"{int(str(se.get('start_time_hour', 10))):02d}:00",
+                    duration_hours=float(str(se.get("duration_hours", 3))),
+                    venue_type=str(se.get("venue_type", "Main Celebration Hall")),
+                    is_outdoor=bool(se.get("is_outdoor", False)),
+                    is_muhurat_locked=bool(se.get("is_muhurat_locked", False)),
                     cultural_significance=f"Traditional rites of {primary.regional_name}.",
                     family_guidance=None
                 ))
 
-            for idx, se in enumerate(t_sec_subevents):
-                if not any(c.name == se["name"] for c in ceremonies):
+            for _idx, se in enumerate(t_sec_subevents):
+                if not any(c.name == str(se["name"]) for c in ceremonies):
                     ceremonies.append(CeremonyItemSchema(
-                        name=se["name"],
+                        name=str(se["name"]),
                         origin_tradition=secondary.regional_name,
-                        day_offset=se.get("day_offset", 0),
-                        start_time=f"{se.get('start_time_hour', 14):02d}:00",
-                        duration_hours=float(se.get("duration_hours", 3)),
-                        venue_type=se.get("venue_type", "Celebration Venue"),
-                        is_outdoor=se.get("is_outdoor", False),
-                        is_muhurat_locked=se.get("is_muhurat_locked", False),
+                        day_offset=int(str(se.get("day_offset", 0))),
+                        start_time=f"{int(str(se.get('start_time_hour', 14))):02d}:00",
+                        duration_hours=float(str(se.get("duration_hours", 3))),
+                        venue_type=str(se.get("venue_type", "Celebration Venue")),
+                        is_outdoor=bool(se.get("is_outdoor", False)),
+                        is_muhurat_locked=bool(se.get("is_muhurat_locked", False)),
                         cultural_significance=f"Sacred custom of {secondary.regional_name}.",
                         family_guidance=None
                     ))
@@ -278,7 +279,7 @@ class GeminiTraditionMergeAgent(BaseTraditionMergeAgent):
         primary: Tradition,
         secondary: Tradition,
         start_date: date,
-        notes: Optional[str] = None
+        notes: str | None = None
     ) -> MergedRunOfShowSchema:
         try:
             import google.generativeai as genai
@@ -381,17 +382,17 @@ class TraditionMergeService:
         self.db = db
         self.agent = get_tradition_merge_agent()
 
-    def get_tradition(self, code: str) -> Optional[Tradition]:
+    def get_tradition(self, code: str) -> Tradition | None:
         return self.db.query(Tradition).filter(Tradition.code == code).first()
 
     def merge_traditions(
         self,
         primary_code: str,
         secondary_code: str,
-        start_date: Optional[date] = None,
-        event_name: Optional[str] = None,
-        notes: Optional[str] = None
-    ) -> Dict[str, Any]:
+        start_date: date | None = None,
+        event_name: str | None = None,
+        notes: str | None = None
+    ) -> dict[str, Any]:
         """
         Executes a dual-tradition merge.
         Returns unified run-of-show with origin labels, reconciled samagri with provenance, and alignment checklist.
@@ -525,7 +526,7 @@ class TraditionMergeService:
             )
         }
 
-    def _detect_shared_key(self, item_name: str) -> Optional[str]:
+    def _detect_shared_key(self, item_name: str) -> str | None:
         lower_name = item_name.lower()
         for key in self.SHARED_KEYWORDS:
             if key in lower_name:

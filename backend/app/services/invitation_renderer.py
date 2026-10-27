@@ -2,7 +2,8 @@ import io
 import os
 import re
 import zlib
-from typing import Optional, List, Dict, Any, Tuple
+from typing import Any
+
 from PIL import Image, ImageDraw, ImageFont
 
 # Path to bundled Noto Sans Devanagari fonts
@@ -11,7 +12,7 @@ FONT_REGULAR_PATH = os.path.join(FONTS_DIR, "NotoSansDevanagari-Regular.ttf")
 FONT_BOLD_PATH = os.path.join(FONTS_DIR, "NotoSansDevanagari-Bold.ttf")
 
 
-def hex_to_rgb(hex_str: Optional[str], default: Tuple[int, int, int] = (180, 83, 9)) -> Tuple[int, int, int]:
+def hex_to_rgb(hex_str: str | None, default: tuple[int, int, int] = (180, 83, 9)) -> tuple[int, int, int]:
     if not hex_str or not isinstance(hex_str, str):
         return default
     clean = hex_str.lstrip("#").strip()
@@ -25,7 +26,7 @@ def hex_to_rgb(hex_str: Optional[str], default: Tuple[int, int, int] = (180, 83,
     return default
 
 
-def get_font(path: str, size: int) -> ImageFont.ImageFont:
+def get_font(path: str, size: int) -> Any:
     try:
         if os.path.exists(path):
             return ImageFont.truetype(path, size)
@@ -38,7 +39,7 @@ def get_font(path: str, size: int) -> ImageFont.ImageFont:
         return ImageFont.load_default()
 
 
-def wrap_text(text: str, font: ImageFont.ImageFont, max_width: int, draw: ImageDraw.ImageDraw) -> List[str]:
+def wrap_text(text: str, font: Any, max_width: int, draw: ImageDraw.ImageDraw) -> list[str]:
     """Wraps text so no line exceeds max_width."""
     words = text.split()
     if not words:
@@ -86,17 +87,17 @@ class InvitationCardRenderer:
     def render_card(
         cls,
         event_name: str,
-        host_name: Optional[str],
+        host_name: str | None,
         date_str: str,
-        venue_str: Optional[str],
+        venue_str: str | None,
         wording_text: str,
-        muhurat_time: Optional[str] = None,
-        ceremony_names: Optional[List[str]] = None,
-        guest_name: Optional[str] = None,
-        guest_diet: Optional[str] = None,
-        palette: Optional[List[str]] = None,
+        muhurat_time: str | None = None,
+        ceremony_names: list[str] | None = None,
+        guest_name: str | None = None,
+        guest_diet: str | None = None,
+        palette: list[str] | None = None,
         layout_variant: str = "classic_royal"
-    ) -> Tuple[bytes, bytes]:
+    ) -> tuple[bytes, bytes]:
         """
         Renders invitation card and returns (png_bytes, pdf_bytes).
         Strict Rule: ZERO raw template placeholders ({host_name}, {date}, etc.) in output.
@@ -201,7 +202,7 @@ class InvitationCardRenderer:
 
         # Cross-reference table
         xref_offset = len(body)
-        body.extend(f"xref\n0 6\n0000000000 65535 f \n".encode("ascii"))
+        body.extend("xref\n0 6\n0000000000 65535 f \n".encode("ascii"))
         for i in range(1, 6):
             body.extend(f"{offsets[i]:010d} 00000 n \n".encode("ascii"))
 
@@ -214,9 +215,9 @@ class InvitationCardRenderer:
     @classmethod
     def _render_classic_royal(
         cls, event_name: str, host_name: str, date_str: str, venue_str: str,
-        wording: str, muhurat: Optional[str], ceremonies: Optional[List[str]],
-        guest_name: Optional[str], guest_diet: Optional[str],
-        primary: Tuple[int, int, int], secondary: Tuple[int, int, int], accent: Tuple[int, int, int]
+        wording: str, muhurat: str | None, ceremonies: list[str] | None,
+        guest_name: str | None, guest_diet: str | None,
+        primary: tuple[int, int, int], secondary: tuple[int, int, int], accent: tuple[int, int, int]
     ) -> Image.Image:
         bg_color = (255, 252, 245)  # Warm royal cream
         img = Image.new("RGB", (cls.WIDTH, cls.HEIGHT), bg_color)
@@ -351,9 +352,9 @@ class InvitationCardRenderer:
     @classmethod
     def _render_modern_minimal(
         cls, event_name: str, host_name: str, date_str: str, venue_str: str,
-        wording: str, muhurat: Optional[str], ceremonies: Optional[List[str]],
-        guest_name: Optional[str], guest_diet: Optional[str],
-        primary: Tuple[int, int, int], secondary: Tuple[int, int, int], accent: Tuple[int, int, int]
+        wording: str, muhurat: str | None, ceremonies: list[str] | None,
+        guest_name: str | None, guest_diet: str | None,
+        primary: tuple[int, int, int], secondary: tuple[int, int, int], accent: tuple[int, int, int]
     ) -> Image.Image:
         bg_color = (255, 255, 255)
         img = Image.new("RGB", (cls.WIDTH, cls.HEIGHT), bg_color)
@@ -442,9 +443,9 @@ class InvitationCardRenderer:
     @classmethod
     def _render_floral_festive(
         cls, event_name: str, host_name: str, date_str: str, venue_str: str,
-        wording: str, muhurat: Optional[str], ceremonies: Optional[List[str]],
-        guest_name: Optional[str], guest_diet: Optional[str],
-        primary: Tuple[int, int, int], secondary: Tuple[int, int, int], accent: Tuple[int, int, int]
+        wording: str, muhurat: str | None, ceremonies: list[str] | None,
+        guest_name: str | None, guest_diet: str | None,
+        primary: tuple[int, int, int], secondary: tuple[int, int, int], accent: tuple[int, int, int]
     ) -> Image.Image:
         # Festive light marigold background
         bg_color = (255, 250, 240)

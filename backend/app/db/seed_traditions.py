@@ -10,13 +10,14 @@ No liturgical texts or scholarly directories were consulted in sandbox isolation
 Content represents unverified algorithmic draft baselines requiring mandatory human elder/officiant review.
 """
 
-from typing import List, Dict, Any
+from typing import Any
+
 from backend.app.db.session import SessionLocal
-from backend.app.models.models import Tradition, RitualItem
+from backend.app.models.models import RitualItem, Tradition
 
 UNVERIFIED_SOURCE_LABEL = "AI-drafted baseline, pending community/priest review"
 
-CURATED_TRADITIONS: List[Dict[str, Any]] = [
+CURATED_TRADITIONS: list[dict[str, Any]] = [
     {
         "code": "maharashtrian_vedic",
         "regional_name": "Maharashtrian Vedic Lagna",
@@ -200,7 +201,7 @@ def seed_cultural_traditions(db=None):
                 )
                 db.add(tradition_obj)
                 traditions_seeded += 1
-            
+
             # Clear existing items for clean deterministic seed
             db.query(RitualItem).filter(RitualItem.tradition_code == t_data["code"]).delete()
 

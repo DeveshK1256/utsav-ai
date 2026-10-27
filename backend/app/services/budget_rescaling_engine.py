@@ -1,8 +1,8 @@
-import os
 import json
-from decimal import Decimal
-from typing import Dict, List, Any, Optional, Tuple
-from pydantic import BaseModel, Field
+import os
+from typing import Any
+
+from pydantic import BaseModel
 
 CONFIG_PATH = os.path.join(os.path.dirname(__file__), "..", "config", "tier_breakpoints.json")
 
@@ -19,24 +19,24 @@ class BudgetItemDiff(BaseModel):
 
 
 class BudgetRescalingResult(BaseModel):
-    items: List[BudgetItemDiff]
+    items: list[BudgetItemDiff]
     total_old: float
     total_new: float
     total_delta: float
-    venue_capacity: Optional[int] = None
+    venue_capacity: int | None = None
     capacity_exceeded: bool = False
     capacity_delta: int = 0
-    capacity_warning: Optional[str] = None
+    capacity_warning: str | None = None
 
 
 class BudgetRescalingEngine:
-    _tiers_cache: Dict[str, Any] = {}
+    _tiers_cache: dict[str, Any] = {}
 
     @classmethod
-    def load_tier_config(cls) -> Dict[str, Any]:
+    def load_tier_config(cls) -> dict[str, Any]:
         if not cls._tiers_cache:
             if os.path.exists(CONFIG_PATH):
-                with open(CONFIG_PATH, "r", encoding="utf-8") as f:
+                with open(CONFIG_PATH, encoding="utf-8") as f:
                     cls._tiers_cache = json.load(f)
             else:
                 cls._tiers_cache = {}
@@ -58,7 +58,7 @@ class BudgetRescalingEngine:
         return "per_guest"
 
     @classmethod
-    def get_tier_info(cls, category: str, guest_count: int) -> Tuple[float, str]:
+    def get_tier_info(cls, category: str, guest_count: int) -> tuple[float, str]:
         cfg = cls.load_tier_config().get(category.lower())
         if not cfg or "tiers" not in cfg:
             return 1.0, f"Standard ({guest_count} guests)"
@@ -76,8 +76,8 @@ class BudgetRescalingEngine:
         cls,
         old_guest_count: int,
         new_guest_count: int,
-        budget_items: List[Any],
-        venue_capacity: Optional[int] = None
+        budget_items: list[Any],
+        venue_capacity: int | None = None
     ) -> BudgetRescalingResult:
         """
         Deterministic recomputation of budget items when guest count changes.
@@ -88,7 +88,7 @@ class BudgetRescalingEngine:
         if new_guest_count <= 0:
             raise ValueError(f"new_guest_count must be > 0 (received {new_guest_count})")
 
-        diffs: List[BudgetItemDiff] = []
+        diffs: list[BudgetItemDiff] = []
         total_old = 0.0
         total_new = 0.0
 
@@ -97,7 +97,7 @@ class BudgetRescalingEngine:
             cat = (getattr(b, "category", "") or "other").lower()
             name = getattr(b, "name", "")
             stored_rule = getattr(b, "scaling_rule", None)
-            
+
             # Resolve canonical scaling rule per DEC-018 if missing or defaulted to per_guest
             canonical_rule = cls.resolve_scaling_rule(cat)
             if not stored_rule or (stored_rule.lower() == "per_guest" and canonical_rule != "per_guest"):
@@ -155,14 +155,13 @@ class BudgetRescalingEngine:
         capacity_exceeded = False
         capacity_delta = 0
         capacity_warning = None
-        if venue_capacity is not None and venue_capacity > 0:
-            if new_guest_count > venue_capacity:
-                capacity_exceeded = True
-                capacity_delta = new_guest_count - venue_capacity
-                capacity_warning = (
-                    f"CRITICAL CAPACITY ALERT: Revised guest count ({new_guest_count}) exceeds venue capacity "
-                    f"({venue_capacity}) by {capacity_delta} guests. Risk of fire-code violation and overcrowding."
-                )
+        if venue_capacity is not None and venue_capacity > 0 and new_guest_count > venue_capacity:
+            capacity_exceeded = True
+            capacity_delta = new_guest_count - venue_capacity
+            capacity_warning = (
+                f"CRITICAL CAPACITY ALERT: Revised guest count ({new_guest_count}) exceeds venue capacity "
+                f"({venue_capacity}) by {capacity_delta} guests. Risk of fire-code violation and overcrowding."
+            )
 
         return BudgetRescalingResult(
             items=diffs,
@@ -180,7 +179,7 @@ class BudgetRescalingEngine:
         cls,
         from_budget: float,
         to_budget: float,
-        budget_items: List[Any]
+        budget_items: list[Any]
     ) -> BudgetRescalingResult:
         """
         Proportionally scales down flexible/unpaid budget items when a budget cut is declared.
@@ -191,7 +190,7 @@ class BudgetRescalingEngine:
         if to_budget <= 0:
             raise ValueError(f"to_budget must be positive (received {to_budget})")
 
-        diffs: List[BudgetItemDiff] = []
+        diffs: list[BudgetItemDiff] = []
         total_old = 0.0
         total_new = 0.0
 

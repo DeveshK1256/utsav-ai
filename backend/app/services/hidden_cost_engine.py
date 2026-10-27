@@ -1,20 +1,20 @@
-import os
 import json
-import re
-from typing import List, Dict, Any, Tuple
+import os
+from typing import Any
+
 from backend.app.schemas.quotes import ExtractedLineItemSchema, HiddenCostAlertSchema
 
 CONFIG_PATH = os.path.join(os.path.dirname(__file__), "..", "config", "hidden_cost_checklist.json")
 
 
 class HiddenCostDetector:
-    _checklist_cache: Dict[str, List[Dict[str, Any]]] = {}
+    _checklist_cache: dict[str, list[dict[str, Any]]] = {}
 
     @classmethod
-    def load_checklist(cls) -> Dict[str, List[Dict[str, Any]]]:
+    def load_checklist(cls) -> dict[str, list[dict[str, Any]]]:
         if not cls._checklist_cache:
             if os.path.exists(CONFIG_PATH):
-                with open(CONFIG_PATH, "r", encoding="utf-8") as f:
+                with open(CONFIG_PATH, encoding="utf-8") as f:
                     cls._checklist_cache = json.load(f)
             else:
                 cls._checklist_cache = {}
@@ -24,9 +24,9 @@ class HiddenCostDetector:
     def analyze_quote(
         cls,
         category: str,
-        line_items: List[ExtractedLineItemSchema],
-        terms_and_conditions: List[str] = None
-    ) -> List[HiddenCostAlertSchema]:
+        line_items: list[ExtractedLineItemSchema],
+        terms_and_conditions: list[str] | None = None
+    ) -> list[HiddenCostAlertSchema]:
         """
         Pure deterministic diff between extracted quote line items and the category checklist.
         Returns list of alerts with status 'missing_from_quote', 'explicitly_covered', or 'ambiguous'.
@@ -70,7 +70,7 @@ class HiddenCostDetector:
         return alerts
 
     @classmethod
-    def _extract_keywords_for_check(cls, code: str) -> List[str]:
+    def _extract_keywords_for_check(cls, code: str) -> list[str]:
         mapping = {
             "cat_overtime": ["overtime", "extra hour", "midnight", "late hour"],
             "cat_extra_plates": ["buffer", "floating", "extra plate", "excess plate"],

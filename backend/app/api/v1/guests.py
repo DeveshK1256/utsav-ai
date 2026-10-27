@@ -1,20 +1,25 @@
-from typing import List, Dict, Any, Optional
-from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File
-from sqlalchemy.orm import Session
-from pydantic import BaseModel
+from typing import Any
 
+from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
+from pydantic import BaseModel
+from sqlalchemy.orm import Session
+
+from backend.app.core.security import verify_event_owner_token
 from backend.app.db.session import get_db
-from backend.app.models.models import Event, Guest, EventFactSheet
+from backend.app.models.models import Event, EventFactSheet, Guest
 from backend.app.services.whatsapp.guest_service import (
-    GuestService, GuestImportResponse, RSVPSummary
-)
-from backend.app.services.whatsapp.send_service import (
-    WhatsAppSendService, BatchSendResult
+    GuestImportResponse,
+    GuestService,
+    RSVPSummary,
 )
 from backend.app.services.whatsapp.reminder_scheduler import (
-    ReminderScheduler, ScheduledReminderPlan
+    ReminderScheduler,
+    ScheduledReminderPlan,
 )
-from backend.app.core.security import verify_event_owner_token
+from backend.app.services.whatsapp.send_service import (
+    BatchSendResult,
+    WhatsAppSendService,
+)
 
 router = APIRouter(prefix="/events", tags=["Guests & Coordination"])
 
@@ -22,33 +27,33 @@ router = APIRouter(prefix="/events", tags=["Guests & Coordination"])
 class GuestRowSchema(BaseModel):
     name: str
     phone: str
-    group_side: Optional[str] = "general"
-    diet: Optional[str] = "veg"
-    mobility_needs: Optional[bool] = False
-    kids_count: Optional[int] = 0
-    headcount: Optional[int] = 1
-    accommodation: Optional[bool] = False
-    language: Optional[str] = "en"
-    notes: Optional[str] = None
+    group_side: str | None = "general"
+    diet: str | None = "veg"
+    mobility_needs: bool | None = False
+    kids_count: int | None = 0
+    headcount: int | None = 1
+    accommodation: bool | None = False
+    language: str | None = "en"
+    notes: str | None = None
 
 
 class GuestImportRequest(BaseModel):
-    guests: List[GuestRowSchema]
+    guests: list[GuestRowSchema]
 
 
 class FactSheetSchema(BaseModel):
-    venue_address: Optional[str] = None
-    parking_info: Optional[str] = None
-    dress_code: Optional[str] = None
-    timing_notes: Optional[str] = None
-    map_link: Optional[str] = None
-    other_facts: Optional[Dict[str, Any]] = None
+    venue_address: str | None = None
+    parking_info: str | None = None
+    dress_code: str | None = None
+    timing_notes: str | None = None
+    map_link: str | None = None
+    other_facts: dict[str, Any] | None = None
 
 
 @router.post("/{event_id}/guests/import", response_model=GuestImportResponse)
 def import_guests(
     event_id: str,
-    payload: Optional[GuestImportRequest] = None,
+    payload: GuestImportRequest | None = None,
     event: Event = Depends(verify_event_owner_token),
     db: Session = Depends(get_db)
 ):
@@ -80,7 +85,7 @@ async def import_guests_csv(
 @router.get("/{event_id}/guests")
 def list_guests(
     event_id: str,
-    status: Optional[str] = Query(None),
+    status: str | None = Query(None),
     db: Session = Depends(get_db)
 ):
     """Lists all guests for an event with optional RSVP status filter."""
@@ -126,7 +131,7 @@ def get_rsvp_summary(
 @router.post("/{event_id}/guests/send-invitations", response_model=BatchSendResult)
 def send_invitations(
     event_id: str,
-    guest_ids: Optional[List[str]] = None,
+    guest_ids: list[str] | None = None,
     event: Event = Depends(verify_event_owner_token),
     db: Session = Depends(get_db)
 ):
@@ -225,7 +230,7 @@ def update_fact_sheet(
     }
 
 
-@router.get("/{event_id}/reminders", response_model=List[ScheduledReminderPlan])
+@router.get("/{event_id}/reminders", response_model=list[ScheduledReminderPlan])
 def get_reminder_schedule(
     event_id: str,
     db: Session = Depends(get_db)

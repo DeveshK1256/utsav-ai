@@ -1,8 +1,8 @@
-import os
 import hmac
+import os
 import secrets
-from typing import Optional
-from fastapi import Header, Request, HTTPException, status, Depends
+
+from fastapi import Depends, Header, HTTPException, Request, status
 from sqlalchemy.orm import Session
 
 from backend.app.db.session import get_db
@@ -16,8 +16,8 @@ def generate_owner_token() -> str:
 
 def verify_event_owner_token(
     request: Request,
-    x_event_owner_token: Optional[str] = Header(None, alias="X-Event-Owner-Token"),
-    authorization: Optional[str] = Header(None),
+    x_event_owner_token: str | None = Header(None, alias="X-Event-Owner-Token"),
+    authorization: str | None = Header(None),
     db: Session = Depends(get_db)
 ) -> Event:
     """

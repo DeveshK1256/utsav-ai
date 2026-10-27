@@ -1,26 +1,29 @@
-import io
 import logging
-from typing import List, Optional
-from datetime import datetime, timezone
-from fastapi import APIRouter, Depends, HTTPException, Query, Response, status, Request
+from datetime import UTC, datetime
+
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
 from sqlalchemy.orm import Session
 
-from backend.app.db.session import get_db
 from backend.app.core.limiter import limiter
+from backend.app.core.security import verify_event_owner_token
+from backend.app.db.session import get_db
 from backend.app.models.models import (
-    Event, Guest, InvitationCard, ThemeProposal, SubEvent, EventFactSheet, User
+    Event,
+    Guest,
+    InvitationCard,
+    SubEvent,
+    ThemeProposal,
 )
 from backend.app.schemas.invitations import (
-    InvitationGenerateRequest,
+    FailedGuestSummary,
     InvitationBatchResponse,
     InvitationCardSummary,
-    FailedGuestSummary,
+    InvitationGenerateRequest,
     InvitationStudioOptionsResponse,
     LayoutOption,
 )
 from backend.app.services.invitation_renderer import InvitationCardRenderer
 from backend.app.services.invitation_wording_agent import InvitationWordingAgent
-from backend.app.core.security import verify_event_owner_token
 
 logger = logging.getLogger(__name__)
 
@@ -110,7 +113,7 @@ def _resolve_event_logistics(event: Event, db: Session):
 @router.get("/options", response_model=InvitationStudioOptionsResponse)
 def get_invitation_studio_options(
     event_id: str,
-    theme_proposal_id: Optional[str] = Query(None),
+    theme_proposal_id: str | None = Query(None),
     db: Session = Depends(get_db)
 ):
     """
@@ -226,8 +229,8 @@ def generate_invitation_cards(
     # Fetch Guests
     guests = db.query(Guest).filter(Guest.event_id == event_id).all()
 
-    created_cards: List[InvitationCard] = []
-    failed_guests: List[FailedGuestSummary] = []
+    created_cards: list[InvitationCard] = []
+    failed_guests: list[FailedGuestSummary] = []
 
     if guests:
         # Batch generation: One card per guest
@@ -255,7 +258,7 @@ def generate_invitation_cards(
                     guest_id=g.id,
                     rendered_png=png_bytes,
                     rendered_pdf=pdf_bytes,
-                    generated_at=datetime.now(timezone.utc)
+                    generated_at=datetime.now(UTC)
                 )
                 db.add(card)
                 created_cards.append(card)
@@ -293,7 +296,7 @@ def generate_invitation_cards(
                 guest_id=None,
                 rendered_png=png_bytes,
                 rendered_pdf=pdf_bytes,
-                generated_at=datetime.now(timezone.utc)
+                generated_at=datetime.now(UTC)
             )
             db.add(card)
             created_cards.append(card)
@@ -306,7 +309,7 @@ def generate_invitation_cards(
         db.refresh(c)
 
     # Format summaries
-    card_summaries: List[InvitationCardSummary] = []
+    card_summaries: list[InvitationCardSummary] = []
     for c in created_cards:
         g_name = None
         if c.guest:
@@ -335,7 +338,7 @@ def generate_invitation_cards(
     )
 
 
-@router.get("", response_model=List[InvitationCardSummary])
+@router.get("", response_model=list[InvitationCardSummary])
 def list_invitation_cards(event_id: str, db: Session = Depends(get_db)):
     """Lists all previously generated invitation cards for this event."""
     cards = db.query(InvitationCard).filter(

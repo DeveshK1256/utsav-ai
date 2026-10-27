@@ -206,7 +206,7 @@ export default function EventDashboardClient() {
     } finally {
       setIsLoading(false);
     }
-  }, [rawEventId, router]);
+  }, [rawEventId]);
 
   useEffect(() => {
     fetchEventData();
