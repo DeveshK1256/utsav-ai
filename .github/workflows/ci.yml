@@ -10,6 +10,8 @@ jobs:
   loop-gate-tests:
     name: Deterministic & Schema Regression Loop Gate
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
 
     env:
       PYTHONPATH: .
@@ -21,6 +23,8 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Set up Python 3.12
         uses: actions/setup-python@v5
@@ -73,6 +77,20 @@ jobs:
       - name: Run Golden Event Evaluation Suite
         run: |
           python scripts/ci_test_runner.py tests/eval/
+
+      # Auto-Commit Ratchet Baseline If Tightened:
+      # If Ruff or MyPy errors decreased, ci_baseline.json was rewritten with the lower number.
+      # When running on the main branch, this step pushes the tightened baseline back to the repository.
+      - name: Auto-Commit Ratchet Baseline If Tightened
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push' && success()
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          if ! git diff --quiet .github/ci_baseline.json; then
+            git add .github/ci_baseline.json
+            git commit -m "chore(ci): auto-ratchet quality baseline down [skip ci]"
+            git push origin main
+          fi
 
       - name: Verification Summary
         if: success()

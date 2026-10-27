@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from pydantic import BaseModel
 
 from backend.app.db.session import get_db
-from backend.app.models.models import Event, Guest, EventFactSheet, MessageLog
+from backend.app.models.models import Event, Guest, EventFactSheet
 from backend.app.services.whatsapp.guest_service import (
     GuestService, GuestImportResponse, RSVPSummary
 )
