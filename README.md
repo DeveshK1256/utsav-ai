@@ -92,13 +92,57 @@ Required variables:
 * `PORT` — API port (defaults to `8000`)
 * `ENABLE_M4_WHATSAPP` — WhatsApp feature flag (defaults to `false`)
 
-### 6. Run Automated Test Suite
-All 54 unit tests run offline with deterministic stubs (zero network calls, zero token consumption):
+### 6. Run Automated Test Suite & Quality Gates
+The repository enforces a strict, zero-tolerance quality and verification pipeline:
+
+#### Full Test Suite & Coverage (140+ tests, >=90% Line Coverage)
+All 140+ automated tests run 100% deterministically offline with stubs (zero network calls, zero token consumption):
 ```bash
-pytest tests/unit/ -v
+pytest tests/ --cov=backend/app --cov-report=term
 ```
 
-### 7. Run Locally
+#### CI Quality Ratchet (Zero-Tolerance Enforcement)
+Linters and typecheckers enforce a ratchet baseline that strictly improves over time:
+```bash
+# Python Ruff linter (0 errors enforced)
+python -m ruff check backend/
+
+# Python MyPy strict typecheck (0 errors enforced)
+python scripts/ci_ratchet.py mypy
+
+# Frontend ESLint (0 errors, 0 warnings)
+npm --prefix frontend run lint
+
+# Production Frontend Build
+npm --prefix frontend run build
+```
+
+#### Dependency Vulnerability Audits
+```bash
+# Python dependencies audit
+python -m pip_audit -r backend/requirements.txt
+
+# Frontend dependencies audit
+npm --prefix frontend audit
+```
+
+#### Automated Accessibility Scans (Axe-core WCAG 2.2 AA)
+```bash
+# Verify 0 accessibility violations across core routes
+node scripts/audit_axe_playwright.cjs
+```
+
+#### End-to-End User Journey Verification
+```bash
+# Verify 5-step user journey (Onboarding -> Budget Scaling -> Vibe Collage -> Muhurat -> Invitation)
+node tests/e2e/test_main_user_journey.cjs
+```
+
+### 7. Google Services & Cloud Run Deployment
+For production deployment on Google Cloud Run and Google Maps/Gemini integration architecture, consult:
+* [`docs/GOOGLE_SERVICES_ARCHITECTURE.md`](docs/GOOGLE_SERVICES_ARCHITECTURE.md) — Google Cloud Run containerization, Cloud Build CI/CD, Secrets Manager, and Gemini Multimodal APIs.
+
+### 8. Run Locally
 ```bash
 # Terminal 1: Backend API
 uvicorn backend.app.main:app --reload --port 8000

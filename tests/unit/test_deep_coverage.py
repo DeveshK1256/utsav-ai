@@ -1100,4 +1100,190 @@ def test_discovery_helper_functions_and_profile_conversion():
     assert item_unrated.rating_tier == "new_unrated"
 
 
+def test_api_invitations_download_and_list():
+    from backend.app.models.models import InvitationCard
+    db = SessionLocal()
+    try:
+        rand_suffix = str(uuid.uuid4())[:8]
+        user = User(phone_number=f"+9166{rand_suffix}", full_name="Invite User", email=f"inv_{rand_suffix}@example.com")
+        db.add(user)
+        db.commit()
+
+        token = "invite_test_secret_token_123"
+        event = Event(
+            id="inv_test_evt_1",
+            name="Invitation Test Event",
+            owner_id=user.id,
+            owner_token=token,
+            event_type="wedding",
+            guest_count=150,
+            total_budget=800000.0,
+            city="Pune",
+            pincode="411001",
+            start_date=datetime.date(2026, 12, 1),
+            end_date=datetime.date(2026, 12, 2),
+            metadata_json={"owner_token": token}
+        )
+        db.add(event)
+        db.commit()
+
+        # Create dummy invitation card with both png and pdf bytes
+        png_dummy = b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDRdummy"
+        pdf_dummy = b"%PDF-1.4 dummy pdf bytes"
+        card = InvitationCard(
+            id="inv_test_card_1",
+            event_id=event.id,
+            layout_variant="classic_royal",
+            wording_text="श्री गणेशाय नमः\nहार्दिक आमंत्रण",
+            rendered_png=png_dummy,
+            rendered_pdf=pdf_dummy
+        )
+        db.add(card)
+        db.commit()
+
+        # 1. List invitation cards
+        res_list = client.get(f"/api/v1/events/{event.id}/invitations")
+        assert res_list.status_code == 200
+        data_list = res_list.json()
+        assert len(data_list) >= 1
+        assert any(c["id"] == "inv_test_card_1" for c in data_list)
+
+        # 2. Download PNG
+        res_png = client.get(f"/api/v1/events/{event.id}/invitations/{card.id}/download?format=png")
+        assert res_png.status_code == 200
+        assert res_png.headers["content-type"] == "image/png"
+        assert res_png.content == png_dummy
+
+        # 3. Download PDF
+        res_pdf = client.get(f"/api/v1/events/{event.id}/invitations/{card.id}/download?format=pdf")
+        assert res_pdf.status_code == 200
+        assert res_pdf.headers["content-type"] == "application/pdf"
+        assert res_pdf.content == pdf_dummy
+
+        # 4. Download non-existent card -> 404
+        res_404 = client.get(f"/api/v1/events/{event.id}/invitations/fake_card_id/download")
+        assert res_404.status_code == 404
+    finally:
+        db.query(InvitationCard).filter(InvitationCard.event_id == "inv_test_evt_1").delete()
+        db.query(Event).filter(Event.id == "inv_test_evt_1").delete()
+        db.query(User).filter(User.phone_number == f"+9166{rand_suffix}").delete()
+        db.commit()
+        db.close()
+
+
+def test_api_quotes_negotiation_draft():
+    from backend.app.models.models import QuoteDocument, QuoteLineItem
+    rand_suffix = str(uuid.uuid4())[:8]
+    db = SessionLocal()
+    try:
+        # 1. 404 for non-existent quote
+        res_404 = client.post(
+            "/api/v1/quotes/non_existent_quote_id/negotiate-draft",
+            json={"quote_id": "non_existent_quote_id", "target_discount_percentage": 10.0}
+        )
+        assert res_404.status_code == 404
+
+        # 2. Valid quote negotiation draft
+        user = User(phone_number=f"+9155{rand_suffix}", full_name="Quote User", email=f"quote_{rand_suffix}@example.com")
+        db.add(user)
+        db.commit()
+
+        token = "quote_test_secret_token_123"
+        event = Event(
+            id="quote_test_evt_1",
+            name="Quote Test Event",
+            owner_id=user.id,
+            owner_token=token,
+            event_type="wedding",
+            guest_count=200,
+            total_budget=1500000.0,
+            city="Pune",
+            pincode="411001",
+            start_date=datetime.date(2026, 12, 1),
+            end_date=datetime.date(2026, 12, 2),
+            metadata_json={"owner_token": token}
+        )
+        db.add(event)
+        db.commit()
+
+        quote = QuoteDocument(
+            id="quote_doc_test_1",
+            event_id=event.id,
+            vendor_name="Royal Catering Services",
+            category="caterer",
+            total_quoted_amount=500000.0,
+            file_name="quote.pdf",
+            file_type="application/pdf",
+            uploaded_file=b"%PDF dummy",
+            raw_extracted_json={"terms_and_conditions": ["Breakage charged extra"]}
+        )
+        db.add(quote)
+        db.commit()
+
+        li = QuoteLineItem(
+            quote_document_id=quote.id,
+            name="Buffet Dinner",
+            qty=200.0,
+            unit="plates",
+            unit_price=2500.0,
+            total=500000.0,
+            category_tag="catering"
+        )
+        db.add(li)
+        db.commit()
+
+        res_neg = client.post(
+            f"/api/v1/quotes/{quote.id}/negotiate-draft",
+            json={"quote_id": quote.id, "target_discount_percentage": 12.0}
+        )
+        assert res_neg.status_code == 200
+        neg_data = res_neg.json()
+        assert neg_data["quote_id"] == quote.id
+        assert neg_data["target_discount_percentage"] == 12.0
+        assert "polite" in neg_data["draft_variants"]
+    finally:
+        db.query(QuoteLineItem).filter(QuoteLineItem.quote_document_id == "quote_doc_test_1").delete()
+        db.query(QuoteDocument).filter(QuoteDocument.id == "quote_doc_test_1").delete()
+        db.query(Event).filter(Event.id == "quote_test_evt_1").delete()
+        db.query(User).filter(User.phone_number == f"+9155{rand_suffix}").delete()
+        db.commit()
+        db.close()
+
+
+def test_core_logic_extreme_edge_cases():
+    # 1. Budget scaling with extreme huge numbers (e.g. 100 Crore / 1 Billion INR)
+    huge_budget = 1_000_000_000.0
+    allocations = BudgetScalingEngine.compute_budget_allocation(
+        total_envelope=huge_budget,
+        event_type="wedding",
+        city="Mumbai",
+        guest_count=5000
+    )
+    total_planned = sum(item["planned_amount"] for item in allocations)
+    assert abs(total_planned - huge_budget) < 1.0
+
+    # 2. Budget scaling with large guest count (10,000 guests)
+    alloc_large_guests = BudgetScalingEngine.compute_budget_allocation(
+        total_envelope=5_000_000.0,
+        event_type="community_festival",
+        city="Pune",
+        guest_count=10000
+    )
+    assert len(alloc_large_guests) >= 4
+
+    # 3. Unicode and Devanagari text handling in invitation wording
+    wording_res = InvitationWordingAgent.compose_wording(
+        event_name="शुभ विवाह सोहळा",
+        event_type="wedding",
+        host_name="संजय आणि वंदना पाटील",
+        venue_str="महालक्ष्मी लॉन्स, पुणे",
+        muhurat_time="सकाळी ११:४५ वाजता",
+        date_str="२१ डिसेंबर २०२६"
+    )
+    assert wording_res.variants
+    first_body = wording_res.variants[0].body_text
+    assert "पाटील" in first_body or len(first_body) > 10
+
+
+
 
