@@ -374,18 +374,7 @@ export const VenueDiscoveryList: React.FC<VenueDiscoveryListProps> = ({
             return (
               <div
                 key={venue.id}
-                tabIndex={0}
-                role="button"
-                aria-pressed={isSelected}
-                aria-label={`Select venue ${venue.business_name}, ${venue.locality || venue.city}`}
-                onClick={() => onSelectVenue && onSelectVenue(venue)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === " ") {
-                    e.preventDefault();
-                    if (onSelectVenue) onSelectVenue(venue);
-                  }
-                }}
-                className={`p-4 rounded-2xl border text-left transition-all cursor-pointer relative focus:outline-none focus:ring-2 focus:ring-amber-500 ${
+                className={`p-4 rounded-2xl border text-left transition-all relative ${
                   isSelected
                     ? "border-emerald-500 bg-emerald-50/40 dark:bg-emerald-950/20 shadow-md ring-2 ring-emerald-500/30"
                     : "border-stone-200 dark:border-stone-800 hover:border-amber-400 dark:hover:border-amber-600 bg-stone-50/40 dark:bg-stone-950/40"

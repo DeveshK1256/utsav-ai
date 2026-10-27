@@ -7,7 +7,13 @@ const ROUTES = [
   '/',
   '/onboarding',
   '/dashboard/events/default',
-  '/dashboard/events/default/compose'
+  '/dashboard/events/default/compose',
+  '/dashboard/events/default/invitations',
+  '/dashboard/events/default/guests',
+  '/dashboard/events/default/vibe',
+  '/dashboard/events/default/vendors/quotes',
+  '/privacy',
+  '/demo'
 ];
 
 async function runAxeAudit() {

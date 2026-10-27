@@ -22,7 +22,7 @@ export default function PrivacyPage() {
           <h1 className="text-3xl sm:text-4xl font-bold font-serif text-stone-900 dark:text-stone-50">
             Privacy Policy
           </h1>
-          <p className="text-xs text-stone-500 dark:text-stone-400">
+          <p className="text-xs text-stone-700 dark:text-stone-300">
             Effective Date: October 24, 2026 &bull; Version 1.0 &bull; Platform: Utsav (<code className="font-mono">utsav-ai</code>)
           </p>
         </div>
@@ -130,8 +130,8 @@ export default function PrivacyPage() {
         </section>
 
         {/* Footer Navigation */}
-        <div className="pt-6 border-t border-stone-200 dark:border-stone-800 flex items-center justify-between text-xs text-stone-500">
-          <Link href="/" className="hover:text-stone-900 dark:hover:text-white font-semibold">
+        <div className="pt-6 border-t border-stone-200 dark:border-stone-800 flex items-center justify-between text-xs text-stone-700 dark:text-stone-300">
+          <Link href="/" className="hover:text-stone-900 dark:hover:text-white font-semibold text-stone-800 dark:text-stone-200">
             ← Return to Home
           </Link>
           <span className="font-mono">&copy; 2026 Utsav AI</span>

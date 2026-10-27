@@ -260,10 +260,12 @@ export default function VibeToPlanClient() {
 
           <form onSubmit={handleUploadAndExtract} className="space-y-5">
             <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-stone-700 dark:text-stone-300 mb-2">
+              <label htmlFor="inspiration-photos-input" className="block text-xs font-semibold uppercase tracking-wider text-stone-700 dark:text-stone-300 mb-2">
                 Inspiration Photos / Mood Board Stills
               </label>
               <input
+                id="inspiration-photos-input"
+                aria-label="Upload inspiration photos"
                 type="file"
                 multiple
                 accept="image/*"

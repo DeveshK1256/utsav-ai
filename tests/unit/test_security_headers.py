@@ -15,10 +15,11 @@ def test_security_headers_present_on_responses():
     assert res.status_code == 200
     assert res.headers.get("X-Content-Type-Options") == "nosniff"
     assert res.headers.get("X-Frame-Options") == "DENY"
-    assert res.headers.get("X-XSS-Protection") == "1; mode=block"
+    assert "X-XSS-Protection" not in res.headers
     assert "max-age=" in res.headers.get("Strict-Transport-Security", "")
     assert res.headers.get("Referrer-Policy") == "strict-origin-when-cross-origin"
-    assert "frame-ancestors 'none'" in res.headers.get("Content-Security-Policy", "")
+    assert res.headers.get("Permissions-Policy") == "geolocation=(self), camera=(), microphone=()"
+    assert res.headers.get("Content-Security-Policy") == "default-src 'none'; frame-ancestors 'none';"
 
 
 def test_verify_event_owner_token_unit():

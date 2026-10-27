@@ -428,7 +428,7 @@ export default function ScopedQuotesDashboardClient() {
                   Selected for Matrix:
                 </div>
                 <div className="text-2xl font-bold font-serif text-[#8B1E28] dark:text-[#F4B41A]">
-                  {selectedQuoteIds.length} <span className="text-xs font-normal text-stone-500">quotes</span>
+                  {selectedQuoteIds.length} <span className="text-xs font-semibold text-stone-700 dark:text-stone-300">quotes</span>
                 </div>
               </div>
             </div>
