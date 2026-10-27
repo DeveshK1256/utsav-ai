@@ -42,6 +42,12 @@ class IntakeRequestSchema(BaseModel):
     start_date: date = Field(..., description="Celebration Start Date")
     end_date: date = Field(..., description="Celebration End Date")
 
+    @field_validator("name", "host_name")
+    @classmethod
+    def sanitize_strings(cls, v: str) -> str:
+        import html
+        return html.escape(v.strip())
+
     @field_validator("end_date")
     @classmethod
     def validate_dates(cls, end_date_val: date, info):

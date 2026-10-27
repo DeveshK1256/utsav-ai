@@ -471,7 +471,7 @@ export default function OnboardingPage() {
   };
 
   return (
-    <div className="min-h-screen py-8 px-4 sm:px-6 lg:px-8">
+    <main id="main-content" className="min-h-screen py-8 px-4 sm:px-6 lg:px-8">
       <div className="max-w-4xl mx-auto">
         {/* Header with Navigation and Theme Toggle */}
         <header className="flex items-center justify-between pb-6 mb-8 border-b border-stone-200/80 dark:border-stone-800">
@@ -1194,6 +1194,6 @@ export default function OnboardingPage() {
           </div>
         )}
       </div>
-    </div>
+    </main>
   );
 }

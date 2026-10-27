@@ -1,0 +1,5 @@
+[allowlist]
+description = "Allow mock test fixtures and synthetic test tokens in automated test suites"
+paths = [
+  '''tests/.*''',
+]

@@ -1,8 +1,9 @@
+import html
 from datetime import date, datetime
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from sqlalchemy.orm import Session
 
 from backend.app.core.security import generate_owner_token, verify_event_owner_token
@@ -29,6 +30,11 @@ class EventCreateSchema(BaseModel):
     end_date: date | None = None
     host_phone: str = Field(default="+919876543210")
     host_name: str = Field(default="Test Host")
+
+    @field_validator("name")
+    @classmethod
+    def sanitize_event_name(cls, v: str) -> str:
+        return html.escape(v.strip())
 
 
 class EventResponseSchema(BaseModel):
@@ -269,10 +275,10 @@ def update_event_compose_progress(
         compose_state["venue_status"] = "shortlist_pick"  # Honest note: shortlist pick, not confirmed booking
         compose_state["venue_skipped"] = False
 
-        if event.fact_sheet and getattr(vendor, "address", None):
-            event.fact_sheet.venue_address = vendor.address
-        elif event.fact_sheet and payload.venue_address:
+        if event.fact_sheet and payload.venue_address:
             event.fact_sheet.venue_address = payload.venue_address
+        elif event.fact_sheet and vendor.locality:
+            event.fact_sheet.venue_address = f"{vendor.business_name}, {vendor.locality}, {vendor.city}"
     elif payload.step == "venue" and not payload.skip_venue:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,

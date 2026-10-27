@@ -114,7 +114,7 @@ export function FeatureShowcase3D() {
         <Interactive3DCard className="p-6 sm:p-8 rounded-3xl glass-card border border-emerald-500/30 shadow-2xl bg-white/95 dark:bg-stone-900/95">
           <div className="flex items-center justify-between border-b border-stone-200 dark:border-stone-800 pb-4 mb-4">
             <div>
-              <div className="text-[10px] uppercase font-bold text-stone-500 tracking-wider">Live Calculated Total</div>
+              <div className="text-[10px] uppercase font-bold text-stone-600 dark:text-stone-300 tracking-wider">Live Calculated Total</div>
               <div className="font-serif text-2xl sm:text-3xl font-bold text-stone-900 dark:text-stone-100">
                 ₹{calculatedTotal.toLocaleString('en-IN')}
               </div>
@@ -203,7 +203,7 @@ export function FeatureShowcase3D() {
                 <span>Rajasthani Royal Thali (250 plates)</span>
                 <span>₹2,50,000</span>
               </div>
-              <div className="text-[10px] text-stone-500">Unit rate: ₹1,000 / plate • Tier-1 Median: ₹1,150 (Fair)</div>
+              <div className="text-[10px] text-stone-600 dark:text-stone-300">Unit rate: ₹1,000 / plate • Tier-1 Median: ₹1,150 (Fair)</div>
             </div>
 
             {/* Hidden Cost Detection Tags */}

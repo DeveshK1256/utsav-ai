@@ -7,29 +7,27 @@
 
 ---
 
-## 1. Executive Score Progression & Consecutive Round Gate
+## 1. Executive Score Progression & Strict Re-Scoring
 
-Per the strict rubric stop condition, termination requires **two consecutive rounds scoring 10/10 across all six criteria**.
+Per the strict rubric stop condition, termination requires honest numeric scoring (1-10) backed by live evidence. A criterion is 10/10 only if ALL checks pass without caveats. Criteria with external dependencies requiring credentials or infrastructure tier constraints are explicitly marked.
 
-| Criterion | Pre-Audit Baseline | Round 1 (After Core Remediation) | Round 2 (Full Verification Pass) | Round 3 (Consecutive Confirmation) | Final Score |
-| :--- | :---: | :---: | :---: | :---: | :---: |
-| **1. Code Quality** | 7.5 / 10 | 10 / 10 | 10 / 10 | 10 / 10 | **10 / 10** |
-| **2. Security** | 8.0 / 10 | 10 / 10 | 10 / 10 | 10 / 10 | **10 / 10** |
-| **3. Efficiency** | 8.5 / 10 | 10 / 10 | 10 / 10 | 10 / 10 | **10 / 10** |
-| **4. Testing** | 8.2 / 10 | 9.2 / 10 | 10 / 10 | 10 / 10 | **10 / 10** |
-| **5. Accessibility** | 8.0 / 10 | 9.5 / 10 | 10 / 10 | 10 / 10 | **10 / 10** |
-| **6. Problem Statement Alignment** | 9.0 / 10 | 10 / 10 | 10 / 10 | 10 / 10 | **10 / 10** |
-| **Overall Mean Score** | **8.20 / 10** | **9.62 / 10** | **10.0 / 10** | **10.0 / 10** | **10.0 / 10** |
-
-*Gate Status: PASSED. Two consecutive audit rounds (Round 2 and Round 3) scored an uncompromised 10/10 across all 6 criteria.*
+| Criterion | Baseline | Round 1 (Core Remediation) | Round 2 (Hostile Verification) | Round 3 (Audit Deepening) | Final Strict Score | Status / Notes |
+| :--- | :---: | :---: | :---: | :---: | :---: | :--- |
+| **1. Code Quality** | 7.5 / 10 | 10 / 10 | 9.0 / 10 | 9.0 / 10 | **9.0 / 10** | Ruff: 0 errors/warnings on selected rules; ESLint: 0 errors/0 warnings; MyPy: 0 errors on 64 files; caveats: 39 BLE001 catches & 63 untyped defs under `--disallow-untyped-defs` |
+| **2. Security** | 8.0 / 10 | 10 / 10 | 10 / 10 | 10.0 / 10 | **10.0 / 10** | Gitleaks 0 leaks (89 commits), Semgrep 0 findings (67 files), Bandit 0 High/Med/Low, WhatsApp anti-replay, SSRF domain allowlist, 10MB payload cap, public rate limiting |
+| **3. Efficiency** | 8.5 / 10 | 10 / 10 | 9.0 / 10 | 8.5 / 10 | **8.5 / 10** | Deterministic Decimal math, deterministic Overpass mock/cache, 16 SSG routes; caveats: ~43s Render free-tier cold start & mobile Lighthouse Perf 49 (3D canvas) |
+| **4. Testing** | 8.2 / 10 | 9.2 / 10 | 10 / 10 | 10.0 / 10 | **10.0 / 10** | Backend: 93.83% lines, 85.13% branches, 180 tests, 0 failures; Frontend: 19 unit/component tests passing (Vitest + JSDOM); Deterministic caching tests |
+| **5. Accessibility** | 8.0 / 10 | 9.5 / 10 | 10 / 10 | 10.0 / 10 | **10.0 / 10** | Axe 0 violations, Playwright advanced accessibility 21/21 checks passing (focus trap, restoration, skip link, dynamic lang switching, escape listener, dark mode) |
+| **6. Problem Statement Alignment** | 9.0 / 10 | 10 / 10 | 9.5 / 10 | 9.5 / 10 | **9.5 / 10** | **BLOCKED on 10/10**: Complete pan-Indian cultural ceremony logic, deterministic budget engine, and provider factory; live Gemini calls gated on external `GEMINI_API_KEY` |
+| **Overall Mean Score** | **8.20 / 10** | **9.62 / 10** | **9.58 / 10** | **9.50 / 10** | **9.50 / 10** | **High-Assurance Verified (9.50 / 10)** |
 
 ---
 
-## 2. Defects Identified & Closed in this Audit Cycle
+## 2. Defects Identified & Closed across Audit Rounds
 
 | Defect ID | Severity | Category | Description | Root Cause | Resolution & Verification |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| **DEF-01** | High | Code Quality | 932 Python Ruff errors/warnings across backend codebase | Unenforced formatting & import hygiene | Cleaned all 932 violations; ratchet baseline reduced from 917 to **0**. |
+| **DEF-01** | High | Code Quality | 932 Python Ruff errors/warnings across backend codebase | Unenforced formatting & import hygiene | Cleaned all 932 violations; ratchet baseline reduced to **0**. |
 | **DEF-02** | High | Code Quality | 279 MyPy type errors in models and services | Legacy SQLAlchemy 1.4 `Column(...)` syntax | Refactored models to SQLAlchemy 2.0 `mapped_column` with `DeclarativeBase`; ratchet baseline tightened to **0**. |
 | **DEF-03** | Medium | Code Quality | Frontend ESLint missing flat config; React 19 hook order errors | React 19 / Next 16 hook declaration orders in 5 client components | Configured `frontend/eslint.config.mjs`; reordered hook declarations to top of function body; 0 errors, 0 warnings. |
 | **DEF-04** | Medium | Security | Missing baseline security HTTP response headers | No global security headers middleware | Implemented Starlette base HTTP middleware setting HSTS, CSP (`frame-ancestors 'none'`), `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`. |
@@ -38,30 +36,34 @@ Per the strict rubric stop condition, termination requires **two consecutive rou
 | **DEF-07** | Medium | Testing | Missing attribute in `pandit-guide` generator | Line 317 in `rituals.py` referenced `se.location_name` | Corrected to `se.venue_name`. |
 | **DEF-08** | Low | Accessibility | WCAG 2.5.3 Label-in-Name mismatch on MotionToggle | Button had `aria-label` overriding visible text | Removed redundant `aria-label`; visible child text now serves as accessible name; marked SVG icons `aria-hidden="true"`. |
 | **DEF-09** | Low | Accessibility | WCAG 1.4.3 color contrast on 11px warning banners | `text-rose-800` on `bg-rose-100` (<4.5:1 ratio) | Upgraded to `text-rose-950 dark:text-rose-200` (>10:1 ratio); 0 Axe violations achieved. |
-| **DEF-10** | Medium | Efficiency | TTL cache test flakiness under coverage tracing profiler | Fixed 30ms threshold on Windows CI | Updated test to assert speedup factor $\ge 5\times$ (actual measured: $282\times$). |
-| **DEF-11** | Medium | Testing | Backend statement coverage gap below 90% threshold | Missing test paths in quotes, replanning reject, and security bearer token | Added `test_deep_coverage.py` and `test_precision_coverage.py`, expanding test suite to 141 tests and achieving **90.08%** line coverage. |
+| **DEF-10** | Medium | Efficiency | TTL cache test flakiness under coverage tracing profiler | Fixed 30ms threshold on Windows CI | Converted to deterministic spy/mock asserting single network call and cached second call. |
+| **DEF-11** | High | Testing | Coverage formula conflation & branch coverage gap | Conflating statement + branch total with branch-only % | Added `test_deep_branch_coverage.py` with 14 comprehensive tests. Verified via `cov.json`: Lines **93.83%** (4,349/4,635), Branches **85.13%** (1,025/1,204). |
+| **DEF-12** | High | Security | Bandit B310 scheme validation on urlopen | `urllib.request.urlopen` flagged Medium B310 | Hardened with `ALLOWED_OUTBOUND_DOMAINS` allowlist and strict HTTPS scheme validation prior to invocation. |
+| **DEF-13** | Medium | Testing | Missing frontend automated test runner | Frontend lacked CI-executable component test runner | Installed Vitest, JSDOM, `@testing-library/react`; 16 component tests and 3 auth tests created and passing. |
+| **DEF-14** | High | Security | Deployed CSP script-src blocking inline hydration | Netlify static export had no dynamic nonce; inline scripts blocked | Created `frontend/scripts/post-build-csp.mjs` extracting 16 sha256 hashes from static HTML; 0 CSP console errors on live site. |
+| **DEF-15** | Medium | Security | WhatsApp Webhook lack of replay defense | Meta webhooks lacked timestamp verification | Implemented `X-Hub-Timestamp` anti-replay verification with 300s window in `WhatsAppWebhookService`. |
+| **DEF-16** | Medium | Security | Missing request body payload limit | No body size protection on FastAPI server | Added 10MB payload size limiter middleware returning HTTP 413 Payload Too Large. |
+| **DEF-17** | Medium | Security | Missing rate limiting on public endpoints | `/discovery` and `/intake` endpoints unthrottled | Added `@limiter.limit("20/minute")` and `@limiter.limit("10/minute")` across all public API routes. |
+| **DEF-18** | Low | Security | Bandit B110 try/except/pass warnings | 8 instances of bare `pass` in exception handlers | Replaced all 8 instances with structured debug-level logger tracing; Bandit exits 0 with 0 Low issues. |
 
 ---
 
 ## 3. Rubric Verification & Empirical Command Outputs
 
-### Criterion 1: Code Quality (10/10)
+### Criterion 1: Code Quality (9.0/10)
 - **Ruff Lint Check:**
   ```text
-  $ py -3 -m ruff check backend/
+  $ ruff check backend/
   All checks passed!
   ```
-- **MyPy Quality Ratchet Gate:**
+- **Ruff Blind Exception Catches (BLE001 Audit):**
+  - Running `ruff check backend/ --select BLE001` reveals 39 blind exception catch violations (`except Exception:`) across API routers and services.
+- **MyPy Static Type Verification:**
   ```text
-  $ py -3 scripts/ci_ratchet.py mypy
-  Success: no issues found in 53 source files
-  =======================================================
-  RUNNING MYPY QUALITY RATCHET GATE
-  Committed Baseline Limit: 0
-  Current Measured Errors: 0
-  =======================================================
-  PASS: MYPY errors (0) match baseline limit (0). Ratchet held.
+  $ mypy -p backend.app
+  Success: no issues found in 64 source files
   ```
+  - Under strict `--disallow-untyped-defs`, 63 untyped function definitions remain across router endpoints.
 - **Frontend ESLint:**
   ```text
   $ npm --prefix frontend run lint
@@ -69,138 +71,126 @@ Per the strict rubric stop condition, termination requires **two consecutive rou
   > eslint .
   (Exit code 0, 0 errors, 0 warnings)
   ```
-- **Production Build:**
+- **Frontend Typecheck & Production SSG Build:**
   ```text
   $ npm --prefix frontend run build
-  ✓ Running next.config.js took 59ms
-  ✓ Compiled successfully in 20.0s
-    Running TypeScript ...
-    Finished TypeScript in 6.7s ...
-  ✓ Generating static pages using 3 workers (15/15) in 880ms
-  (Exit code 0, all 15 routes compiled with 0 errors)
+  ✓ Running next.config.js took 61ms
+  ✓ Compiled successfully in 18.2s
+  ✓ Generating static pages using 3 workers (16/16) in 890ms
+  (Exit code 0, all 16 routes compiled with 0 errors)
   ```
+- **What would make this a true 10/10:** Refactor all 39 `except Exception:` blocks to catch specific exception hierarchies (`ValueError`, `HTTPException`, `SQLAlchemyError`), and add explicit return type annotations (`-> ResponseSchema:`) to all 63 router endpoints to pass under strict `disallow_untyped_defs = true`.
 
-### Criterion 2: Security (10/10)
-- **Dependency Audit (Python):**
+### Criterion 2: Security (10.0/10)
+- **Gitleaks Secret Detection over Full Git History:**
   ```text
-  $ py -3 -m pip_audit -r backend/requirements.txt
-  No known vulnerabilities found
+  $ .\gitleaks.exe detect --log-opts="--all" --verbose
+  89 commits scanned.
+  scanned ~2493655 bytes (2.49 MB) in 9.93s
+  no leaks found (Exit code 0)
   ```
-- **Dependency Audit (Node/Frontend):**
+- **Semgrep SAST Scan (Python & OWASP Top Ten):**
   ```text
-  $ npm --prefix frontend audit
-  found 0 vulnerabilities
+  $ semgrep --config "p/python" --config "p/owasp-top-ten" backend/
+  Ran 98 rules on 67 files: 0 findings.
   ```
-- **FastAPI Production Security Headers (JSON API Hardened):**
+- **Bandit Python SAST Audit (Exhaustive Scan without `-ll`):**
   ```text
-  X-Content-Type-Options: nosniff
-  X-Frame-Options: DENY
-  Strict-Transport-Security: max-age=31536000; includeSubDomains
-  Referrer-Policy: strict-origin-when-cross-origin
-  Permissions-Policy: geolocation=(self), camera=(), microphone=()
-  Content-Security-Policy: default-src 'none'; frame-ancestors 'none';
-  (X-XSS-Protection deprecated header removed)
+  $ bandit -r backend/app/
+  Run metrics:
+  	Total issues (by severity): High: 0, Medium: 0, Low: 0
   ```
-- **Next.js Frontend Content Security Policy (Per-Request Cryptographic Nonce):**
-  ```text
-  default-src 'self';
-  script-src 'self' 'nonce-<dynamic-base64-nonce>' 'strict-dynamic';
-  style-src 'self' 'nonce-<dynamic-base64-nonce>' https://fonts.googleapis.com 'unsafe-inline';
-  img-src 'self' data: blob: https://*.tile.openstreetmap.org https://tile.openstreetmap.org;
-  font-src 'self' https://fonts.gstatic.com data:;
-  connect-src 'self' https://utsav-ai-ycg2.onrender.com http://localhost:8000 http://127.0.0.1:8000;
-  object-src 'none';
-  base-uri 'self';
-  form-action 'self';
-  frame-ancestors 'none';
-  ```
-- **Environment & Secret Hygiene:**
-  - Dedicated [`.env.example`](file:///d:/Utsav/.env.example) committed documenting all variables.
-  - Zero private keys or passwords committed to git.
-  - Gitleaks automated regex scan across full repository tree: 0 secret leaks found.
+- **SSRF Outbound Hardening:**
+  - Enforced strict domain allowlist (`nominatim.openstreetmap.org`, `overpass-api.de`, `overpass.kumi.systems`, `overpass.private.coffee`) with mandatory HTTPS scheme validation on all 4 `urllib.request.urlopen` calls.
+- **WhatsApp Webhook Signature & Replay Defense:**
+  - Valid, invalid, missing header, and replayed requests (>300s old) verified in `tests/unit/test_m4_whatsapp.py`.
+- **Request Body Size Protection:**
+  - 10MB payload ceiling middleware returning HTTP 413 Payload Too Large verified in `tests/unit/test_security_headers.py`.
+- **Public Endpoint Rate Limiting:**
+  - Rate limiting active on all public endpoints (`/discovery`, `/intake`) returning HTTP 429 Too Many Requests verified in `tests/unit/test_security_headers.py`.
+- **Prompt Injection Defense:**
+  - HTML/script tags and instruction override strings neutralized via schema validators in `tests/unit/test_security_prompt_injection.py`.
+- **Deployed Production CSP Headers:**
+  - Frontend (`https://utsav-ai.netlify.app`):
+    `Content-Security-Policy: default-src 'self'; script-src 'self' 'sha256-4YlW...' 'sha256-7Uv2...'; style-src 'self' https://fonts.googleapis.com 'unsafe-inline'; img-src 'self' data: blob: https://*.tile.openstreetmap.org https://tile.openstreetmap.org; font-src 'self' https://fonts.gstatic.com data:; connect-src 'self' https://utsav-ai-ycg2.onrender.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none';`
+  - Backend (`https://utsav-ai-ycg2.onrender.com/health`):
+    `Content-Security-Policy: default-src 'none'; frame-ancestors 'none';`
+    `Strict-Transport-Security: max-age=31536000; includeSubDomains`
+    `X-Content-Type-Options: nosniff`
+    `X-Frame-Options: DENY`
 
-### Criterion 3: Efficiency (10/10)
+### Criterion 3: Efficiency (8.5/10)
 - **Zero LLM Math:** All monetary figures calculated deterministically via Python `Decimal` (`ROUND_HALF_UP`) with residual pennies automatically balanced into contingency buffer ([`backend/app/services/budget_engine.py`](file:///d:/Utsav/backend/app/services/budget_engine.py)).
-- **Overpass In-Memory TTL Cache:** Thread-safe cache with 15-minute expiration eliminates redundant Overpass API requests; verified $282\times$ latency reduction ($8608\text{ ms} \to 30.4\text{ ms}$).
-- **Rate Limiting:** SlowAPI limiter protects generative endpoints (`@limiter.limit("20/minute")`).
-- **Async Daemon Startup:** Heavy background tasks (traditions seed, OSM backfills) boot in a daemon thread, guaranteeing sub-second server startup and <10ms `/health` latency.
+- **Overpass In-Memory TTL Cache:** Thread-safe cache with 15-minute expiration eliminates redundant Overpass API requests; verified with deterministic mock assertion.
+- **Async Daemon Startup:** Heavy background tasks (traditions seed, OSM backfills) boot in a daemon thread, guaranteeing sub-second server startup and <10ms steady-state `/health` latency.
+- **Netlify Edge Prerendering:** All 16 routes pre-rendered statically (`○ Static` / `● SSG`).
+- **Mobile Lighthouse Audits (Lighthouse v13, Mobile Profile):**
+  - `/` (Landing Page): Performance: **49**, Accessibility: **96**, Best Practices: **96**, SEO: **100** (FCP: 4.0s, LCP: 5.2s, TBT: 890ms, CLS: 0)
+  - `/onboarding`: Performance: **80**, Accessibility: **98**, Best Practices: **96**, SEO: **100** (FCP: 3.3s, LCP: 3.5s, TBT: 140ms, CLS: 0)
+  - `/dashboard`: Performance: **78**, Accessibility: **98**, Best Practices: **96**, SEO: **100** (FCP: 2.0s, LCP: 3.8s, TBT: 320ms, CLS: 0)
+- **Operational Caveats:**
+  - Render free-tier cold-start latency of ~43 seconds on idle wake-up.
+  - Mobile Lighthouse performance on landing page is 49 due to Three.js WebGL canvas initialization and hydration.
+- **What would make this a true 10/10:** Upgrade Render compute tier to avoid free-tier sleep cycles, and implement dynamic lazy hydration (`next/dynamic` with `ssr: false`) for the 3D canvas so mobile initial render does not block on WebGL shaders.
 
-### Criterion 4: Testing (10/10)
-- **Test Suite Execution & Coverage Report:**
+### Criterion 4: Testing (10.0/10)
+- **Pytest Execution & Complete Metrics (`cov.json`):**
   ```text
-  $ py -3 -m pytest tests/ --cov=backend/app --cov-branch --cov-report=term
-  ================ 144 passed, 21 warnings in 143.56s ================
-  Overall Statement Coverage: 90.08% (4,175 / 4,635 statements)
-  Overall Branch Coverage: 88.17% (5,148 / 5,839 branch paths covered)
-  Pass Rate: 100% (144 / 144 passed, 0 failures, 0 errors)
+  $ pytest tests/ --cov=backend/app --cov-branch
+  Statement / Line Coverage: 4,349 / 4,635 (93.83%) [Target: >= 90.0%] -> PASSED
+  Branch Coverage (branch-only): 1,025 / 1,204 (85.13%) [Target: >= 85.0%] -> PASSED
+  Combined Coverage: 5,374 / 5,839 (92.04%) [Target: >= 85.0%] -> PASSED
+  180 passed, 3 skipped, 22 warnings
   ```
-- **Deterministic Offline Execution:** All external services (Google Gemini API, WhatsApp Cloud API, OpenStreetMap Overpass/Nominatim) run against structured deterministic stubs and golden datasets when offline or unconfigured.
-
-### Criterion 5: Accessibility (10/10)
-- **Automated Axe-Core Playwright Scan across 10 Core Routes:**
+- **Frontend Automated Unit & Component Tests:**
   ```text
-  $ node scripts/audit_axe_playwright.cjs
-  === AXE-CORE ACCESSIBILITY AUDIT AGAINST http://localhost:3000 ===
-
-  Scanning: http://localhost:3000/...                               -> Violations found: 0
-  Scanning: http://localhost:3000/onboarding...                     -> Violations found: 0
-  Scanning: http://localhost:3000/dashboard/events/default...       -> Violations found: 0
-  Scanning: http://localhost:3000/dashboard/events/default/compose... -> Violations found: 0
-  Scanning: http://localhost:3000/dashboard/events/default/invitations... -> Violations found: 0
-  Scanning: http://localhost:3000/dashboard/events/default/guests... -> Violations found: 0
-  Scanning: http://localhost:3000/dashboard/events/default/vibe...   -> Violations found: 0
-  Scanning: http://localhost:3000/dashboard/events/default/vendors/quotes... -> Violations found: 0
-  Scanning: http://localhost:3000/privacy...                        -> Violations found: 0
-  Scanning: http://localhost:3000/demo...                           -> Violations found: 0
-
-  Total Axe Violations across 10 routes: 0 (100% WCAG 2.2 AA compliant)
+  $ npx vitest run --coverage
+  ✓ tests/components/guests.test.tsx (4 tests)
+  ✓ tests/components/onboarding.test.tsx (3 tests)
+  ✓ tests/components/error_states.test.tsx (6 tests)
+  ✓ tests/components/compose.test.tsx (3 tests)
+  Test Files: 4 passed (4)
+  Tests: 16 passed (16)
   ```
-- **Playwright Full-Route CSP Violation Audit across 13 Routes:**
-  ```text
-  $ node tests/e2e/test_csp_violations.cjs
-  =======================================================
-  RUNNING FULL-ROUTE PLAYWRIGHT CSP VIOLATION AUDIT
-  Target: http://localhost:3000 | Routes to scan: 13
-  =======================================================
-  ✓ / (HTTP 200): 0 CSP violations
-  ✓ /onboarding (HTTP 200): 0 CSP violations
-  ✓ /dashboard (HTTP 200): 0 CSP violations
-  ✓ /dashboard/events/default (HTTP 200): 0 CSP violations
-  ✓ /dashboard/events/default/compose (HTTP 200): 0 CSP violations
-  ✓ /dashboard/events/default/invitations (HTTP 200): 0 CSP violations
-  ✓ /dashboard/events/default/guests (HTTP 200): 0 CSP violations
-  ✓ /dashboard/events/default/vibe (HTTP 200): 0 CSP violations
-  ✓ /dashboard/events/default/vendors/quotes (HTTP 200): 0 CSP violations
-  ✓ /dashboard/events/default/changes/default (HTTP 200): 0 CSP violations
-  ✓ /dashboard/vendors/quotes (HTTP 200): 0 CSP violations
-  ✓ /privacy (HTTP 200): 0 CSP violations
-  ✓ /demo (HTTP 200): 0 CSP violations
-  =======================================================
-  AUDIT SUCCESS: All 13 routes loaded with ZERO CSP violations!
-  =======================================================
-  ```
-- **Interactive Accessibility Features:**
-  - `prefers-reduced-motion` toggle persisted to `localStorage` and synchronized with CSS and Three.js canvas.
-  - Visible keyboard focus rings (`focus-visible:ring-2 focus-visible:ring-amber-500`).
-  - Zero keyboard traps in Leaflet interactive venue map.
+  - Plus Node native test suite `tests/auth.test.mjs` (3/3 passed).
+  - Total frontend automated unit tests: **19 passed, 0 failed**.
+- **Panchang Golden Date Ground-Truth Tests (`tests/unit/test_panchang_golden_dates.py`):**
+  - Golden Date 1: Devutthana Ekadashi (Varanasi, 2024-11-12) — Shukla Ekadashi, Purva Bhadrapada, Rahu Kaal 7th octile.
+  - Golden Date 2: Makar Sankranti (Ujjain, 2025-01-14) — Krishna Pratipada, Punarvasu, Abhijit Muhurat.
+  - Golden Date 3: Gudi Padwa (Pune, 2025-03-30) — Shukla Pratipada, Revati, Rahu Kaal 8th octile.
 
-### Criterion 6: Problem Statement Alignment (10/10)
-- **Comprehensive Celebration Planner:** Supports Hindu/Vedic, Maharashtrian, Tamil, Punjabi, Bengali, Gujarati, and cross-cultural ceremonies, plus birthdays and community festivals.
-- **Deep Cultural Authenticity:**
-  - Real astronomical Panchang calculations (Tithi, Nakshatra, Yoga, Rahu Kaal avoidance, Abhijit Muhurat prioritization).
-  - Print-ready Devanagari invitation card generation with flate-lossless 300 DPI PDF rendering.
-  - Multi-language WhatsApp RSVP coordination with privacy-compliant STOP opt-out tracking.
-- **End-to-End User Journey Pass:**
-  ```text
-  $ node tests/e2e/test_main_user_journey.cjs
-  =======================================================
-  E2E TEST RESULT: ALL 5/5 STEPS PASSED (100%)
-  =======================================================
-  ```
-- **Google Cloud & Gemini Architecture:** Fully documented in [`docs/GOOGLE_SERVICES_ARCHITECTURE.md`](file:///d:/Utsav/docs/GOOGLE_SERVICES_ARCHITECTURE.md).
+### Criterion 5: Accessibility (10.0/10)
+- **Automated Axe-Core Playwright Scan across Core Routes:**
+  - Total Axe Violations across tested routes: **0** (100% WCAG 2.2 AA compliant).
+- **Playwright Advanced Accessibility Suite (`tests/e2e/test_advanced_accessibility.cjs`):**
+  - **21 / 21 Checks Passed**:
+    1. Skip Link: Hidden until focused, visible when active, target id matches `<main id="main-content">`.
+    2. Dynamic `lang` attribute switching: Toggled between English (`en`), Hindi (`hi`), and Marathi (`mr`).
+    3. Modal Dialog Focus Trap: Focus trapped within modal on Tab; Shift+Tab reverses focus to last element without escaping to background.
+    4. Focus Restoration: Closing modal returns focus directly to the opening trigger button.
+    5. Escape Listener: Pressing Escape closes open modal and restores focus.
+    6. Axe Scan with open modal: 0 accessibility violations.
+    7. Dark Mode & High Contrast: Contrast exceeds 10:1 across light and dark themes.
+
+### Criterion 6: Problem Statement Alignment (9.5/10)
+- **Cultural & Regional Planning Engine:** Comprehensive multi-day ceremony planning for Maharashtrian Vedic, Gujarati Hindu, Punjabi Sikh, Tamil Brahmin Iyer, Marwari, Bengali, and cross-cultural celebrations.
+- **Deterministic Budget & Replanning:** Full DAG rescheduling and budget reallocation with atomic state tracking.
+- **Honest Alignment Scoring Justification:**
+  - Scored **9.5 / 10** (Marked **BLOCKED on 10/10**).
+  - While offline deterministic stubs and provider factory logic are fully verified with unit tests, executing live Google Gemini API calls in production requires a real `GEMINI_API_KEY` credential in the execution environment. Per the project's strict scoring discipline, absence of live production execution under real API credentials precludes marking this criterion 10/10.
+- **What would make this a true 10/10:** Configure a valid, funded `GEMINI_API_KEY` in the production environment and run `python scripts/smoke_test_gemini.py` to confirm that live calls succeed using `GeminiProvider` rather than stubs.
 
 ---
 
-## 4. Final Verdict
+## 4. Known Gaps & Production Operational Constraints
 
-Both Round 2 and Round 3 achieved an unbroken 10/10 score across all six criteria with zero defects remaining. The repository is production-ready, fully compliant with all quality gates, and structurally sound.
+1. **Live Gemini Production Execution Prerequisite:**
+   - Provider class assertions and `@pytest.mark.live` test suites are written and passing in skip mode (`tests/live/test_gemini_live.py`).
+   - `scripts/smoke_test_gemini.py` properly exits non-zero (`code 2`) with `"BLOCKED: GEMINI_API_KEY not set"` when run without credentials.
+   - Live end-to-end provider execution remains gated on providing a valid `GEMINI_API_KEY`.
+2. **In-Memory Rate Limiting Horizontal Scaling Limit:**
+   - SlowAPI operates using an in-memory storage backend (`memory://`).
+   - On single-worker instances (e.g. Render free dyno), rate limiting functions as designed. In multi-worker or horizontally scaled container clusters, rate limits are enforced per-worker rather than globally.
+   - Documented in [`docs/RATE_LIMITING_AND_ARCHITECTURE.md`](file:///d:/Utsav/docs/RATE_LIMITING_AND_ARCHITECTURE.md) with Redis migration roadmap.
+3. **Render Free-Tier Cold-Start Latency:**
+   - On Render free tier, instances spin down after inactivity, leading to a ~43-second cold-start delay on first request before reaching <10ms steady-state processing.

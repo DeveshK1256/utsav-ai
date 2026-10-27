@@ -1,10 +1,13 @@
 import io
+import logging
 import os
 import re
 import zlib
 from typing import Any
 
 from PIL import Image, ImageDraw, ImageFont
+
+logger = logging.getLogger(__name__)
 
 # Path to bundled Noto Sans Devanagari fonts
 FONTS_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "assets", "fonts")
@@ -30,12 +33,13 @@ def get_font(path: str, size: int) -> Any:
     try:
         if os.path.exists(path):
             return ImageFont.truetype(path, size)
-    except Exception:
-        pass
+    except Exception as exc:
+        logger.debug("Failed loading primary font %s: %s", path, exc)
     # System fallback or default
     try:
         return ImageFont.truetype("arial.ttf", size)
-    except Exception:
+    except Exception as exc:
+        logger.debug("Failed loading system fallback font: %s", exc)
         return ImageFont.load_default()
 
 

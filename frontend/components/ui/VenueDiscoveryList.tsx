@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import dynamic from "next/dynamic";
 import { Search, MapPin, Navigation, ListFilter, AlertCircle, Sparkles } from "lucide-react";
 import { WakingUpNotice } from "./WakingUpNotice";
@@ -177,7 +177,7 @@ export const VenueDiscoveryList: React.FC<VenueDiscoveryListProps> = ({
   };
 
   // 3. Fetch Real Nearby Venues (Curated Baseline + OpenStreetMap Nationwide)
-  const fetchVenues = async () => {
+  const fetchVenues = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
@@ -206,11 +206,11 @@ export const VenueDiscoveryList: React.FC<VenueDiscoveryListProps> = ({
     } finally {
       setLoading(false);
     }
-  };
+  }, [apiBase, city, categoryFilter, geoState.lat, geoState.lng]);
 
   useEffect(() => {
     fetchVenues();
-  }, [city, categoryFilter, geoState.lat, geoState.lng]);
+  }, [fetchVenues]);
 
   const centerLat = geoState.lat || 26.9124;
   const centerLng = geoState.lng || 75.7873;

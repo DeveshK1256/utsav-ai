@@ -97,3 +97,70 @@ def test_verify_event_owner_token_unit():
         db.commit()
         db.close()
 
+
+def test_cors_allow_list_enforcement():
+    """Validates CORS allow-list permits trusted origins and rejects unauthorized domains."""
+    # 1. Allowed Production Domain
+    res_prod = client.options(
+        "/api/v1/discovery/vendors?city=Pune",
+        headers={"Origin": "https://utsav-ai.netlify.app", "Access-Control-Request-Method": "GET"}
+    )
+    assert res_prod.headers.get("access-control-allow-origin") == "https://utsav-ai.netlify.app"
+
+    # 2. Allowed Localhost Domain
+    res_local = client.options(
+        "/api/v1/discovery/vendors?city=Pune",
+        headers={"Origin": "http://localhost:3000", "Access-Control-Request-Method": "GET"}
+    )
+    assert res_local.headers.get("access-control-allow-origin") == "http://localhost:3000"
+
+    # 3. Disallowed Malicious Domain
+    res_evil = client.options(
+        "/api/v1/discovery/vendors?city=Pune",
+        headers={"Origin": "https://attacker-controlled-site.xyz", "Access-Control-Request-Method": "GET"}
+    )
+    assert "access-control-allow-origin" not in res_evil.headers
+
+
+def test_request_body_size_limit_enforcement():
+    """Validates that payloads exceeding the 10MB limit are immediately rejected with 413."""
+    oversized_length = str(15 * 1024 * 1024)  # 15MB
+    res = client.post(
+        "/api/v1/intake/calculate-budget",
+        headers={"Content-Length": oversized_length, "Content-Type": "application/json"},
+        content=b"{}"
+    )
+    assert res.status_code == 413
+    assert "Payload Too Large" in res.text
+
+
+def test_public_endpoint_rate_limiting():
+    """Validates that SlowAPI rate limiting protects public intake endpoints against abuse."""
+    from backend.app.core.limiter import limiter
+    limiter.reset()
+
+    # Hit intake generate endpoint up to limit (20/minute)
+    responses = []
+    valid_payload = {
+        "name": "Rate Limit Flood Celebration",
+        "host_name": "Test Flooder",
+        "phone_number": "+919988776655",
+        "event_type": "wedding",
+        "tradition_code": "maharashtrian_vedic",
+        "guest_count": 100,
+        "total_budget": 500000.0,
+        "city": "Pune",
+        "pincode": "411001",
+        "start_date": "2026-12-01",
+        "end_date": "2026-12-02"
+    }
+    for _ in range(25):
+        r = client.post(
+            "/api/v1/intake/generate",
+            json=valid_payload
+        )
+        responses.append(r.status_code)
+
+    # At least one request after 20 must encounter 429 Too Many Requests
+    assert 429 in responses
+

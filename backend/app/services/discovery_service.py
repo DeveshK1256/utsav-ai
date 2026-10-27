@@ -29,6 +29,26 @@ _OVERPASS_CACHE_LOCK = threading.Lock()
 OVERPASS_CACHE_TTL_SECONDS = 15 * 60  # 15 minutes
 
 
+ALLOWED_OUTBOUND_DOMAINS = {
+    "nominatim.openstreetmap.org",
+    "overpass-api.de",
+    "overpass.kumi.systems",
+    "overpass.private.coffee"
+}
+
+
+def _validate_safe_outbound_url(url: str) -> None:
+    """
+    Enforces strict scheme and domain allow-listing on all outbound HTTP requests.
+    Prevents Server-Side Request Forgery (SSRF) to internal/private IPs or unvetted hosts.
+    """
+    parsed = urllib.parse.urlparse(url)
+    if parsed.scheme != "https":
+        raise ValueError(f"SSRF Guard: Insecure scheme '{parsed.scheme}' blocked. Only HTTPS permitted.")
+    if parsed.netloc not in ALLOWED_OUTBOUND_DOMAINS:
+        raise ValueError(f"SSRF Guard: Outbound destination '{parsed.netloc}' not in approved domain allowlist.")
+
+
 def is_valid_venue_name(name: str | None) -> bool:
     """
     Filters out nameless, un-named, pure address/digits, raw ID fallbacks,
@@ -199,8 +219,9 @@ class VendorDiscoveryService:
 
         try:
             url = f"https://nominatim.openstreetmap.org/search?q={urllib.parse.quote(query_text)}&format=json&countrycodes=in&limit=1"
+            _validate_safe_outbound_url(url)
             req = urllib.request.Request(url, headers={"User-Agent": OSM_USER_AGENT})
-            with urllib.request.urlopen(req, timeout=4) as resp:
+            with urllib.request.urlopen(req, timeout=4) as resp:  # nosec B310
                 data = json.loads(resp.read().decode("utf-8"))
                 if data and len(data) > 0:
                     first = data[0]
@@ -415,8 +436,9 @@ out center 15;"""
 
         for srv in overpass_servers:
             try:
+                _validate_safe_outbound_url(srv)
                 req = urllib.request.Request(srv, data=overpass_data, headers={"User-Agent": OSM_USER_AGENT})
-                with urllib.request.urlopen(req, timeout=1.8) as resp:
+                with urllib.request.urlopen(req, timeout=1.8) as resp:  # nosec B310
                     data = json.loads(resp.read().decode("utf-8"))
                     elements = data.get("elements", [])
                     for el in elements:
@@ -455,20 +477,22 @@ out center 15;"""
             if not target_city:
                 try:
                     rev_url = f"https://nominatim.openstreetmap.org/reverse?lat={lat}&lon={lng}&format=json"
+                    _validate_safe_outbound_url(rev_url)
                     rev_req = urllib.request.Request(rev_url, headers={"User-Agent": OSM_USER_AGENT})
-                    with urllib.request.urlopen(rev_req, timeout=3.0) as rev_resp:
+                    with urllib.request.urlopen(rev_req, timeout=3.0) as rev_resp:  # nosec B310
                         rev_data = json.loads(rev_resp.read().decode("utf-8"))
                         addr = rev_data.get("address", {})
                         target_city = addr.get("city") or addr.get("town") or addr.get("state_district")
-                except Exception:
-                    pass
+                except Exception as exc:
+                    logger.debug("Failed reverse geocoding city lookup: %s", exc)
 
             for term in search_terms:
                 query_str = f"{term} {target_city}" if target_city else term
                 try:
                     url = f"https://nominatim.openstreetmap.org/search?q={urllib.parse.quote(query_str)}&format=json&limit=6&countrycodes=in"
+                    _validate_safe_outbound_url(url)
                     req = urllib.request.Request(url, headers={"User-Agent": OSM_USER_AGENT})
-                    with urllib.request.urlopen(req, timeout=3.5) as resp:
+                    with urllib.request.urlopen(req, timeout=3.5) as resp:  # nosec B310
                         items = json.loads(resp.read().decode("utf-8"))
                         for it in items:
                             v_name = it.get("name") or it.get("display_name", "").split(",")[0]

@@ -18,7 +18,8 @@ router = APIRouter(prefix="/intake", tags=["Intake"])
 
 
 @router.post("/calculate-budget", response_model=BudgetCalculationResponseSchema)
-def calculate_budget(payload: BudgetCalculationRequestSchema):
+@limiter.limit("60/minute")
+def calculate_budget(request: Request, payload: BudgetCalculationRequestSchema):
     """
     Computes deterministic city-tier scaled budget allocation.
     Single authoritative backend calculation engine called by frontend clients.

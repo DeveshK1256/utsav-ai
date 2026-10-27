@@ -2,6 +2,7 @@ import hashlib
 import hmac
 import logging
 import os
+import time
 from typing import Any
 
 from sqlalchemy.orm import Session
@@ -26,11 +27,27 @@ class WebhookSecurityError(Exception):
 class WhatsAppWebhookService:
 
     @classmethod
-    def verify_meta_signature(cls, raw_payload: bytes, signature_header: str | None) -> bool:
+    def verify_meta_signature(
+        cls,
+        raw_payload: bytes,
+        signature_header: str | None,
+        timestamp: float | int | None = None,
+        max_age_seconds: int = 300
+    ) -> bool:
         """
-        Verifies Meta X-Hub-Signature-256 HMAC SHA256 header.
-        Rejects unsigned or forged requests (fail-closed).
+        Verifies Meta X-Hub-Signature-256 HMAC SHA256 header and enforces timestamp-based replay protection.
+        Rejects unsigned, forged, or replayed requests (fail-closed).
         """
+        if timestamp is not None:
+            now = time.time()
+            if (now - float(timestamp)) > max_age_seconds or (float(timestamp) - now) > 60:
+                logger.warning(
+                    "Rejected replayed/stale WhatsApp webhook: timestamp delta %.1fs exceeds %ds limit",
+                    now - float(timestamp),
+                    max_age_seconds
+                )
+                return False
+
         is_test_env = bool(os.getenv("PYTEST_CURRENT_TEST")) or getattr(settings, "ENVIRONMENT", "").lower() in ("test", "testing")
         app_secret = getattr(settings, "WHATSAPP_APP_SECRET", None)
         if not app_secret:

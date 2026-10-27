@@ -25,7 +25,7 @@ export default function HomePage() {
       />
 
       {/* Main Content Flow */}
-      <main className="flex-1">
+      <main id="main-content" className="flex-1">
         {/* 1. Hero: From Planning Chaos to Composed Celebration */}
         <HeroChaosToComposed />
 

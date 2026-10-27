@@ -1,7 +1,8 @@
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy.orm import Session
 
+from backend.app.core.limiter import limiter
 from backend.app.db.session import get_db
 from backend.app.schemas.discovery import VendorDiscoveryResponse
 from backend.app.services.discovery_service import VendorDiscoveryService
@@ -10,7 +11,9 @@ router = APIRouter(prefix="/discovery", tags=["Vendor & Venue Discovery (F15-Lit
 
 
 @router.get("/vendors", response_model=VendorDiscoveryResponse)
+@limiter.limit("60/minute")
 def get_nearby_vendors(
+    request: Request,
     lat: float | None = Query(None, description="Latitude for geo-radius query"),
     lng: float | None = Query(None, description="Longitude for geo-radius query"),
     city: str | None = Query(None, description="City name fallback if geolocation consent is denied or unavailable"),
@@ -45,7 +48,9 @@ def get_nearby_vendors(
 
 
 @router.get("/geocode")
+@limiter.limit("60/minute")
 def geocode_location(
+    request: Request,
     q: str = Query(..., min_length=2, description="City name or 6-digit Indian pincode to geocode via OpenStreetMap")
 ):
     """

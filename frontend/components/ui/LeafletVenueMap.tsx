@@ -238,7 +238,7 @@ export function LeafletVenueMap({
         mapInstanceRef.current = null;
       }
     };
-  }, [venues, centerLat, centerLng, userLat, userLng, selectedVenueId]);
+  }, [venues, centerLat, centerLng, userLat, userLng, selectedVenueId, onSelectVenue]);
 
   return (
     <div className={className}>

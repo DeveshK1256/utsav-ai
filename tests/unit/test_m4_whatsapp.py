@@ -420,14 +420,58 @@ def test_webhook_hmac_signature_security():
     invalid_sig = "sha256=invalid_hex_digest_forgery"
 
     # Test verify_meta_signature directly
+    import time
     from backend.app.core.config import settings
     orig_secret = settings.WHATSAPP_APP_SECRET
     settings.WHATSAPP_APP_SECRET = secret
 
     try:
-        assert WhatsAppWebhookService.verify_meta_signature(raw_payload, valid_sig) is True
-        assert WhatsAppWebhookService.verify_meta_signature(raw_payload, invalid_sig) is False
-        assert WhatsAppWebhookService.verify_meta_signature(raw_payload, None) is False
+        now_ts = time.time()
+        # 1. Valid signature with current timestamp -> passes
+        assert WhatsAppWebhookService.verify_meta_signature(raw_payload, valid_sig, timestamp=now_ts) is True
+        # 2. Invalid signature -> rejected
+        assert WhatsAppWebhookService.verify_meta_signature(raw_payload, invalid_sig, timestamp=now_ts) is False
+        # 3. Missing signature header (None) -> rejected
+        assert WhatsAppWebhookService.verify_meta_signature(raw_payload, None, timestamp=now_ts) is False
+        # 4. Replay attack: Valid signature but stale timestamp (600s old, > 300s limit) -> rejected
+        stale_ts = now_ts - 600
+        assert WhatsAppWebhookService.verify_meta_signature(raw_payload, valid_sig, timestamp=stale_ts) is False
+        # 5. Future timestamp skew beyond 60s -> rejected
+        future_ts = now_ts + 120
+        assert WhatsAppWebhookService.verify_meta_signature(raw_payload, valid_sig, timestamp=future_ts) is False
+
+        # 6. HTTP Webhook Endpoint Test (Integration with FastApi router)
+        # 6a. Valid signature and fresh timestamp -> 200
+        resp_valid = client.post(
+            "/api/v1/webhooks/whatsapp",
+            content=raw_payload,
+            headers={"Content-Type": "application/json", "X-Hub-Signature-256": valid_sig, "X-Hub-Timestamp": str(now_ts)}
+        )
+        assert resp_valid.status_code == 200
+
+        # 6b. Invalid signature -> 403
+        resp_inv = client.post(
+            "/api/v1/webhooks/whatsapp",
+            content=raw_payload,
+            headers={"Content-Type": "application/json", "X-Hub-Signature-256": invalid_sig, "X-Hub-Timestamp": str(now_ts)}
+        )
+        assert resp_inv.status_code == 403
+
+        # 6c. Missing signature header -> 403
+        resp_miss = client.post(
+            "/api/v1/webhooks/whatsapp",
+            content=raw_payload,
+            headers={"Content-Type": "application/json", "X-Hub-Timestamp": str(now_ts)}
+        )
+        assert resp_miss.status_code == 403
+
+        # 6d. Replay attack over HTTP: valid signature with 10-minute old timestamp -> 403
+        resp_replay = client.post(
+            "/api/v1/webhooks/whatsapp",
+            content=raw_payload,
+            headers={"Content-Type": "application/json", "X-Hub-Signature-256": valid_sig, "X-Hub-Timestamp": str(stale_ts)}
+        )
+        assert resp_replay.status_code == 403
     finally:
         settings.WHATSAPP_APP_SECRET = orig_secret
 

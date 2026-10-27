@@ -19,11 +19,11 @@ export default function DashboardIndex() {
   }, [router]);
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-6 text-stone-600 dark:text-stone-300">
+    <main id="main-content" className="min-h-screen flex items-center justify-center p-6 text-stone-600 dark:text-stone-300">
       <div className="text-center space-y-3">
         <div className="w-10 h-10 border-4 border-amber-500 border-t-transparent rounded-full animate-spin mx-auto" />
         <p className="text-sm font-medium">Loading Celebration Workspace...</p>
       </div>
-    </div>
+    </main>
   );
 }

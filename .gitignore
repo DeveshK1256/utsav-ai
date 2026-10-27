@@ -76,4 +76,7 @@ video_pipeline/clips/
 video_pipeline/trimmed/
 video_pipeline/concat_video.mp4
 tools/
+*.exe
+lh-*.json
+cov.json
 

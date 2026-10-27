@@ -333,7 +333,7 @@ export default function EventDashboardClient() {
         }
       />
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 pt-8 space-y-8">
+      <main id="main-content" className="max-w-7xl mx-auto px-4 sm:px-6 pt-8 space-y-8">
         {/* Breadcrumb Navigation */}
         <div className="flex items-center gap-2 text-xs text-stone-500 dark:text-stone-400 font-medium">
           <Link href="/" className="hover:text-stone-900 dark:hover:text-white transition-colors">

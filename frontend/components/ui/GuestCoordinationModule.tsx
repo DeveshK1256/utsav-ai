@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { getAuthHeaders } from '@/lib/auth';
 
 interface Guest {
@@ -60,6 +60,116 @@ export function GuestCoordinationModule({ eventId, eventName, apiBase }: GuestCo
   const [isImportModalOpen, setIsImportModalOpen] = useState<boolean>(false);
   const [isFactSheetModalOpen, setIsFactSheetModalOpen] = useState<boolean>(false);
   const [isSendingInvites, setIsSendingInvites] = useState<boolean>(false);
+
+  // Trigger and modal refs for accessible focus trapping & restoration
+  const importTriggerRef = useRef<HTMLButtonElement | null>(null);
+  const factSheetTriggerRef = useRef<HTMLButtonElement | null>(null);
+  const importModalRef = useRef<HTMLDivElement | null>(null);
+  const factSheetModalRef = useRef<HTMLDivElement | null>(null);
+
+  // Focus trap & restore for Import Modal
+  useEffect(() => {
+    if (isImportModalOpen) {
+      // Focus first element after modal DOM node mounts
+      setTimeout(() => {
+        const modalEl = importModalRef.current;
+        if (modalEl) {
+          const focusable = modalEl.querySelectorAll<HTMLElement>(
+            'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+          );
+          if (focusable.length > 0) focusable[0].focus();
+        }
+      }, 50);
+
+      const handleKeyDown = (e: KeyboardEvent) => {
+        if (e.key === 'Escape' || e.key === 'Esc') {
+          e.preventDefault();
+          console.log('[DEBUG-MODAL] Escape key pressed, closing import modal');
+          setIsImportModalOpen(false);
+          importTriggerRef.current?.focus();
+          return;
+        }
+
+        if (e.key === 'Tab') {
+          const modalEl = importModalRef.current;
+          if (!modalEl) return;
+          const focusable = Array.from(modalEl.querySelectorAll<HTMLElement>(
+            'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+          ));
+          if (focusable.length === 0) return;
+          const first = focusable[0];
+          const last = focusable[focusable.length - 1];
+          if (e.shiftKey) {
+            if (document.activeElement === first || document.activeElement === modalEl) {
+              e.preventDefault();
+              last.focus();
+            }
+          } else {
+            if (document.activeElement === last) {
+              e.preventDefault();
+              first.focus();
+            }
+          }
+        }
+      };
+
+      window.addEventListener('keydown', handleKeyDown, true);
+      return () => {
+        window.removeEventListener('keydown', handleKeyDown, true);
+      };
+    }
+  }, [isImportModalOpen]);
+
+  // Focus trap & restore for Fact Sheet Modal
+  useEffect(() => {
+    if (isFactSheetModalOpen) {
+      setTimeout(() => {
+        const modalEl = factSheetModalRef.current;
+        if (modalEl) {
+          const focusable = modalEl.querySelectorAll<HTMLElement>(
+            'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+          );
+          if (focusable.length > 0) focusable[0].focus();
+        }
+      }, 50);
+
+      const handleKeyDown = (e: KeyboardEvent) => {
+        if (e.key === 'Escape' || e.key === 'Esc') {
+          e.preventDefault();
+          setIsFactSheetModalOpen(false);
+          factSheetTriggerRef.current?.focus();
+          return;
+        }
+
+        if (e.key === 'Tab') {
+          const modalEl = factSheetModalRef.current;
+          if (!modalEl) return;
+          const focusable = Array.from(modalEl.querySelectorAll<HTMLElement>(
+            'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+          ));
+          if (focusable.length === 0) return;
+          const first = focusable[0];
+          const last = focusable[focusable.length - 1];
+          if (e.shiftKey) {
+            if (document.activeElement === first || document.activeElement === modalEl) {
+              e.preventDefault();
+              last.focus();
+            }
+          } else {
+            if (document.activeElement === last) {
+              e.preventDefault();
+              first.focus();
+            }
+          }
+        }
+      };
+
+      window.addEventListener('keydown', handleKeyDown, true);
+      return () => {
+        window.removeEventListener('keydown', handleKeyDown, true);
+      };
+    }
+  }, [isFactSheetModalOpen]);
 
   // Import form state
   const [importText, setImportText] = useState<string>('');
@@ -272,6 +382,7 @@ export function GuestCoordinationModule({ eventId, eventName, apiBase }: GuestCo
 
         <div className="flex flex-wrap items-center gap-2.5">
           <button
+            ref={factSheetTriggerRef}
             onClick={() => setIsFactSheetModalOpen(true)}
             className="px-4 py-2 rounded-xl bg-stone-100 hover:bg-stone-200 dark:bg-stone-800 dark:hover:bg-stone-700 text-stone-800 dark:text-stone-200 text-xs font-semibold transition-colors flex items-center gap-1.5"
           >
@@ -279,6 +390,7 @@ export function GuestCoordinationModule({ eventId, eventName, apiBase }: GuestCo
           </button>
 
           <button
+            ref={importTriggerRef}
             onClick={() => setIsImportModalOpen(true)}
             className="px-4 py-2 rounded-xl bg-stone-100 hover:bg-stone-200 dark:bg-stone-800 dark:hover:bg-stone-700 text-stone-800 dark:text-stone-200 text-xs font-semibold transition-colors flex items-center gap-1.5"
           >
@@ -346,20 +458,20 @@ export function GuestCoordinationModule({ eventId, eventName, apiBase }: GuestCo
           <div className="flex items-center gap-2">
             <span className="font-semibold text-stone-800 dark:text-stone-200">Catering Breakdown:</span>
             <span className="px-2 py-0.5 rounded-md bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 font-medium">
-              Pure Veg: {summary.diet_breakdown.veg || 0}
+              Pure Veg: {summary.diet_breakdown?.veg || 0}
             </span>
             <span className="px-2 py-0.5 rounded-md bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 font-medium">
-              Jain: {summary.diet_breakdown.jain || 0}
+              Jain: {summary.diet_breakdown?.jain || 0}
             </span>
             <span className="px-2 py-0.5 rounded-md bg-stone-100 dark:bg-stone-800 text-stone-700 dark:text-stone-300 font-medium">
-              Non-Veg: {summary.diet_breakdown.non_veg || 0}
+              Non-Veg: {summary.diet_breakdown?.non_veg || 0}
             </span>
           </div>
 
           <div className="flex items-center gap-3 text-stone-600 dark:text-stone-300 font-medium">
-            <span>♿ Wheelchair: {summary.mobility_needs_count}</span>
-            <span>👶 Children: {summary.kids_count}</span>
-            <span>🏨 Accommodation: {summary.accommodation_needed_count}</span>
+            <span>♿ Wheelchair: {summary.mobility_needs_count || 0}</span>
+            <span>👶 Children: {summary.kids_count || 0}</span>
+            <span>🏨 Accommodation: {summary.accommodation_needed_count || 0}</span>
           </div>
         </div>
       )}
@@ -492,12 +604,32 @@ export function GuestCoordinationModule({ eventId, eventName, apiBase }: GuestCo
       {/* Guest Import Modal */}
       {isImportModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-fadeIn">
-          <div className="glass-card max-w-xl w-full p-6 sm:p-7 rounded-3xl shadow-xl border border-stone-200 dark:border-stone-800 space-y-5 animate-scaleUp">
+          <div
+            ref={importModalRef}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="import-modal-title"
+            onKeyDown={(e) => {
+              if (e.key === 'Escape' || e.key === 'Esc') {
+                e.stopPropagation();
+                setIsImportModalOpen(false);
+                importTriggerRef.current?.focus();
+              }
+            }}
+            className="glass-card max-w-xl w-full p-6 sm:p-7 rounded-3xl shadow-xl border border-stone-200 dark:border-stone-800 space-y-5 animate-scaleUp"
+          >
             <div className="flex items-center justify-between pb-3 border-b border-stone-200/60 dark:border-stone-800/60">
-              <h3 className="font-serif font-bold text-lg text-stone-900 dark:text-stone-100 flex items-center gap-2">
+              <h3 id="import-modal-title" className="font-serif font-bold text-lg text-stone-900 dark:text-stone-100 flex items-center gap-2">
                 <span>📥</span> Import Guest Roster
               </h3>
-              <button onClick={() => setIsImportModalOpen(false)} className="text-stone-400 hover:text-stone-700 text-sm font-bold">
+              <button
+                onClick={() => {
+                  setIsImportModalOpen(false);
+                  importTriggerRef.current?.focus();
+                }}
+                aria-label="Close import dialog"
+                className="text-stone-400 hover:text-stone-700 text-sm font-bold"
+              >
                 ✕
               </button>
             </div>
@@ -536,8 +668,11 @@ export function GuestCoordinationModule({ eventId, eventName, apiBase }: GuestCo
 
             <div className="flex items-center justify-end gap-2 pt-2">
               <button
-                onClick={() => setIsImportModalOpen(false)}
-                className="px-4 py-2 rounded-xl text-stone-600 hover:text-stone-900 text-xs font-semibold"
+                onClick={() => {
+                  setIsImportModalOpen(false);
+                  importTriggerRef.current?.focus();
+                }}
+                className="px-4 py-2 rounded-xl text-stone-600 hover:text-stone-900 dark:text-stone-400 dark:hover:text-stone-200 text-xs font-semibold"
               >
                 Cancel
               </button>
@@ -556,12 +691,32 @@ export function GuestCoordinationModule({ eventId, eventName, apiBase }: GuestCo
       {/* Fact Sheet Editor Modal */}
       {isFactSheetModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-fadeIn">
-          <div className="glass-card max-w-xl w-full p-6 sm:p-7 rounded-3xl shadow-xl border border-stone-200 dark:border-stone-800 space-y-5 animate-scaleUp max-h-[90vh] overflow-y-auto">
+          <div
+            ref={factSheetModalRef}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="factsheet-modal-title"
+            onKeyDown={(e) => {
+              if (e.key === 'Escape' || e.key === 'Esc') {
+                e.stopPropagation();
+                setIsFactSheetModalOpen(false);
+                factSheetTriggerRef.current?.focus();
+              }
+            }}
+            className="glass-card max-w-xl w-full p-6 sm:p-7 rounded-3xl shadow-xl border border-stone-200 dark:border-stone-800 space-y-5 animate-scaleUp max-h-[90vh] overflow-y-auto"
+          >
             <div className="flex items-center justify-between pb-3 border-b border-stone-200/60 dark:border-stone-800/60">
-              <h3 className="font-serif font-bold text-lg text-stone-900 dark:text-stone-100 flex items-center gap-2">
+              <h3 id="factsheet-modal-title" className="font-serif font-bold text-lg text-stone-900 dark:text-stone-100 flex items-center gap-2">
                 <span>📋</span> Verified Event Fact Sheet
               </h3>
-              <button onClick={() => setIsFactSheetModalOpen(false)} className="text-stone-400 hover:text-stone-700 text-sm font-bold">
+              <button
+                onClick={() => {
+                  setIsFactSheetModalOpen(false);
+                  factSheetTriggerRef.current?.focus();
+                }}
+                aria-label="Close fact sheet dialog"
+                className="text-stone-400 hover:text-stone-700 text-sm font-bold"
+              >
                 ✕
               </button>
             </div>
@@ -639,8 +794,11 @@ export function GuestCoordinationModule({ eventId, eventName, apiBase }: GuestCo
 
             <div className="flex items-center justify-end gap-2 pt-3 border-t border-stone-200/60 dark:border-stone-800/60">
               <button
-                onClick={() => setIsFactSheetModalOpen(false)}
-                className="px-4 py-2 rounded-xl text-stone-600 hover:text-stone-900 text-xs font-semibold"
+                onClick={() => {
+                  setIsFactSheetModalOpen(false);
+                  factSheetTriggerRef.current?.focus();
+                }}
+                className="px-4 py-2 rounded-xl text-stone-600 hover:text-stone-900 dark:text-stone-400 dark:hover:text-stone-200 text-xs font-semibold"
               >
                 Cancel
               </button>

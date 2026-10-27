@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { getAuthHeaders } from '@/lib/auth';
 
 interface RitualHubProps {
@@ -147,7 +147,7 @@ export const RitualIntelligenceHub: React.FC<RitualHubProps> = ({
   }, [apiBase, eventDate]);
 
   // Trigger merge on mount or when requested
-  const handleMergeTraditions = async () => {
+  const handleMergeTraditions = useCallback(async () => {
     setIsMerging(true);
     setMergeSuccessMsg(null);
     try {
@@ -175,11 +175,11 @@ export const RitualIntelligenceHub: React.FC<RitualHubProps> = ({
     } finally {
       setIsMerging(false);
     }
-  };
+  }, [apiBase, primaryTradition, isDualTradition, secondaryTradition, eventDate, eventId]);
 
   useEffect(() => {
     handleMergeTraditions();
-  }, [primaryTradition, secondaryTradition, isDualTradition]);
+  }, [handleMergeTraditions]);
 
   // Generate ritual tasks into DAG
   const handleGenerateTasks = async () => {

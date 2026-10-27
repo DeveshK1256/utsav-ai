@@ -94,28 +94,26 @@ def test_discovery_missing_params_error():
 def test_overpass_in_process_ttl_cache_speedup():
     """
     Verifies that the in-process free-tier TTL cache eliminates redundant network round trips
-    and accelerates repeated queries to the same city / coordinates by at least 10x.
+    and accelerates repeated queries to the same city / coordinates deterministically via call counter.
     """
-    import time
-    from backend.app.services.discovery_service import _OVERPASS_CACHE
+    from unittest.mock import patch
+    from backend.app.services.discovery_service import _OVERPASS_CACHE, VendorDiscoveryService
 
     # Clear cache for isolated test
     _OVERPASS_CACHE.clear()
 
-    # Query 1: Initial (populates cache)
-    t0 = time.perf_counter()
-    res1 = client.get("/api/v1/discovery/vendors?city=Pune")
-    t1 = (time.perf_counter() - t0) * 1000
-    assert res1.status_code == 200
+    # Query 1: Initial call populates cache
+    with patch.object(VendorDiscoveryService, "_fetch_and_persist_osm_venues", wraps=VendorDiscoveryService._fetch_and_persist_osm_venues) as spy_fetch:
+        res1 = client.get("/api/v1/discovery/vendors?city=Pune")
+        assert res1.status_code == 200
+        assert spy_fetch.call_count >= 1
+        assert len(_OVERPASS_CACHE) >= 1
 
-    # Query 2: Cached repeat
-    t2_start = time.perf_counter()
-    res2 = client.get("/api/v1/discovery/vendors?city=Pune")
-    t2 = (time.perf_counter() - t2_start) * 1000
-    assert res2.status_code == 200
+    # Query 2: Cached repeat - must hit in-memory cache and bypass network round-trips
+    with patch("urllib.request.urlopen") as mock_urlopen:
+        res2 = client.get("/api/v1/discovery/vendors?city=Pune")
+        assert res2.status_code == 200
+        # Overpass network calls must be completely bypassed on cache hit
+        mock_urlopen.assert_not_called()
 
-    print(f"\n[OVERPASS TTL CACHE PERFORMANCE] First call: {t1:.2f}ms, Cached call: {t2:.2f}ms (Speedup: {t1/max(t2, 0.01):.1f}x)")
-    # Cached call must execute quickly and show significant speedup
-    assert t2 < 100.0, f"Expected cached response under 100ms, took {t2:.2f}ms"
-    assert (t1 / max(t2, 0.01)) >= 5.0, "Expected at least 5x speedup from in-memory cache"
     assert len(res1.json()["results"]) == len(res2.json()["results"])

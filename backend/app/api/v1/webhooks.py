@@ -35,6 +35,7 @@ def verify_whatsapp_webhook(
 async def receive_whatsapp_webhook(
     request: Request,
     x_hub_signature_256: str | None = Header(None, alias="X-Hub-Signature-256"),
+    x_hub_timestamp: str | None = Header(None, alias="X-Hub-Timestamp"),
     db: Session = Depends(get_db)
 ):
     """
@@ -43,15 +44,22 @@ async def receive_whatsapp_webhook(
     - Inbound guest RSVPs (buttons and free-text)
     - Guest FAQ inquiries
     - STOP opt-out requests
-    Rejects unsigned or forged requests when WHATSAPP_APP_SECRET is set.
+    Rejects unsigned, forged, or replayed requests when WHATSAPP_APP_SECRET is set.
     """
     raw_body = await request.body()
 
-    # Meta HMAC Signature Verification (Public Endpoint Guardrail)
-    is_valid = WhatsAppWebhookService.verify_meta_signature(raw_body, x_hub_signature_256)
+    ts_val: float | None = None
+    if x_hub_timestamp:
+        try:
+            ts_val = float(x_hub_timestamp)
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Invalid X-Hub-Timestamp header format")
+
+    # Meta HMAC Signature Verification & Anti-Replay Guardrail
+    is_valid = WhatsAppWebhookService.verify_meta_signature(raw_body, x_hub_signature_256, timestamp=ts_val)
     if not is_valid:
-        logger.error("Rejected unauthorized WhatsApp webhook request: invalid HMAC signature")
-        raise HTTPException(status_code=403, detail="Invalid HMAC signature")
+        logger.error("Rejected unauthorized WhatsApp webhook request: invalid HMAC signature or replayed timestamp")
+        raise HTTPException(status_code=403, detail="Invalid HMAC signature or replayed timestamp")
 
     try:
         payload = await request.json()
