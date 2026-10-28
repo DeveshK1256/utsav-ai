@@ -1,5 +1,6 @@
 import hmac
 import os
+import logging
 from datetime import UTC, datetime
 
 from fastapi import (
@@ -37,10 +38,13 @@ from backend.app.schemas.quotes import (
 from backend.app.services.budget_engine import BudgetScalingEngine
 from backend.app.services.hidden_cost_engine import HiddenCostDetector
 from backend.app.services.llm_provider import (
+    ExtractionValidationError,
     get_negotiation_draft_provider,
     get_quote_extraction_provider,
 )
 from backend.app.services.quote_comparison_engine import QuoteComparisonEngine
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/quotes", tags=["quotes"])
 
@@ -58,7 +62,7 @@ async def upload_quote(
     x_event_owner_token: str | None = Header(None, alias="X-Event-Owner-Token"),
     authorization: str | None = Header(None),
     db: Session = Depends(get_db)
-):
+) -> QuoteDocumentResponseSchema:
     """
     Accepts multipart upload of a vendor quote document.
     Stores the raw file in DB bytea (DEC-017), extracts structured line items via LLM provider,
@@ -120,7 +124,8 @@ async def upload_quote(
         )
         extraction_failed = False
         error_detail = None
-    except Exception as e:
+    except (ExtractionValidationError, ValueError, RuntimeError, KeyError, TypeError, OSError) as e:
+        logger.warning("Quote extraction provider failed: %s", e)
         extracted = None
         extraction_failed = True
         error_detail = str(e)
@@ -268,7 +273,7 @@ async def upload_quote(
 def list_event_quotes(
     event_id: str,
     db: Session = Depends(get_db)
-):
+) -> list[QuoteDocumentResponseSchema]:
     """
     List all uploaded quotes for an event with parsed line items and analysis.
     """
@@ -349,7 +354,7 @@ def list_event_quotes(
 def compare_quotes(
     payload: QuoteComparisonRequestSchema,
     db: Session = Depends(get_db)
-):
+) -> QuoteComparisonResponseSchema:
     """
     Compares two or more quotes side-by-side.
     Validates all quotes share the exact same category.
@@ -443,7 +448,7 @@ def generate_negotiation_draft(
     quote_id: str,
     payload: NegotiationDraftRequestSchema | None = None,
     db: Session = Depends(get_db)
-):
+) -> NegotiationDraftResponseSchema:
     """
     Generates polite, firm, and bundle-ask negotiation draft letters in English and Hindi.
     Draws leverage points directly from detected hidden costs and benchmark discrepancies.
