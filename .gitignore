@@ -72,23 +72,23 @@ build_master_doc.py
 *.db
 *.sqlite3
  
-video_pipeline/clips/
-video_pipeline/trimmed/
-video_pipeline/concat_video.mp4
-video_pipeline/clips_incognito/
-video_pipeline/trimmed_incognito/
-video_pipeline/incognito_vo/
-video_pipeline/incognito_video_concat.mp4
-video_pipeline/*.m4a
-video_pipeline/*.txt
+marketing/video_pipeline/clips/
+marketing/video_pipeline/trimmed/
+marketing/video_pipeline/concat_video.mp4
+marketing/video_pipeline/clips_incognito/
+marketing/video_pipeline/trimmed_incognito/
+marketing/video_pipeline/incognito_vo/
+marketing/video_pipeline/incognito_video_concat.mp4
+marketing/video_pipeline/*.m4a
+marketing/video_pipeline/*.txt
 test_incognito_*.png
-brag-output/composition/
+marketing/brag/composition/
 tools/
 *.exe
 lh-*.json
 cov.json
 
-video_pipeline/clips_detailed/
-video_pipeline/trimmed_detailed/
-video_pipeline/detailed_vo/
-video_pipeline/detailed_video_concat.mp4
+marketing/video_pipeline/clips_detailed/
+marketing/video_pipeline/trimmed_detailed/
+marketing/video_pipeline/detailed_vo/
+marketing/video_pipeline/detailed_video_concat.mp4

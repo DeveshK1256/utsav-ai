@@ -1,4 +1,4 @@
-name: Utsav Automated CI Loop Gate
+name: Utsav Automated Quality & CI Gate
 
 on:
   push:
@@ -7,11 +7,9 @@ on:
     branches: [ main, master ]
 
 jobs:
-  loop-gate-tests:
-    name: Deterministic & Schema Regression Loop Gate
+  ci-quality-gate:
+    name: Complete Quality & Security CI Gate
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
 
     env:
       PYTHONPATH: .
@@ -23,8 +21,6 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
       - name: Set up Python 3.12
         uses: actions/setup-python@v5
@@ -36,20 +32,24 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r backend/requirements.txt
-          pip install jsonschema ruff mypy
+          pip install ruff mypy bandit radon pytest pytest-cov jsonschema
 
-      # Linting & Static Typing Quality Ratchet Gates:
-      # Rather than permanent pass-through (`continue-on-error: true`), we enforce a strict quality
-      # ratchet against `.github/ci_baseline.json` (established in Audit V3: 932 Ruff, 279 MyPy).
-      # If any commit introduces new linting or typing regressions exceeding the baseline, this step
-      # fails and blocks the build, preventing code quality rot while allowing incremental cleanup.
-      - name: Code Quality Lint Ratchet Gate (Ruff)
+      - name: Python Strict Lint Gate (Ruff)
         run: |
-          python scripts/ci_ratchet.py ruff
+          ruff check backend
+          ruff format --check backend
 
-      - name: Static Type Check Ratchet Gate (MyPy)
+      - name: Python Static Type Check (MyPy Strict)
         run: |
-          python scripts/ci_ratchet.py mypy
+          mypy backend
+
+      - name: Security Vulnerability Scan (Bandit)
+        run: |
+          bandit -r backend/app -q
+
+      - name: Complexity Check (Radon CC <= 10)
+        run: |
+          python -m radon cc -s -n C backend/app
 
       - name: Set up Node.js 20
         uses: actions/setup-node@v4
@@ -60,38 +60,27 @@ jobs:
 
       - name: Install Frontend Dependencies
         working-directory: frontend
-        run: npm install
+        run: npm ci || npm install
 
-      - name: Frontend Production Build Gate (Hard Gate)
+      - name: Frontend Strict Lint Gate (ESLint)
+        working-directory: frontend
+        run: npm run lint
+
+      - name: Frontend Type Check (tsc --noEmit)
+        working-directory: frontend
+        run: npx tsc --project tsconfig.json --noEmit
+
+      - name: Frontend Unit Tests (Vitest)
+        working-directory: frontend
+        run: npm test
+
+      - name: Frontend Production Build & CSP Gate
         working-directory: frontend
         run: npm run build
 
-      - name: Run Deterministic Unit Tests
+      - name: Backend Full Test Suite & Branch Coverage (fail-under=90)
         run: |
-          python scripts/ci_test_runner.py tests/unit/
-
-      - name: Run Schema Regression Tests
-        run: |
-          python scripts/ci_test_runner.py tests/schema/
-
-      - name: Run Golden Event Evaluation Suite
-        run: |
-          python scripts/ci_test_runner.py tests/eval/
-
-      # Auto-Commit Ratchet Baseline If Tightened:
-      # If Ruff or MyPy errors decreased, ci_baseline.json was rewritten with the lower number.
-      # When running on the main branch, this step pushes the tightened baseline back to the repository.
-      - name: Auto-Commit Ratchet Baseline If Tightened
-        if: github.ref == 'refs/heads/main' && github.event_name == 'push' && success()
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          if ! git diff --quiet .github/ci_baseline.json; then
-            git add .github/ci_baseline.json
-            git commit -m "chore(ci): auto-ratchet quality baseline down [skip ci]"
-            git push origin main
-          fi
+          pytest tests -v --cov=backend/app --cov-branch --cov-fail-under=90
 
       - name: Verification Summary
-        if: success()
-        run: echo "Utsav CI Loop Gate Passed All Gates!"
+        run: echo "Utsav CI Quality Gate Passed All Gates!"

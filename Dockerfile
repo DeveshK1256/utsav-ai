@@ -18,7 +18,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 RUN python -m venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 
-COPY requirements.txt .
+COPY backend/requirements.txt requirements.txt
 RUN pip install --no-cache-dir -U pip setuptools wheel && \
     pip install --no-cache-dir -r requirements.txt
 
@@ -43,7 +43,7 @@ COPY --from=builder /opt/venv /opt/venv
 
 # Copy application source code
 COPY backend /app/backend
-COPY alembic.ini /app/alembic.ini
+COPY backend/alembic.ini /app/alembic.ini
 
 # Security: run as non-root user
 RUN addgroup --system --gid 1001 appgroup && \
