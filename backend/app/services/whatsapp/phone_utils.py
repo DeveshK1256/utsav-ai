@@ -1,6 +1,42 @@
 import re
 
 
+def _extract_indian_digits(cleaned: str) -> str | None:
+    """Extracts candidate 10-digit national number from known Indian prefixes."""
+    if cleaned.startswith("+91") and len(cleaned) == 13:
+        return cleaned[3:]
+    if cleaned.startswith("91") and len(cleaned) == 12:
+        return cleaned[2:]
+    if cleaned.startswith("0") and len(cleaned) == 11:
+        return cleaned[1:]
+    if len(cleaned) == 10 and not cleaned.startswith("+"):
+        return cleaned
+    return None
+
+
+def _parse_indian_phone(cleaned: str, phone_raw: str) -> str | None:
+    """Parses various Indian phone representations into standard +91XXXXXXXXXX format."""
+    digits = _extract_indian_digits(cleaned)
+    if digits is None:
+        if cleaned.startswith("+91") or (cleaned.startswith("91") and len(cleaned) >= 10):
+            raise ValueError(f"Invalid Indian mobile number '{phone_raw}': 10 digits starting with 6-9 required")
+        return None
+
+    if digits.isdigit() and digits[0] in "6789":
+        return f"+91{digits}"
+    raise ValueError(f"Invalid Indian mobile number '{phone_raw}': must start with 6, 7, 8, or 9")
+
+
+def _parse_international_phone(cleaned: str, phone_raw: str) -> str | None:
+    """Parses international E.164 formatted numbers (+[1-9][0-9]{7,14})."""
+    if cleaned.startswith("+"):
+        rest = cleaned[1:]
+        if 8 <= len(rest) <= 15 and rest.isdigit() and rest[0] != "0":
+            return cleaned
+        raise ValueError(f"Invalid international E.164 phone number: '{phone_raw}'")
+    return None
+
+
 def normalize_e164_phone(phone_raw: str) -> str:
     """
     Normalizes a phone number to standard E.164.
@@ -15,43 +51,13 @@ def normalize_e164_phone(phone_raw: str) -> str:
 
     cleaned = re.sub(r"[\s\-\(\)\.]", "", str(phone_raw).strip())
 
-    # Case 1: Indian numbers with +91 prefix
-    if cleaned.startswith("+91"):
-        digits = cleaned[3:]
-        if len(digits) == 10 and digits.isdigit() and digits[0] in "6789":
-            return f"+91{digits}"
-        raise ValueError(
-            f"Invalid Indian mobile number '{phone_raw}': 10 digits starting with 6-9 required"
-        )
+    indian_res = _parse_indian_phone(cleaned, phone_raw)
+    if indian_res:
+        return indian_res
 
-    # Case 2: Indian numbers with 91 prefix (12 digits)
-    if cleaned.startswith("91") and len(cleaned) == 12:
-        digits = cleaned[2:]
-        if digits.isdigit() and digits[0] in "6789":
-            return f"+91{digits}"
-        raise ValueError(f"Invalid Indian mobile number '{phone_raw}' with 91 prefix")
-
-    # Case 3: Indian numbers with leading 0 (11 digits)
-    if cleaned.startswith("0") and len(cleaned) == 11:
-        digits = cleaned[1:]
-        if digits.isdigit() and digits[0] in "6789":
-            return f"+91{digits}"
-        raise ValueError(f"Invalid Indian mobile number '{phone_raw}' with leading 0")
-
-    # Case 4: Bare 10-digit Indian number
-    if len(cleaned) == 10 and cleaned.isdigit():
-        if cleaned[0] in "6789":
-            return f"+91{cleaned}"
-        raise ValueError(
-            f"Invalid Indian mobile number '{phone_raw}': must start with 6, 7, 8, or 9"
-        )
-
-    # Case 5: International E.164 number (starts with '+' and 8-15 digits)
-    if cleaned.startswith("+"):
-        rest = cleaned[1:]
-        if 8 <= len(rest) <= 15 and rest.isdigit() and rest[0] != "0":
-            return cleaned
-        raise ValueError(f"Invalid international E.164 phone number: '{phone_raw}'")
+    intl_res = _parse_international_phone(cleaned, phone_raw)
+    if intl_res:
+        return intl_res
 
     raise ValueError(
         f"Unparseable phone number '{phone_raw}'. Provide a valid 10-digit Indian mobile or +E.164 format."
