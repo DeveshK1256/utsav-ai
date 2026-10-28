@@ -1,4 +1,4 @@
-from pydantic import field_validator
+from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -16,7 +16,7 @@ class Settings(BaseSettings):
     WHATSAPP_PROVIDER: str = "mock"  # "mock" or "cloud_api"
     WHATSAPP_API_TOKEN: str | None = None
     WHATSAPP_PHONE_NUMBER_ID: str | None = None
-    WHATSAPP_WEBHOOK_VERIFY_TOKEN: str = "utsav_webhook_verify_token_secure"
+    WHATSAPP_WEBHOOK_VERIFY_TOKEN: str = Field(default="utsav_webhook_verify_token_secure")
     WHATSAPP_APP_SECRET: str | None = None
 
     @field_validator("DATABASE_URL", mode="after")

@@ -302,7 +302,7 @@ class VendorDiscoveryService:
             url = f"https://nominatim.openstreetmap.org/search?q={urllib.parse.quote(query_text)}&format=json&countrycodes=in&limit=1"
             _validate_safe_outbound_url(url)
             req = urllib.request.Request(url, headers={"User-Agent": OSM_USER_AGENT})
-            with urllib.request.urlopen(req, timeout=4) as resp:  # nosec B310
+            with urllib.request.urlopen(req, timeout=4) as resp:  # noqa: S310 # nosec B310
                 data = json.loads(resp.read().decode("utf-8"))
                 if data and len(data) > 0:
                     first = data[0]
@@ -534,10 +534,10 @@ out center 15;"""
         for srv in overpass_servers:
             try:
                 _validate_safe_outbound_url(srv)
-                req = urllib.request.Request(
+                req = urllib.request.Request(  # noqa: S310
                     srv, data=overpass_data, headers={"User-Agent": OSM_USER_AGENT}
                 )
-                with urllib.request.urlopen(req, timeout=1.8) as resp:  # nosec B310
+                with urllib.request.urlopen(req, timeout=1.8) as resp:  # noqa: S310 # nosec B310
                     data = json.loads(resp.read().decode("utf-8"))
                     elements = data.get("elements", [])
                     for el in elements:
@@ -600,7 +600,7 @@ out center 15;"""
                     rev_req = urllib.request.Request(
                         rev_url, headers={"User-Agent": OSM_USER_AGENT}
                     )
-                    with urllib.request.urlopen(rev_req, timeout=3.0) as rev_resp:  # nosec B310
+                    with urllib.request.urlopen(rev_req, timeout=3.0) as rev_resp:  # noqa: S310 # nosec B310
                         rev_data = json.loads(rev_resp.read().decode("utf-8"))
                         addr = rev_data.get("address", {})
                         target_city = (
@@ -622,7 +622,7 @@ out center 15;"""
                     url = f"https://nominatim.openstreetmap.org/search?q={urllib.parse.quote(query_str)}&format=json&limit=6&countrycodes=in"
                     _validate_safe_outbound_url(url)
                     req = urllib.request.Request(url, headers={"User-Agent": OSM_USER_AGENT})
-                    with urllib.request.urlopen(req, timeout=3.5) as resp:  # nosec B310
+                    with urllib.request.urlopen(req, timeout=3.5) as resp:  # noqa: S310 # nosec B310
                         items = json.loads(resp.read().decode("utf-8"))
                         for it in items:
                             v_name = it.get("name") or it.get("display_name", "").split(",")[0]
