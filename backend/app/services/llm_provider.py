@@ -3,6 +3,10 @@ import os
 from abc import ABC, abstractmethod
 from typing import Any, cast
 
+from backend.app.schemas.quotes import (
+    ExtractedLineItemSchema,
+    QuoteExtractionPayloadSchema,
+)
 from backend.app.schemas.vibe import (
     DecorItemProposalSchema,
     SingleImageVibeSchema,

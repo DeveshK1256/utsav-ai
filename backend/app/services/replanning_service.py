@@ -27,6 +27,274 @@ from backend.app.services.llm_provider import get_replanning_explanation_provide
 
 class ReplanningService:
     @classmethod
+    def _handle_infeasible_proposal(
+        cls,
+        db: Session,
+        event: Event,
+        change_type: str,
+        payload: dict[str, Any],
+        infeasibility_reason: str,
+    ) -> ChangeProposalResponseSchema:
+        change_event = ChangeEvent(
+            event_id=event.id,
+            change_type=change_type,
+            payload=payload,
+            status="blocked_infeasible",
+        )
+        db.add(change_event)
+        db.flush()
+
+        proposal_payload = {
+            "change_id": change_event.id,
+            "event_id": event.id,
+            "change_type": change_type,
+            "status": "blocked_infeasible",
+            "summary": f"Infeasible change request: {infeasibility_reason}",
+            "budget_diff": [],
+            "budget_total_old": float(event.total_budget),
+            "budget_total_new": float(event.total_budget),
+            "budget_total_delta": 0.0,
+            "task_diff": {"added_tasks": [], "moved_tasks": [], "cancelled_tasks": []},
+            "vendor_re_quote_categories": [],
+            "capacity_warning": None,
+            "infeasibility_reason": infeasibility_reason,
+            "explanation": f"This change proposal cannot be applied because it is infeasible: {infeasibility_reason}",
+            "mitigation_suggestions": [
+                "Revise parameters to valid ranges (e.g. valid future dates, positive guest counts, budget above committed costs)."
+            ],
+            "created_at": datetime.now(UTC).isoformat(),
+        }
+
+        suggestion = AISuggestion(
+            event_id=event.id,
+            change_event_id=change_event.id,
+            agent_name="replanning_agent_f1",
+            proposal_payload=proposal_payload,
+            reasoning={"infeasible": True, "reason": infeasibility_reason},
+            status="blocked_infeasible",
+        )
+        db.add(suggestion)
+        db.commit()
+
+        return ChangeProposalResponseSchema(
+            change_id=change_event.id,
+            event_id=event.id,
+            change_type=change_type,
+            status="blocked_infeasible",
+            summary=proposal_payload["summary"],
+            budget_diff=[],
+            budget_total_old=float(event.total_budget),
+            budget_total_new=float(event.total_budget),
+            budget_total_delta=0.0,
+            task_diff=TaskDiffSchema(),
+            vendor_re_quote_categories=[],
+            capacity_warning=None,
+            infeasibility_reason=infeasibility_reason,
+            explanation=proposal_payload["explanation"],
+            mitigation_suggestions=proposal_payload["mitigation_suggestions"],
+            created_at=change_event.created_at,
+        )
+
+    @classmethod
+    def _build_guest_count_proposal(
+        cls, event: Event, payload: dict[str, Any]
+    ) -> dict[str, Any]:
+        from_g = int(payload.get("from_guest_count", event.guest_count))
+        to_g = int(payload.get("to_guest_count") or event.guest_count or 100)
+        result = BudgetRescalingEngine.rescale_for_guest_count_change(
+            old_guest_count=from_g,
+            new_guest_count=to_g,
+            budget_items=event.budget_items,
+            venue_capacity=event.venue_capacity,
+        )
+        budget_diffs = [item.model_dump() for item in result.items]
+        vendor_re_quote_cats = []
+        if to_g > from_g:
+            vendor_re_quote_cats = [
+                d["category"]
+                for d in budget_diffs
+                if d["scaling_rule"] in ("per_guest", "tiered") and d["difference"] > 0
+            ]
+        return {
+            "budget_diffs": budget_diffs,
+            "budget_old": result.total_old,
+            "budget_new": result.total_new,
+            "budget_delta": result.total_delta,
+            "capacity_warning": result.capacity_warning,
+            "task_diff": {"added_tasks": [], "moved_tasks": [], "cancelled_tasks": []},
+            "sub_event_diffs": [],
+            "vendor_re_quote_cats": vendor_re_quote_cats,
+        }
+
+    @classmethod
+    def _build_vendor_cancelled_proposal(
+        cls, event: Event, payload: dict[str, Any]
+    ) -> dict[str, Any]:
+        cat = payload.get("category", "vendor")
+        v_name = payload.get("vendor_name", "Vendor")
+        task_diff = {
+            "added_tasks": [
+                {
+                    "title": f"Urgent: Settle replacement for {cat} ({v_name})",
+                    "description": f"Vendor {v_name} cancelled. Procure replacement quotes for {cat} immediately.",
+                    "assigned_role": "Procurement Lead",
+                    "duration_minutes": 120,
+                }
+            ],
+            "moved_tasks": [],
+            "cancelled_tasks": [],
+        }
+        budget_diffs: list[dict[str, Any]] = []
+        for b in event.budget_items:
+            if (b.category or "").lower() == cat.lower():
+                b_amt = float(b.planned_amount or 0.0)
+                budget_diffs.append(
+                    {
+                        "budget_item_id": b.id,
+                        "category": b.category,
+                        "name": b.name,
+                        "scaling_rule": b.scaling_rule or "fixed",
+                        "old_amount": b_amt,
+                        "new_amount": b_amt,
+                        "difference": 0.0,
+                        "formula": f"{cat}: Replacement required — original planned allocation ₹{b_amt:,.2f} preserved for re-contracting",
+                    }
+                )
+        return {
+            "budget_diffs": budget_diffs,
+            "budget_old": float(event.total_budget),
+            "budget_new": float(event.total_budget),
+            "budget_delta": 0.0,
+            "capacity_warning": None,
+            "task_diff": task_diff,
+            "sub_event_diffs": [],
+            "vendor_re_quote_cats": [cat],
+        }
+
+    @classmethod
+    def _build_date_moved_proposal(
+        cls, event: Event, payload: dict[str, Any]
+    ) -> dict[str, Any]:
+        from_d = date.fromisoformat(str(payload.get("from_date")))
+        to_d = date.fromisoformat(str(payload.get("to_date")))
+        days_delta = (to_d - from_d).days
+        payload["days_shifted"] = days_delta
+
+        moved_tasks = DAGScheduler.shift_tasks_for_date_moved(event.tasks, days_delta)
+        sub_event_diffs = DAGScheduler.shift_sub_events_for_date_moved(
+            event.sub_events, days_delta
+        )
+        return {
+            "budget_diffs": [],
+            "budget_old": float(event.total_budget),
+            "budget_new": float(event.total_budget),
+            "budget_delta": 0.0,
+            "capacity_warning": None,
+            "task_diff": {
+                "added_tasks": [],
+                "moved_tasks": moved_tasks,
+                "cancelled_tasks": [],
+            },
+            "sub_event_diffs": sub_event_diffs,
+            "vendor_re_quote_cats": [],
+        }
+
+    @classmethod
+    def _build_budget_cut_proposal(
+        cls, event: Event, payload: dict[str, Any]
+    ) -> dict[str, Any]:
+        from_b = float(payload.get("from_budget", float(event.total_budget)))
+        to_b = float(payload.get("to_budget") or float(event.total_budget))
+        result = BudgetRescalingEngine.rescale_for_budget_cut(
+            from_budget=from_b, to_budget=to_b, budget_items=event.budget_items
+        )
+        return {
+            "budget_diffs": [item.model_dump() for item in result.items],
+            "budget_old": result.total_old,
+            "budget_new": result.total_new,
+            "budget_delta": result.total_delta,
+            "capacity_warning": None,
+            "task_diff": {"added_tasks": [], "moved_tasks": [], "cancelled_tasks": []},
+            "sub_event_diffs": [],
+            "vendor_re_quote_cats": [],
+        }
+
+    @classmethod
+    def _build_venue_unavailable_proposal(
+        cls, event: Event, payload: dict[str, Any]
+    ) -> dict[str, Any]:
+        v_name = payload.get("venue_name", "Primary Venue")
+        task_diff = {
+            "added_tasks": [
+                {
+                    "title": f"Emergency: Scout replacement venues for {v_name}",
+                    "description": f"Target capacity: {event.venue_capacity or event.guest_count} guests in {event.city}.",
+                    "assigned_role": "Host",
+                    "duration_minutes": 240,
+                },
+                {
+                    "title": "Conduct emergency replacement venue site inspections",
+                    "description": "Verify acoustics, fire safety, and stage layout for muhurat timings.",
+                    "assigned_role": "Logistics Lead",
+                    "duration_minutes": 180,
+                },
+            ],
+            "moved_tasks": [],
+            "cancelled_tasks": [],
+        }
+        budget_diffs: list[dict[str, Any]] = []
+        for b in event.budget_items:
+            if (b.category or "").lower() == "venue":
+                b_amt = float(b.planned_amount or 0.0)
+                budget_diffs.append(
+                    {
+                        "budget_item_id": b.id,
+                        "category": b.category,
+                        "name": b.name,
+                        "scaling_rule": b.scaling_rule or "fixed",
+                        "old_amount": b_amt,
+                        "new_amount": b_amt,
+                        "difference": 0.0,
+                        "formula": f"venue: Replacement venue required — current budget allocation ₹{b_amt:,.2f} preserved for new contract",
+                    }
+                )
+        return {
+            "budget_diffs": budget_diffs,
+            "budget_old": float(event.total_budget),
+            "budget_new": float(event.total_budget),
+            "budget_delta": 0.0,
+            "capacity_warning": None,
+            "task_diff": task_diff,
+            "sub_event_diffs": [],
+            "vendor_re_quote_cats": ["venue"],
+        }
+
+    @classmethod
+    def _dispatch_proposal_builder(
+        cls, event: Event, change_type: str, payload: dict[str, Any]
+    ) -> dict[str, Any]:
+        builders = {
+            "guest_count_changed": cls._build_guest_count_proposal,
+            "vendor_cancelled": cls._build_vendor_cancelled_proposal,
+            "date_moved": cls._build_date_moved_proposal,
+            "budget_cut": cls._build_budget_cut_proposal,
+            "venue_unavailable": cls._build_venue_unavailable_proposal,
+        }
+        builder = builders.get(change_type)
+        if builder:
+            return builder(event, payload)
+        return {
+            "budget_diffs": [],
+            "budget_old": float(event.total_budget),
+            "budget_new": float(event.total_budget),
+            "budget_delta": 0.0,
+            "capacity_warning": None,
+            "task_diff": {"added_tasks": [], "moved_tasks": [], "cancelled_tasks": []},
+            "sub_event_diffs": [],
+            "vendor_re_quote_cats": [],
+        }
+
+    @classmethod
     def create_change_proposal(
         cls,
         db: Session,
@@ -44,67 +312,11 @@ class ReplanningService:
         # 1. Infeasibility validations
         infeasibility_reason = cls._check_infeasibility(event, change_type, payload)
         if infeasibility_reason:
-            change_event = ChangeEvent(
-                event_id=event_id,
-                change_type=change_type,
-                payload=payload,
-                status="blocked_infeasible",
-            )
-            db.add(change_event)
-            db.flush()
-
-            proposal_payload = {
-                "change_id": change_event.id,
-                "event_id": event_id,
-                "change_type": change_type,
-                "status": "blocked_infeasible",
-                "summary": f"Infeasible change request: {infeasibility_reason}",
-                "budget_diff": [],
-                "budget_total_old": float(event.total_budget),
-                "budget_total_new": float(event.total_budget),
-                "budget_total_delta": 0.0,
-                "task_diff": {"added_tasks": [], "moved_tasks": [], "cancelled_tasks": []},
-                "vendor_re_quote_categories": [],
-                "capacity_warning": None,
-                "infeasibility_reason": infeasibility_reason,
-                "explanation": f"This change proposal cannot be applied because it is infeasible: {infeasibility_reason}",
-                "mitigation_suggestions": [
-                    "Revise parameters to valid ranges (e.g. valid future dates, positive guest counts, budget above committed costs)."
-                ],
-                "created_at": datetime.now(UTC).isoformat(),
-            }
-
-            suggestion = AISuggestion(
-                event_id=event_id,
-                change_event_id=change_event.id,
-                agent_name="replanning_agent_f1",
-                proposal_payload=proposal_payload,
-                reasoning={"infeasible": True, "reason": infeasibility_reason},
-                status="blocked_infeasible",
-            )
-            db.add(suggestion)
-            db.commit()
-
-            return ChangeProposalResponseSchema(
-                change_id=change_event.id,
-                event_id=event_id,
-                change_type=change_type,
-                status="blocked_infeasible",
-                summary=proposal_payload["summary"],
-                budget_diff=[],
-                budget_total_old=float(event.total_budget),
-                budget_total_new=float(event.total_budget),
-                budget_total_delta=0.0,
-                task_diff=TaskDiffSchema(),
-                vendor_re_quote_categories=[],
-                capacity_warning=None,
-                infeasibility_reason=infeasibility_reason,
-                explanation=proposal_payload["explanation"],
-                mitigation_suggestions=proposal_payload["mitigation_suggestions"],
-                created_at=change_event.created_at,
+            return cls._handle_infeasible_proposal(
+                db, event, change_type, payload, infeasibility_reason
             )
 
-        # 2. Determine initial status: queued if another change is pending, else pending
+        # 2. Determine initial status
         pending_existing = (
             db.query(ChangeEvent)
             .filter(ChangeEvent.event_id == event_id, ChangeEvent.status == "pending")
@@ -113,126 +325,15 @@ class ReplanningService:
         current_status = "queued" if pending_existing else "pending"
 
         # 3. Dispatch deterministic math & scheduling handler
-        budget_diffs: list[dict[str, Any]] = []
-        task_diff: dict[str, list[Any]] = {
-            "added_tasks": [],
-            "moved_tasks": [],
-            "cancelled_tasks": [],
-        }
-        sub_event_diffs: list[dict[str, Any]] = []
-        vendor_re_quote_cats: list[str] = []
-        capacity_warning: str | None = None
-        budget_old = float(event.total_budget)
-        budget_new = float(event.total_budget)
-        budget_delta = 0.0
-
-        if change_type == "guest_count_changed":
-            from_g = int(payload.get("from_guest_count", event.guest_count))
-            to_g = int(payload.get("to_guest_count") or event.guest_count or 100)
-            result = BudgetRescalingEngine.rescale_for_guest_count_change(
-                old_guest_count=from_g,
-                new_guest_count=to_g,
-                budget_items=event.budget_items,
-                venue_capacity=event.venue_capacity,
-            )
-            budget_diffs = [item.model_dump() for item in result.items]
-            budget_old = result.total_old
-            budget_new = result.total_new
-            budget_delta = result.total_delta
-            capacity_warning = result.capacity_warning
-            if to_g > from_g:
-                vendor_re_quote_cats = [
-                    d["category"]
-                    for d in budget_diffs
-                    if d["scaling_rule"] in ("per_guest", "tiered") and d["difference"] > 0
-                ]
-
-        elif change_type == "vendor_cancelled":
-            cat = payload.get("category", "vendor")
-            v_name = payload.get("vendor_name", "Vendor")
-            vendor_re_quote_cats = [cat]
-            task_diff["added_tasks"].append(
-                {
-                    "title": f"Urgent: Settle replacement for {cat} ({v_name})",
-                    "description": f"Vendor {v_name} cancelled. Procure replacement quotes for {cat} immediately.",
-                    "assigned_role": "Procurement Lead",
-                    "duration_minutes": 120,
-                }
-            )
-            for b in event.budget_items:
-                if (b.category or "").lower() == cat.lower():
-                    b_amt = float(b.planned_amount or 0.0)
-                    budget_diffs.append(
-                        {
-                            "budget_item_id": b.id,
-                            "category": b.category,
-                            "name": b.name,
-                            "scaling_rule": b.scaling_rule or "fixed",
-                            "old_amount": b_amt,
-                            "new_amount": b_amt,
-                            "difference": 0.0,
-                            "formula": f"{cat}: Replacement required — original planned allocation ₹{b_amt:,.2f} preserved for re-contracting",
-                        }
-                    )
-
-        elif change_type == "date_moved":
-            from_d = date.fromisoformat(str(payload.get("from_date")))
-            to_d = date.fromisoformat(str(payload.get("to_date")))
-            days_delta = (to_d - from_d).days
-            payload["days_shifted"] = days_delta
-
-            task_diff["moved_tasks"] = DAGScheduler.shift_tasks_for_date_moved(
-                event.tasks, days_delta
-            )
-            sub_event_diffs = DAGScheduler.shift_sub_events_for_date_moved(
-                event.sub_events, days_delta
-            )
-
-        elif change_type == "budget_cut":
-            from_b = float(payload.get("from_budget", float(event.total_budget)))
-            to_b = float(payload.get("to_budget") or float(event.total_budget))
-            result = BudgetRescalingEngine.rescale_for_budget_cut(
-                from_budget=from_b, to_budget=to_b, budget_items=event.budget_items
-            )
-            budget_diffs = [item.model_dump() for item in result.items]
-            budget_old = result.total_old
-            budget_new = result.total_new
-            budget_delta = result.total_delta
-
-        elif change_type == "venue_unavailable":
-            v_name = payload.get("venue_name", "Primary Venue")
-            vendor_re_quote_cats = ["venue"]
-            task_diff["added_tasks"].extend(
-                [
-                    {
-                        "title": f"Emergency: Scout replacement venues for {v_name}",
-                        "description": f"Target capacity: {event.venue_capacity or event.guest_count} guests in {event.city}.",
-                        "assigned_role": "Host",
-                        "duration_minutes": 240,
-                    },
-                    {
-                        "title": "Conduct emergency replacement venue site inspections",
-                        "description": "Verify acoustics, fire safety, and stage layout for muhurat timings.",
-                        "assigned_role": "Logistics Lead",
-                        "duration_minutes": 180,
-                    },
-                ]
-            )
-            for b in event.budget_items:
-                if (b.category or "").lower() == "venue":
-                    b_amt = float(b.planned_amount or 0.0)
-                    budget_diffs.append(
-                        {
-                            "budget_item_id": b.id,
-                            "category": b.category,
-                            "name": b.name,
-                            "scaling_rule": b.scaling_rule or "fixed",
-                            "old_amount": b_amt,
-                            "new_amount": b_amt,
-                            "difference": 0.0,
-                            "formula": f"venue: Replacement venue required — current budget allocation ₹{b_amt:,.2f} preserved for new contract",
-                        }
-                    )
+        plan = cls._dispatch_proposal_builder(event, change_type, payload)
+        budget_diffs = plan["budget_diffs"]
+        budget_old = plan["budget_old"]
+        budget_new = plan["budget_new"]
+        budget_delta = plan["budget_delta"]
+        task_diff = plan["task_diff"]
+        sub_event_diffs = plan["sub_event_diffs"]
+        vendor_re_quote_cats = plan["vendor_re_quote_cats"]
+        capacity_warning = plan["capacity_warning"]
 
         # 4. Generate plain-language explanation and mitigation suggestions
         diff_summary = {
@@ -366,6 +467,109 @@ class ReplanningService:
         )
 
     @classmethod
+    def _apply_budget_diffs(
+        cls, db: Session, event_id: str, budget_diff: list[dict[str, Any]]
+    ) -> None:
+        for item_diff in budget_diff:
+            b_id = item_diff.get("budget_item_id")
+            new_amt = item_diff.get("new_amount")
+            rule = item_diff.get("scaling_rule")
+            if b_id and new_amt is not None:
+                b_item = (
+                    db.query(BudgetItem)
+                    .filter(BudgetItem.id == b_id, BudgetItem.event_id == event_id)
+                    .first()
+                )
+                if b_item:
+                    b_item.planned_amount = new_amt
+                    if rule and b_item.scaling_rule != rule:
+                        b_item.scaling_rule = rule
+
+    @classmethod
+    def _apply_task_diffs(
+        cls, db: Session, event_id: str, task_diff: dict[str, list[dict[str, Any]]]
+    ) -> None:
+        for moved in task_diff.get("moved_tasks", []):
+            t_id = moved.get("task_id")
+            t_record = db.query(Task).filter(Task.id == t_id, Task.event_id == event_id).first()
+            if t_record:
+                if moved.get("new_start"):
+                    t_record.scheduled_start = datetime.fromisoformat(moved["new_start"])
+                if moved.get("new_end"):
+                    t_record.scheduled_end = datetime.fromisoformat(moved["new_end"])
+
+        for added in task_diff.get("added_tasks", []):
+            new_t = Task(
+                event_id=event_id,
+                title=added.get("title", "New Task"),
+                description=added.get("description"),
+                status="pending",
+                duration_minutes=added.get("duration_minutes", 60),
+                assigned_role=added.get("assigned_role", "Coordinator"),
+                dependency_task_ids=[],
+            )
+            db.add(new_t)
+
+    @classmethod
+    def _apply_sub_event_diffs(
+        cls, db: Session, event_id: str, sub_event_diffs: list[dict[str, Any]]
+    ) -> None:
+        for se_diff in sub_event_diffs:
+            se_id = se_diff.get("sub_event_id")
+            se_record = (
+                db.query(SubEvent)
+                .filter(SubEvent.id == se_id, SubEvent.event_id == event_id)
+                .first()
+            )
+            if se_record:
+                if se_diff.get("new_start"):
+                    se_record.start_time = datetime.fromisoformat(se_diff["new_start"])
+                if se_diff.get("new_end"):
+                    se_record.end_time = datetime.fromisoformat(se_diff["new_end"])
+
+    @classmethod
+    def _apply_event_mutations(
+        cls, event: Event, change_type: str, payload: dict[str, Any]
+    ) -> None:
+        if change_type == "guest_count_changed":
+            to_g = payload.get("to_guest_count")
+            if to_g:
+                event.guest_count = int(to_g)
+        elif change_type == "date_moved":
+            to_d_str = payload.get("to_date")
+            from_d_str = payload.get("from_date")
+            if to_d_str and from_d_str:
+                from_d = date.fromisoformat(str(from_d_str))
+                to_d = date.fromisoformat(str(to_d_str))
+                days_delta = (to_d - from_d).days
+                event.start_date = to_d
+                event.end_date = event.end_date + timedelta(days=days_delta)
+        elif change_type == "budget_cut":
+            to_b = payload.get("to_budget")
+            if to_b is not None:
+                event.total_budget = float(to_b)
+
+    @classmethod
+    def _promote_next_queued(cls, db: Session, event_id: str) -> None:
+        next_queued = (
+            db.query(ChangeEvent)
+            .filter(ChangeEvent.event_id == event_id, ChangeEvent.status == "queued")
+            .order_by(ChangeEvent.created_at.asc())
+            .first()
+        )
+        if next_queued:
+            next_queued.status = "pending"
+            next_sugg = (
+                db.query(AISuggestion)
+                .filter(AISuggestion.change_event_id == next_queued.id)
+                .first()
+            )
+            if next_sugg:
+                next_sugg.status = "pending"
+                if next_sugg.proposal_payload:
+                    next_sugg.proposal_payload["status"] = "pending"
+
+    @classmethod
     def accept_change(
         cls, db: Session, event_id: str, change_id: str, actor_id: str | None = None
     ) -> ChangeProposalResponseSchema:
@@ -394,76 +598,16 @@ class ReplanningService:
         payload = sugg.proposal_payload
 
         # 1. Mutate Budget Items
-        for item_diff in payload.get("budget_diff", []):
-            b_id = item_diff.get("budget_item_id")
-            new_amt = item_diff.get("new_amount")
-            rule = item_diff.get("scaling_rule")
-            if b_id and new_amt is not None:
-                b_item = (
-                    db.query(BudgetItem)
-                    .filter(BudgetItem.id == b_id, BudgetItem.event_id == event_id)
-                    .first()
-                )
-                if b_item:
-                    b_item.planned_amount = new_amt
-                    if rule and b_item.scaling_rule != rule:
-                        b_item.scaling_rule = rule
+        cls._apply_budget_diffs(db, event_id, payload.get("budget_diff", []))
 
         # 2. Mutate Tasks
-        task_diff = payload.get("task_diff", {})
-        for moved in task_diff.get("moved_tasks", []):
-            t_id = moved.get("task_id")
-            t_record = db.query(Task).filter(Task.id == t_id, Task.event_id == event_id).first()
-            if t_record:
-                if moved.get("new_start"):
-                    t_record.scheduled_start = datetime.fromisoformat(moved["new_start"])
-                if moved.get("new_end"):
-                    t_record.scheduled_end = datetime.fromisoformat(moved["new_end"])
-
-        for added in task_diff.get("added_tasks", []):
-            new_t = Task(
-                event_id=event_id,
-                title=added.get("title", "New Task"),
-                description=added.get("description"),
-                status="pending",
-                duration_minutes=added.get("duration_minutes", 60),
-                assigned_role=added.get("assigned_role", "Coordinator"),
-                dependency_task_ids=[],
-            )
-            db.add(new_t)
+        cls._apply_task_diffs(db, event_id, payload.get("task_diff", {}))
 
         # 3. Mutate SubEvents
-        for se_diff in payload.get("sub_event_diffs", []):
-            se_id = se_diff.get("sub_event_id")
-            se_record = (
-                db.query(SubEvent)
-                .filter(SubEvent.id == se_id, SubEvent.event_id == event_id)
-                .first()
-            )
-            if se_record:
-                if se_diff.get("new_start"):
-                    se_record.start_time = datetime.fromisoformat(se_diff["new_start"])
-                if se_diff.get("new_end"):
-                    se_record.end_time = datetime.fromisoformat(se_diff["new_end"])
+        cls._apply_sub_event_diffs(db, event_id, payload.get("sub_event_diffs", []))
 
         # 4. Mutate Event top-level fields
-        if change_event.change_type == "guest_count_changed":
-            to_g = change_event.payload.get("to_guest_count")
-            if to_g:
-                event.guest_count = int(to_g)
-        elif change_event.change_type == "date_moved":
-            to_d_str = change_event.payload.get("to_date")
-            from_d_str = change_event.payload.get("from_date")
-            if to_d_str and from_d_str:
-                from_d = date.fromisoformat(str(from_d_str))
-                to_d = date.fromisoformat(str(to_d_str))
-                days_delta = (to_d - from_d).days
-                event.start_date = to_d
-                event.end_date = event.end_date + timedelta(days=days_delta)
-        elif change_event.change_type == "budget_cut":
-            to_b = change_event.payload.get("to_budget")
-            if to_b is not None:
-                event.total_budget = float(to_b)
+        cls._apply_event_mutations(event, change_event.change_type, change_event.payload or {})
 
         # 5. Mark ChangeEvent and AISuggestion as applied
         change_event.status = "applied"
@@ -482,23 +626,7 @@ class ReplanningService:
         db.add(event_log)
 
         # 7. Promote next queued change event if present
-        next_queued = (
-            db.query(ChangeEvent)
-            .filter(ChangeEvent.event_id == event_id, ChangeEvent.status == "queued")
-            .order_by(ChangeEvent.created_at.asc())
-            .first()
-        )
-        if next_queued:
-            next_queued.status = "pending"
-            next_sugg = (
-                db.query(AISuggestion)
-                .filter(AISuggestion.change_event_id == next_queued.id)
-                .first()
-            )
-            if next_sugg:
-                next_sugg.status = "pending"
-                if next_sugg.proposal_payload:
-                    next_sugg.proposal_payload["status"] = "pending"
+        cls._promote_next_queued(db, event_id)
 
         db.commit()
         db.refresh(change_event)
@@ -542,28 +670,27 @@ class ReplanningService:
 
         # Promote next queued if the rejected proposal was the active pending one
         if was_pending:
-            next_queued = (
-                db.query(ChangeEvent)
-                .filter(ChangeEvent.event_id == event_id, ChangeEvent.status == "queued")
-                .order_by(ChangeEvent.created_at.asc())
-                .first()
-            )
-            if next_queued:
-                next_queued.status = "pending"
-                next_sugg = (
-                    db.query(AISuggestion)
-                    .filter(AISuggestion.change_event_id == next_queued.id)
-                    .first()
-                )
-                if next_sugg:
-                    next_sugg.status = "pending"
-                    if next_sugg.proposal_payload:
-                        next_sugg.proposal_payload["status"] = "pending"
+            cls._promote_next_queued(db, event_id)
 
         db.commit()
         db.refresh(change_event)
 
         return cls.get_change_proposal(db, event_id, change_id)
+
+    @classmethod
+    def _apply_budget_overrides(
+        cls, budget_diff: list[dict[str, Any]], overrides: dict[str, float]
+    ) -> None:
+        for item in budget_diff:
+            b_id = item.get("budget_item_id")
+            if b_id in overrides:
+                overridden_amt = round(float(overrides[b_id]), 2)
+                old_amt = item.get("old_amount", 0.0)
+                item["new_amount"] = overridden_amt
+                item["difference"] = round(overridden_amt - old_amt, 2)
+                item["formula"] = (
+                    f"{item.get('category')}: User manual override = {overridden_amt:.2f}"
+                )
 
     @classmethod
     def patch_change(
@@ -590,16 +717,7 @@ class ReplanningService:
         budget_diff = payload.get("budget_diff", [])
 
         if patch_data.budget_overrides:
-            for item in budget_diff:
-                b_id = item.get("budget_item_id")
-                if b_id in patch_data.budget_overrides:
-                    overridden_amt = round(float(patch_data.budget_overrides[b_id]), 2)
-                    old_amt = item.get("old_amount", 0.0)
-                    item["new_amount"] = overridden_amt
-                    item["difference"] = round(overridden_amt - old_amt, 2)
-                    item["formula"] = (
-                        f"{item.get('category')}: User manual override = {overridden_amt:.2f}"
-                    )
+            cls._apply_budget_overrides(budget_diff, patch_data.budget_overrides)
 
             # Recalculate totals
             new_total = round(sum(i.get("new_amount", 0.0) for i in budget_diff), 2)
@@ -618,71 +736,88 @@ class ReplanningService:
         return cls.get_change_proposal(db, event_id, change_id)
 
     @classmethod
+    def _check_guest_count_infeasibility(cls, payload: dict[str, Any]) -> str | None:
+        to_g = payload.get("to_guest_count")
+        if to_g is None or not isinstance(to_g, (int, float)) or int(to_g) <= 0:
+            return f"Target guest count must be a positive integer (received {to_g})."
+        if int(to_g) > 10000:
+            return f"Target guest count ({to_g}) exceeds maximum supported event scale (10,000)."
+        return None
+
+    @classmethod
+    def _check_date_moved_infeasibility(
+        cls, event: Event, payload: dict[str, Any]
+    ) -> str | None:
+        to_d_raw = payload.get("to_date")
+        from_d_raw = payload.get(
+            "from_date", event.start_date.isoformat() if event.start_date else None
+        )
+        if not to_d_raw:
+            return "Target date 'to_date' is required."
+        try:
+            to_d = date.fromisoformat(str(to_d_raw))
+            from_d = date.fromisoformat(str(from_d_raw))
+        except (ValueError, TypeError) as e:
+            return f"Invalid date format (must be YYYY-MM-DD): {e}"
+
+        if to_d < date.today():
+            return f"Cannot move event date to the past ({to_d.isoformat()} is earlier than today {date.today().isoformat()})."
+        if to_d == from_d:
+            return f"Target date ({to_d.isoformat()}) is identical to current date."
+        return None
+
+    @classmethod
+    def _calculate_committed_total(cls, budget_items: list[BudgetItem]) -> float:
+        total = 0.0
+        for b in budget_items:
+            is_paid = bool(getattr(b, "is_paid", False))
+            actual = float(getattr(b, "actual_amount", 0.0) or 0.0)
+            if is_paid or actual > 0.0:
+                total += float(b.planned_amount or 0.0)
+        return total
+
+    @classmethod
+    def _check_budget_cut_infeasibility(
+        cls, event: Event, payload: dict[str, Any]
+    ) -> str | None:
+        to_b_raw = payload.get("to_budget")
+        if to_b_raw is None:
+            return "Target budget 'to_budget' is required."
+        try:
+            to_b = float(to_b_raw)
+        except (ValueError, TypeError):
+            return f"Invalid target budget amount: {to_b_raw}"
+
+        from_b = float(payload.get("from_budget", float(event.total_budget)))
+        if to_b <= 0:
+            return f"Target budget must be strictly positive (received ₹{to_b:,.2f})."
+        if to_b >= from_b:
+            return f"Budget cut target (₹{to_b:,.2f}) must be strictly less than current budget (₹{from_b:,.2f})."
+
+        committed_total = cls._calculate_committed_total(event.budget_items)
+        if to_b < committed_total:
+            return (
+                f"Target budget (₹{to_b:,.2f}) cannot be less than already committed/paid vendor contracts "
+                f"(₹{committed_total:,.2f})."
+            )
+        return None
+
+    @classmethod
     def _check_infeasibility(
         cls, event: Event, change_type: str, payload: dict[str, Any]
     ) -> str | None:
         if change_type == "guest_count_changed":
-            to_g = payload.get("to_guest_count")
-            if to_g is None or not isinstance(to_g, (int, float)) or int(to_g) <= 0:
-                return f"Target guest count must be a positive integer (received {to_g})."
-            if int(to_g) > 10000:
-                return (
-                    f"Target guest count ({to_g}) exceeds maximum supported event scale (10,000)."
-                )
-
-        elif change_type == "date_moved":
-            to_d_raw = payload.get("to_date")
-            from_d_raw = payload.get(
-                "from_date", event.start_date.isoformat() if event.start_date else None
-            )
-            if not to_d_raw:
-                return "Target date 'to_date' is required."
-            try:
-                to_d = date.fromisoformat(str(to_d_raw))
-                from_d = date.fromisoformat(str(from_d_raw))
-            except (ValueError, TypeError) as e:
-                return f"Invalid date format (must be YYYY-MM-DD): {e}"
-
-            if to_d < date.today():
-                return f"Cannot move event date to the past ({to_d.isoformat()} is earlier than today {date.today().isoformat()})."
-            if to_d == from_d:
-                return f"Target date ({to_d.isoformat()}) is identical to current date."
-
-        elif change_type == "budget_cut":
-            to_b_raw = payload.get("to_budget")
-            if to_b_raw is None:
-                return "Target budget 'to_budget' is required."
-            try:
-                to_b = float(to_b_raw)
-            except (ValueError, TypeError):
-                return f"Invalid target budget amount: {to_b_raw}"
-
-            from_b = float(payload.get("from_budget", float(event.total_budget)))
-            if to_b <= 0:
-                return f"Target budget must be strictly positive (received ₹{to_b:,.2f})."
-            if to_b >= from_b:
-                return f"Budget cut target (₹{to_b:,.2f}) must be strictly less than current budget (₹{from_b:,.2f})."
-
-            committed_total = sum(
-                float(b.planned_amount or 0.0)
-                for b in event.budget_items
-                if getattr(b, "is_paid", False)
-                or float(getattr(b, "actual_amount", 0.0) or 0.0) > 0
-            )
-            if to_b < committed_total:
-                return (
-                    f"Target budget (₹{to_b:,.2f}) cannot be less than already committed/paid vendor contracts "
-                    f"(₹{committed_total:,.2f})."
-                )
-
-        elif change_type == "vendor_cancelled":
-            cat = payload.get("category")
-            if not cat:
+            return cls._check_guest_count_infeasibility(payload)
+        if change_type == "date_moved":
+            return cls._check_date_moved_infeasibility(event, payload)
+        if change_type == "budget_cut":
+            return cls._check_budget_cut_infeasibility(event, payload)
+        if change_type == "vendor_cancelled":
+            if not payload.get("category"):
                 return "Vendor category is required in change payload."
-
-        elif change_type == "venue_unavailable":
-            v_name = payload.get("venue_name")
-            if not v_name:
+            return None
+        if change_type == "venue_unavailable":
+            if not payload.get("venue_name"):
                 return "Venue name is required in change payload."
-
+            return None
         return None

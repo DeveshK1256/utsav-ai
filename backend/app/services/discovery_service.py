@@ -7,6 +7,7 @@ import time
 import urllib.parse
 import urllib.request
 import uuid
+from typing import Any
 
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
@@ -509,7 +510,11 @@ out center 15;"""
         v_name = it.get("name") or it.get("display_name", "").split(",")[0]
         if not is_valid_venue_name(v_name):
             return None
-        v_lat, v_lng = float(it.get("lat")), float(it.get("lon"))
+        raw_lat = it.get("lat")
+        raw_lng = it.get("lon")
+        if raw_lat is None or raw_lng is None:
+            return None
+        v_lat, v_lng = float(raw_lat), float(raw_lng)
         if haversine_distance_km(lat, lng, v_lat, v_lng) > radius_km:
             return None
         return {
@@ -533,8 +538,9 @@ out center 15;"""
             rev_req = urllib.request.Request(rev_url, headers={"User-Agent": OSM_USER_AGENT})
             with urllib.request.urlopen(rev_req, timeout=3.0) as rev_resp:  # noqa: S310 # nosec B310
                 rev_data = json.loads(rev_resp.read().decode("utf-8"))
-                addr = rev_data.get("address", {})
-                return addr.get("city") or addr.get("town") or addr.get("state_district")
+                addr: dict[str, Any] = rev_data.get("address", {})
+                city_val = addr.get("city") or addr.get("town") or addr.get("state_district")
+                return str(city_val) if city_val else None
         except (urllib.error.URLError, TimeoutError, json.JSONDecodeError, KeyError, ValueError, OSError) as exc:
             logger.debug("Failed reverse geocoding city lookup: %s", exc)
         return None
