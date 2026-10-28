@@ -28,32 +28,23 @@ logger = logging.getLogger(__name__)
 
 class VibeService:
     @classmethod
-    def upload_vibe_and_extract(
-        cls,
-        db: Session,
-        event_id: str,
-        files: list[UploadFile],
-        text_description: str | None = None,
-    ) -> StyleProfile:
-        event = db.query(Event).filter(Event.id == event_id).first()
-        if not event:
-            raise HTTPException(status_code=404, detail="Event not found")
-
+    def _read_and_validate_images(
+        cls, files: list[UploadFile]
+    ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
         if len(files) > 10:
             raise HTTPException(
                 status_code=400, detail="Maximum 10 images allowed per style profile"
             )
 
-        # Read images into memory
         image_records = []
         raw_images_for_provider: list[dict[str, Any]] = []
+        max_image_size_bytes = 5 * 1024 * 1024  # 5 MB limit per image
 
-        MAX_IMAGE_SIZE_BYTES = 5 * 1024 * 1024  # 5 MB limit per image
         for f in files:
             content = f.file.read()
             if not content:
                 continue
-            if len(content) > MAX_IMAGE_SIZE_BYTES:
+            if len(content) > max_image_size_bytes:
                 raise HTTPException(
                     status_code=400,
                     detail=f"Image '{f.filename or 'upload'}' exceeds 5MB limit ({len(content)} bytes)",
@@ -65,6 +56,22 @@ class VibeService:
             image_records.append(
                 {"id": generate_uuid(), "content_type": m_type, "image_data": content}
             )
+
+        return image_records, raw_images_for_provider
+
+    @classmethod
+    def upload_vibe_and_extract(
+        cls,
+        db: Session,
+        event_id: str,
+        files: list[UploadFile],
+        text_description: str | None = None,
+    ) -> StyleProfile:
+        event = db.query(Event).filter(Event.id == event_id).first()
+        if not event:
+            raise HTTPException(status_code=404, detail="Event not found")
+
+        image_records, raw_images_for_provider = cls._read_and_validate_images(files)
 
         # Call extraction provider (real Gemini batched call or deterministic stub)
         provider = get_vibe_extraction_provider()

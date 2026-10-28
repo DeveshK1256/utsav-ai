@@ -34,6 +34,62 @@ GEMINI_API_URL = (
 )
 
 
+def _query_gemini_json_api(
+    api_key: str,
+    payload: dict[str, Any],
+    timeout: float = 30.0,
+    context_desc: str = "Gemini",
+) -> tuple[dict[str, Any] | None, Exception | None]:
+    attempts = 0
+    last_err: Exception | None = None
+    while attempts < 3:
+        attempts += 1
+        try:
+            with httpx.Client(timeout=timeout) as client:
+                resp = client.post(f"{GEMINI_API_URL}?key={api_key}", json=payload)
+                resp.raise_for_status()
+                data = resp.json()
+                parts = data["candidates"][0]["content"]["parts"]
+                text = "".join(p.get("text", "") for p in parts).strip()
+                cleaned = text.removeprefix("```json").removeprefix("```").removesuffix("```")
+                parsed = json.loads(cleaned.strip())
+                if isinstance(parsed, dict):
+                    return parsed, None
+        except (
+            httpx.HTTPError,
+            KeyError,
+            IndexError,
+            json.JSONDecodeError,
+            ValidationError,
+            TypeError,
+            ValueError,
+        ) as e:
+            last_err = e
+            is_429 = "429" in str(e) or (
+                hasattr(e, "response") and getattr(e.response, "status_code", None) == 429
+            )
+            logger.warning(
+                f"{context_desc} attempt {attempts} failed with {type(e).__name__}: {e}. Quota exhausted: {is_429}."
+            )
+            if attempts < 3:
+                time.sleep(2.0 * attempts)
+    return None, last_err
+
+
+def _format_fallback_details(last_err: Exception | None, task_name: str) -> tuple[str, str]:
+    is_429 = "429" in str(last_err) if last_err else False
+    fallback_reason = (
+        "stub_fallback_quota_exhausted (HTTP 429)"
+        if is_429
+        else f"stub_fallback_error ({type(last_err).__name__ if last_err else 'Unknown'})"
+    )
+    warning_msg = (
+        f"LOUD ALERT: Live LLM {task_name} failed after 3 attempts due to {last_err}. "
+        f"Output safely degraded to deterministic fixture ({fallback_reason})."
+    )
+    return fallback_reason, warning_msg
+
+
 class GeminiQuoteExtractionProvider(BaseQuoteExtractionProvider):
     """
     Real Google Gemini provider for multi-modal document extraction (PDF, images, text).
@@ -106,43 +162,23 @@ class GeminiQuoteExtractionProvider(BaseQuoteExtractionProvider):
             "generationConfig": {"response_mime_type": "application/json", "temperature": 0.1},
         }
 
-        # Up to 2 retries on validation failure
-        attempts = 0
-        last_error = None
-        while attempts < 3:
-            attempts += 1
-            try:
-                with httpx.Client(timeout=45.0) as client:
-                    resp = client.post(f"{GEMINI_API_URL}?key={self.api_key}", json=payload)
-                    resp.raise_for_status()
-                    data = resp.json()
-
-                    parts = data["candidates"][0]["content"]["parts"]
-                    candidate_text = "".join(p.get("text", "") for p in parts).strip()
-                    cleaned_json = candidate_text
-                    cleaned_json = cleaned_json.removeprefix("```json")
-                    cleaned_json = cleaned_json.removeprefix("```")
-                    cleaned_json = cleaned_json.removesuffix("```")
-
-                    parsed_dict = json.loads(cleaned_json.strip())
-                    validated = QuoteExtractionPayloadSchema.model_validate(parsed_dict)
-                    # Zero LLM self-reported math: compute confidence deterministically in Python
-                    validated.confidence_score = validated.compute_deterministic_confidence()
-                    return validated
-
-            except (httpx.HTTPError, KeyError, json.JSONDecodeError, ValidationError) as e:
-                last_error = e
-                logger.warning(f"Gemini quote extraction attempt {attempts} failed: {e}")
-                if attempts < 3:
-                    # Exponential backoff on rate-limits (HTTP 429) or transient errors
-                    sleep_sec = 2.0 * attempts
-                    logger.info(f"Retrying Gemini extraction in {sleep_sec}s...")
-                    time.sleep(sleep_sec)
-
-        logger.error(f"Gemini quote extraction failed after 2 retries ({last_error}).")
-        raise ExtractionValidationError(
-            f"Schema validation failed after 2 retries (3 total attempts): {last_error}"
+        parsed_dict, last_error = _query_gemini_json_api(
+            self.api_key, payload, timeout=45.0, context_desc="Gemini quote extraction"
         )
+        if not parsed_dict:
+            logger.error(f"Gemini quote extraction failed after 2 retries ({last_error}).")
+            raise ExtractionValidationError(
+                f"Schema validation failed after 2 retries (3 total attempts): {last_error}"
+            )
+        try:
+            validated = QuoteExtractionPayloadSchema.model_validate(parsed_dict)
+            validated.confidence_score = validated.compute_deterministic_confidence()
+            return validated
+        except ValidationError as e:
+            logger.error(f"Gemini quote extraction validation failed: {e}")
+            raise ExtractionValidationError(
+                f"Schema validation failed after 2 retries (3 total attempts): {e}"
+            ) from e
 
 
 class GeminiNegotiationDraftProvider(BaseNegotiationDraftProvider):
@@ -208,34 +244,11 @@ class GeminiNegotiationDraftProvider(BaseNegotiationDraftProvider):
             "generationConfig": {"response_mime_type": "application/json", "temperature": 0.2},
         }
 
-        attempts = 0
-        while attempts < 3:
-            attempts += 1
-            try:
-                with httpx.Client(timeout=30.0) as client:
-                    resp = client.post(f"{GEMINI_API_URL}?key={self.api_key}", json=payload)
-                    resp.raise_for_status()
-                    data = resp.json()
-                    parts = data["candidates"][0]["content"]["parts"]
-                    text = "".join(p.get("text", "") for p in parts).strip()
-                    text = text.removeprefix("```json")
-                    text = text.removeprefix("```")
-                    text = text.removesuffix("```")
-                    parsed = json.loads(text.strip())
-                    if "polite" in parsed and "firm" in parsed and "bundle_ask" in parsed:
-                        return cast(dict[str, dict[str, str]], parsed)
-            except (
-                httpx.HTTPError,
-                KeyError,
-                IndexError,
-                json.JSONDecodeError,
-                ValidationError,
-                TypeError,
-                ValueError,
-            ) as e:
-                logger.warning(f"Gemini negotiation draft attempt {attempts} failed: {e}")
-                if attempts < 3:
-                    time.sleep(2.0 * attempts)
+        parsed, _ = _query_gemini_json_api(
+            self.api_key, payload, timeout=30.0, context_desc="Gemini negotiation draft"
+        )
+        if parsed and "polite" in parsed and "firm" in parsed and "bundle_ask" in parsed:
+            return cast(dict[str, dict[str, str]], parsed)
 
         logger.warning(
             "All Gemini negotiation draft attempts failed; falling back to deterministic stub."
@@ -301,63 +314,25 @@ class GeminiReplanningExplanationProvider(BaseReplanningExplanationProvider):
             "generationConfig": {"response_mime_type": "application/json", "temperature": 0.2},
         }
 
-        attempts = 0
-        while attempts < 3:
-            attempts += 1
-            try:
-                with httpx.Client(timeout=30.0) as client:
-                    resp = client.post(f"{GEMINI_API_URL}?key={self.api_key}", json=payload)
-                    resp.raise_for_status()
-                    data = resp.json()
-                    parts = data["candidates"][0]["content"]["parts"]
-                    text = "".join(p.get("text", "") for p in parts).strip()
-                    text = text.removeprefix("```json")
-                    text = text.removeprefix("```")
-                    text = text.removesuffix("```")
-                    parsed = json.loads(text.strip())
-                    if "explanation" in parsed and "mitigation_suggestions" in parsed:
-                        return {
-                            "explanation": parsed["explanation"],
-                            "mitigation_suggestions": parsed["mitigation_suggestions"],
-                            "provider_used": "gemini-3-flash-preview",
-                            "fallback_warning": None,
-                            "reasoning": {
-                                "source": "gemini-3-flash-preview",
-                                "change_type": change_type,
-                                "budget_total_delta": delta,
-                                "is_over_budget": over_budget,
-                                "overage_amount": over_amount,
-                            },
-                        }
-            except (
-                httpx.HTTPError,
-                KeyError,
-                IndexError,
-                json.JSONDecodeError,
-                ValidationError,
-                TypeError,
-                ValueError,
-            ) as e:
-                last_err = e
-                is_429 = "429" in str(e) or (
-                    hasattr(e, "response") and getattr(e.response, "status_code", None) == 429
-                )
-                logger.error(
-                    f"CRITICAL: Gemini replanning explanation attempt {attempts} failed with {type(e).__name__}: {e}. "
-                    f"Quota exhausted: {is_429}."
-                )
-                if attempts < 3:
-                    time.sleep(2.0 * attempts)
+        parsed, last_err = _query_gemini_json_api(
+            self.api_key, payload, timeout=30.0, context_desc="Gemini replanning explanation"
+        )
+        if parsed and "explanation" in parsed and "mitigation_suggestions" in parsed:
+            return {
+                "explanation": parsed["explanation"],
+                "mitigation_suggestions": parsed["mitigation_suggestions"],
+                "provider_used": "gemini-3-flash-preview",
+                "fallback_warning": None,
+                "reasoning": {
+                    "source": "gemini-3-flash-preview",
+                    "change_type": change_type,
+                    "budget_total_delta": delta,
+                    "is_over_budget": over_budget,
+                    "overage_amount": over_amount,
+                },
+            }
 
-        fallback_reason = (
-            "stub_fallback_quota_exhausted (HTTP 429)"
-            if ("429" in str(last_err))
-            else f"stub_fallback_error ({type(last_err).__name__})"
-        )
-        warning_msg = (
-            f"LOUD ALERT: Live LLM explanation failed after 3 attempts due to {last_err}. "
-            f"Output safely degraded to deterministic rule-based template ({fallback_reason})."
-        )
+        fallback_reason, warning_msg = _format_fallback_details(last_err, "explanation")
         logger.error(warning_msg)
         stub_res = self.fallback_stub.generate_explanation_and_mitigations(
             change_type, diff_summary, total_budget
@@ -433,54 +408,19 @@ class GeminiVibeProvider(BaseVibeExtractionProvider, BaseThemeGenerationProvider
             "generationConfig": {"response_mime_type": "application/json", "temperature": 0.2},
         }
 
-        attempts = 0
-        last_err = None
-        while attempts < 3:
-            attempts += 1
+        parsed, last_err = _query_gemini_json_api(
+            self.api_key, payload, timeout=45.0, context_desc="Gemini vibe extraction"
+        )
+        if parsed:
             try:
-                with httpx.Client(timeout=45.0) as client:
-                    resp = client.post(f"{GEMINI_API_URL}?key={self.api_key}", json=payload)
-                    resp.raise_for_status()
-                    data = resp.json()
-                    res_parts = data["candidates"][0]["content"]["parts"]
-                    text = "".join(p.get("text", "") for p in res_parts).strip()
-                    text = text.removeprefix("```json")
-                    text = text.removeprefix("```")
-                    text = text.removesuffix("```")
-                    parsed = json.loads(text.strip())
-                    validated = VibeExtractionPayloadSchema.model_validate(parsed)
-                    self.last_provider_used = "gemini-3-flash-preview"
-                    self.last_fallback_warning = None
-                    return validated
-            except (
-                httpx.HTTPError,
-                KeyError,
-                IndexError,
-                json.JSONDecodeError,
-                ValidationError,
-                TypeError,
-                ValueError,
-            ) as e:
+                validated = VibeExtractionPayloadSchema.model_validate(parsed)
+                self.last_provider_used = "gemini-3-flash-preview"
+                self.last_fallback_warning = None
+                return validated
+            except ValidationError as e:
                 last_err = e
-                is_429 = "429" in str(e) or (
-                    hasattr(e, "response") and getattr(e.response, "status_code", None) == 429
-                )
-                logger.error(
-                    f"CRITICAL: Gemini vibe extraction attempt {attempts} failed with {type(e).__name__}: {e}. "
-                    f"Quota exhausted: {is_429}."
-                )
-                if attempts < 3:
-                    time.sleep(2.0 * attempts)
 
-        fallback_reason = (
-            "stub_fallback_quota_exhausted (HTTP 429)"
-            if ("429" in str(last_err))
-            else f"stub_fallback_error ({type(last_err).__name__})"
-        )
-        warning_msg = (
-            f"LOUD ALERT: Live LLM vibe extraction failed after 3 attempts due to {last_err}. "
-            f"Output safely degraded to deterministic fixture ({fallback_reason})."
-        )
+        fallback_reason, warning_msg = _format_fallback_details(last_err, "vibe extraction")
         logger.error(warning_msg)
         self.last_provider_used = fallback_reason
         self.last_fallback_warning = warning_msg
@@ -550,59 +490,23 @@ class GeminiVibeProvider(BaseVibeExtractionProvider, BaseThemeGenerationProvider
             "generationConfig": {"response_mime_type": "application/json", "temperature": 0.2},
         }
 
-        attempts = 0
-        last_err = None
-        while attempts < 3:
-            attempts += 1
+        parsed, last_err = _query_gemini_json_api(
+            self.api_key, payload, timeout=45.0, context_desc="Gemini theme generation"
+        )
+        if parsed:
             try:
-                with httpx.Client(timeout=45.0) as client:
-                    resp = client.post(f"{GEMINI_API_URL}?key={self.api_key}", json=payload)
-                    resp.raise_for_status()
-                    data = resp.json()
-                    res_parts = data["candidates"][0]["content"]["parts"]
-                    text = "".join(p.get("text", "") for p in res_parts).strip()
-                    text = text.removeprefix("```json")
-                    text = text.removeprefix("```")
-                    text = text.removesuffix("```")
-                    parsed = json.loads(text.strip())
-                    validated = ThemeGenerationPayloadSchema.model_validate(parsed)
-                    if len(validated.decor_items) >= 10:
-                        self.last_provider_used = "gemini-3-flash-preview"
-                        self.last_fallback_warning = None
-                        return validated
-                    else:
-                        logger.warning(
-                            f"Gemini returned only {len(validated.decor_items)} decor items (< 10). Retrying..."
-                        )
-            except (
-                httpx.HTTPError,
-                KeyError,
-                IndexError,
-                json.JSONDecodeError,
-                ValidationError,
-                TypeError,
-                ValueError,
-            ) as e:
+                validated = ThemeGenerationPayloadSchema.model_validate(parsed)
+                if len(validated.decor_items) >= 10:
+                    self.last_provider_used = "gemini-3-flash-preview"
+                    self.last_fallback_warning = None
+                    return validated
+                logger.warning(
+                    f"Gemini returned only {len(validated.decor_items)} decor items (< 10)."
+                )
+            except ValidationError as e:
                 last_err = e
-                is_429 = "429" in str(e) or (
-                    hasattr(e, "response") and getattr(e.response, "status_code", None) == 429
-                )
-                logger.error(
-                    f"CRITICAL: Gemini theme generation attempt {attempts} failed with {type(e).__name__}: {e}. "
-                    f"Quota exhausted: {is_429}."
-                )
-                if attempts < 3:
-                    time.sleep(2.0 * attempts)
 
-        fallback_reason = (
-            "stub_fallback_quota_exhausted (HTTP 429)"
-            if ("429" in str(last_err))
-            else f"stub_fallback_error ({type(last_err).__name__})"
-        )
-        warning_msg = (
-            f"LOUD ALERT: Live LLM theme generation failed after 3 attempts due to {last_err}. "
-            f"Output safely degraded to deterministic fixture ({fallback_reason})."
-        )
+        fallback_reason, warning_msg = _format_fallback_details(last_err, "theme generation")
         logger.error(warning_msg)
         self.last_provider_used = fallback_reason
         self.last_fallback_warning = warning_msg

@@ -392,13 +392,10 @@ class DeterministicStubReplanningExplanationProvider(BaseReplanningExplanationPr
     Zero external network calls, 100% reproducible fixtures.
     """
 
-    def generate_explanation_and_mitigations(
-        self, change_type: str, diff_summary: dict[str, Any], total_budget: float
-    ) -> dict[str, Any]:
-        delta = diff_summary.get("budget_total_delta", 0.0)
-        new_total = diff_summary.get("budget_total_new", 0.0)
-        over_budget = new_total > total_budget
-        over_amount = round(new_total - total_budget, 2) if over_budget else 0.0
+    @classmethod
+    def _build_change_explanation(
+        cls, change_type: str, diff_summary: dict[str, Any], delta: float
+    ) -> str:
         capacity_exceeded = diff_summary.get("capacity_exceeded", False)
         capacity_warning = diff_summary.get("capacity_warning")
 
@@ -412,34 +409,42 @@ class DeterministicStubReplanningExplanationProvider(BaseReplanningExplanationPr
             )
             if capacity_exceeded and capacity_warning:
                 explanation += f" Note: {capacity_warning}"
-        elif change_type == "date_moved":
+            return explanation
+        if change_type == "date_moved":
             days = diff_summary.get("days_shifted", 0)
             from_d = diff_summary.get("from_date", "")
             to_d = diff_summary.get("to_date", "")
-            explanation = (
+            return (
                 f"Event date shifted by {days:+d} days (from {from_d} to {to_d}). "
                 f"All operational tasks and ritual sub-events have been shifted in lockstep while preserving dependency chains."
             )
-        elif change_type == "vendor_cancelled":
+        if change_type == "vendor_cancelled":
             cat = diff_summary.get("vendor_category", "vendor")
             name = diff_summary.get("vendor_name", "Vendor")
-            explanation = (
+            return (
                 f"Cancellation of {name} ({cat}) recorded. "
                 f"High-priority replacement sourcing tasks have been scheduled and quote requirements flagged."
             )
-        elif change_type == "budget_cut":
+        if change_type == "budget_cut":
             cut = diff_summary.get("cut_amount", abs(delta))
-            explanation = (
+            return (
                 f"Target budget decreased by ₹{cut:,.2f}. Flexible categories have been proportionally scaled down "
                 f"while locked contracts and paid deposits remain protected."
             )
-        elif change_type == "venue_unavailable":
+        if change_type == "venue_unavailable":
             v_name = diff_summary.get("venue_name", "primary venue")
-            explanation = f"Venue unavailability noted for {v_name}. Critical path emergency venue scouting tasks have been added."
-        else:
-            explanation = (
-                f"Change event ({change_type}) evaluated with total budget delta of ₹{delta:+,.2f}."
-            )
+            return f"Venue unavailability noted for {v_name}. Critical path emergency venue scouting tasks have been added."
+        return f"Change event ({change_type}) evaluated with total budget delta of ₹{delta:+,.2f}."
+
+    def generate_explanation_and_mitigations(
+        self, change_type: str, diff_summary: dict[str, Any], total_budget: float
+    ) -> dict[str, Any]:
+        delta = diff_summary.get("budget_total_delta", 0.0)
+        new_total = diff_summary.get("budget_total_new", 0.0)
+        over_budget = new_total > total_budget
+        over_amount = round(new_total - total_budget, 2) if over_budget else 0.0
+
+        explanation = self._build_change_explanation(change_type, diff_summary, delta)
 
         mitigations = []
         if over_budget:

@@ -296,7 +296,7 @@ class VendorDiscoveryService:
             url = f"https://nominatim.openstreetmap.org/search?q={urllib.parse.quote(query_text)}&format=json&countrycodes=in&limit=1"
             _validate_safe_outbound_url(url)
             req = urllib.request.Request(url, headers={"User-Agent": OSM_USER_AGENT})
-            with urllib.request.urlopen(req, timeout=4) as resp:  # noqa: S310 # nosec B310
+            with urllib.request.urlopen(req, timeout=4) as resp:  # nosec B310
                 data = json.loads(resp.read().decode("utf-8"))
                 if data and len(data) > 0:
                     first = data[0]
@@ -489,8 +489,8 @@ out center 15;"""
         for srv in servers:
             try:
                 _validate_safe_outbound_url(srv)
-                req = urllib.request.Request(srv, data=overpass_data, headers={"User-Agent": OSM_USER_AGENT})  # noqa: S310
-                with urllib.request.urlopen(req, timeout=1.8) as resp:  # noqa: S310 # nosec B310
+                req = urllib.request.Request(srv, data=overpass_data, headers={"User-Agent": OSM_USER_AGENT})
+                with urllib.request.urlopen(req, timeout=1.8) as resp:  # nosec B310
                     data = json.loads(resp.read().decode("utf-8"))
                     for el in data.get("elements", []):
                         parsed = cls._parse_overpass_element(el, city_hint)
@@ -536,7 +536,7 @@ out center 15;"""
             rev_url = f"https://nominatim.openstreetmap.org/reverse?lat={lat}&lon={lng}&format=json"
             _validate_safe_outbound_url(rev_url)
             rev_req = urllib.request.Request(rev_url, headers={"User-Agent": OSM_USER_AGENT})
-            with urllib.request.urlopen(rev_req, timeout=3.0) as rev_resp:  # noqa: S310 # nosec B310
+            with urllib.request.urlopen(rev_req, timeout=3.0) as rev_resp:  # nosec B310
                 rev_data = json.loads(rev_resp.read().decode("utf-8"))
                 addr: dict[str, Any] = rev_data.get("address", {})
                 city_val = addr.get("city") or addr.get("town") or addr.get("state_district")
@@ -558,7 +558,7 @@ out center 15;"""
                 url = f"https://nominatim.openstreetmap.org/search?q={urllib.parse.quote(query_str)}&format=json&limit=6&countrycodes=in"
                 _validate_safe_outbound_url(url)
                 req = urllib.request.Request(url, headers={"User-Agent": OSM_USER_AGENT})
-                with urllib.request.urlopen(req, timeout=3.5) as resp:  # noqa: S310 # nosec B310
+                with urllib.request.urlopen(req, timeout=3.5) as resp:  # nosec B310
                     for it in json.loads(resp.read().decode("utf-8")):
                         parsed = cls._parse_nominatim_item(it, target_city, lat, lng, radius_km)
                         if parsed:

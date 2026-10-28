@@ -9,6 +9,7 @@ from backend.app.models.models import Event, Guest, MessageLog, OptOut
 from backend.app.services.whatsapp.phone_utils import normalize_e164_phone
 from backend.app.services.whatsapp.provider import (
     WhatsAppProvider,
+    WhatsAppSendResult,
     get_whatsapp_provider,
 )
 
@@ -60,6 +61,64 @@ class WhatsAppSendService:
             )
 
     @classmethod
+    def _enforce_opt_out(
+        cls,
+        db: Session,
+        event_id: str,
+        guest_id: str | None,
+        norm_phone: str,
+        message_type: str,
+        message_body: str,
+    ) -> None:
+        opted_out = db.query(OptOut).filter(OptOut.phone == norm_phone).first()
+        if not opted_out:
+            return
+        logger.warning(f"Blocked outbound WhatsApp send to opted-out phone: {norm_phone}")
+        log_entry = MessageLog(
+            guest_id=guest_id,
+            event_id=event_id,
+            phone_number=norm_phone,
+            direction="outbound",
+            message_type=message_type,
+            content_snapshot=message_body,
+            whatsapp_message_id=None,
+            delivery_status="failed",
+            failure_reason=f"recipient_opted_out at {opted_out.opted_out_at.isoformat()}",
+        )
+        db.add(log_entry)
+        db.commit()
+        db.refresh(log_entry)
+        raise OptOutBlockedError(
+            f"Phone {norm_phone} has opted out (STOP) and cannot be contacted."
+        )
+
+    @classmethod
+    def _dispatch_provider_message(
+        cls,
+        active_provider: WhatsAppProvider,
+        norm_phone: str,
+        template_name: str | None,
+        guest: Guest | None,
+        event: Event,
+        message_body: str,
+    ) -> WhatsAppSendResult:
+        if template_name:
+            return active_provider.send_template(
+                to_phone=norm_phone,
+                template_name=template_name,
+                language=guest.language if guest else "en",
+                parameters=[guest.name if guest else "Guest", event.name],
+            )
+        buttons = [
+            {"id": "yes", "title": "Attending"},
+            {"id": "no", "title": "Decline"},
+            {"id": "maybe", "title": "Maybe"},
+        ]
+        return active_provider.send_interactive_buttons(
+            to_phone=norm_phone, body=message_body, buttons=buttons
+        )
+
+    @classmethod
     def send_single_message(
         cls,
         db: Session,
@@ -79,49 +138,17 @@ class WhatsAppSendService:
         active_provider = provider or get_whatsapp_provider()
 
         # 1. Non-negotiable Opt-Out Guard
-        opted_out = db.query(OptOut).filter(OptOut.phone == norm_phone).first()
-        if opted_out:
-            logger.warning(f"Blocked outbound WhatsApp send to opted-out phone: {norm_phone}")
-            log_entry = MessageLog(
-                guest_id=guest.id if guest else None,
-                event_id=event.id,
-                phone_number=norm_phone,
-                direction="outbound",
-                message_type=message_type,
-                content_snapshot=message_body,
-                whatsapp_message_id=None,
-                delivery_status="failed",
-                failure_reason=f"recipient_opted_out at {opted_out.opted_out_at.isoformat()}",
-            )
-            db.add(log_entry)
-            db.commit()
-            db.refresh(log_entry)
-            raise OptOutBlockedError(
-                f"Phone {norm_phone} has opted out (STOP) and cannot be contacted."
-            )
+        guest_id = guest.id if guest else None
+        cls._enforce_opt_out(db, event.id, guest_id, norm_phone, message_type, message_body)
 
         # 2. Transmit via Provider
-        if template_name:
-            res = active_provider.send_template(
-                to_phone=norm_phone,
-                template_name=template_name,
-                language=guest.language if guest else "en",
-                parameters=[guest.name if guest else "Guest", event.name],
-            )
-        else:
-            # Interactive buttons or freeform
-            buttons = [
-                {"id": "yes", "title": "Attending"},
-                {"id": "no", "title": "Decline"},
-                {"id": "maybe", "title": "Maybe"},
-            ]
-            res = active_provider.send_interactive_buttons(
-                to_phone=norm_phone, body=message_body, buttons=buttons
-            )
+        res = cls._dispatch_provider_message(
+            active_provider, norm_phone, template_name, guest, event, message_body
+        )
 
         # 3. Log Audit Trail
         log_entry = MessageLog(
-            guest_id=guest.id if guest else None,
+            guest_id=guest_id,
             event_id=event.id,
             phone_number=norm_phone,
             direction="outbound",
