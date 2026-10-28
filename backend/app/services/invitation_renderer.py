@@ -87,6 +87,38 @@ class InvitationCardRenderer:
     WIDTH = 1200
     HEIGHT = 1800
 
+    @staticmethod
+    def _sanitize_font_text(text: str | None) -> str:
+        """
+        Scrubs curly template brackets and replaces unicode symbols not present
+        in the Noto Sans Devanagari font (stars, bullets, box characters)
+        to prevent FreeType .notdef missing glyph tofu square boxes.
+        """
+        if not text:
+            return ""
+        # Strip template placeholders
+        clean = re.sub(r"\{.*?\}", "", text)
+        # Scrub unmapped unicode symbols
+        replacements = {
+            "★": "",
+            "☆": "",
+            "•": " | ",
+            "·": " - ",
+            "▪": " | ",
+            "▫": " | ",
+            "◆": " | ",
+            "◇": " | ",
+            "✓": "",
+            "✔": "",
+            "□": "",
+            "■": "",
+        }
+        for bad, good in replacements.items():
+            clean = clean.replace(bad, good)
+        # Collapse multiple spaces
+        clean = re.sub(r" +", " ", clean)
+        return clean.strip()
+
     @classmethod
     def render_card(
         cls,
@@ -106,13 +138,15 @@ class InvitationCardRenderer:
         Renders invitation card and returns (png_bytes, pdf_bytes).
         Strict Rule: ZERO raw template placeholders ({host_name}, {date}, etc.) in output.
         """
-        # Sanitization: Ensure no literal curly-bracket placeholders leaked
-        clean_event_name = re.sub(r"\{.*?\}", "", event_name).strip() or "Celebration"
-        clean_host_name = re.sub(r"\{.*?\}", "", host_name or "").strip()
-        clean_date_str = re.sub(r"\{.*?\}", "", date_str).strip() or "Date to be confirmed"
-        clean_venue_str = re.sub(r"\{.*?\}", "", venue_str or "").strip() or "Venue to be confirmed"
-        clean_wording = re.sub(r"\{.*?\}", "", wording_text).strip() or "You are cordially invited to celebrate with us."
-        clean_guest = re.sub(r"\{.*?\}", "", guest_name or "").strip() if guest_name else None
+        # Sanitization: Ensure no literal curly-bracket placeholders or unmapped font symbols leaked
+        clean_event_name = cls._sanitize_font_text(event_name) or "Celebration"
+        clean_host_name = cls._sanitize_font_text(host_name)
+        clean_date_str = cls._sanitize_font_text(date_str) or "Date to be confirmed"
+        clean_venue_str = cls._sanitize_font_text(venue_str) or "Venue to be confirmed"
+        clean_wording = cls._sanitize_font_text(wording_text) or "You are cordially invited to celebrate with us."
+        clean_guest = cls._sanitize_font_text(guest_name) if guest_name else None
+        clean_muhurat = cls._sanitize_font_text(muhurat_time) if muhurat_time else None
+        clean_ceremonies = [cls._sanitize_font_text(c) for c in (ceremony_names or [])] if ceremony_names else None
 
         # Palette Extraction (default to Indian festive gold/vermilion/terracotta/cream)
         raw_palette = palette or ["#B45309", "#991B1B", "#FEF3C7", "#1E3A8A", "#D97706"]
@@ -124,19 +158,19 @@ class InvitationCardRenderer:
         if layout_variant == "modern_minimal":
             image = cls._render_modern_minimal(
                 clean_event_name, clean_host_name, clean_date_str, clean_venue_str,
-                clean_wording, muhurat_time, ceremony_names, clean_guest, guest_diet,
+                clean_wording, clean_muhurat, clean_ceremonies, clean_guest, guest_diet,
                 primary_color, secondary_color, accent_color
             )
         elif layout_variant == "floral_festive":
             image = cls._render_floral_festive(
                 clean_event_name, clean_host_name, clean_date_str, clean_venue_str,
-                clean_wording, muhurat_time, ceremony_names, clean_guest, guest_diet,
+                clean_wording, clean_muhurat, clean_ceremonies, clean_guest, guest_diet,
                 primary_color, secondary_color, accent_color
             )
         else:  # default: classic_royal
             image = cls._render_classic_royal(
                 clean_event_name, clean_host_name, clean_date_str, clean_venue_str,
-                clean_wording, muhurat_time, ceremony_names, clean_guest, guest_diet,
+                clean_wording, clean_muhurat, clean_ceremonies, clean_guest, guest_diet,
                 primary_color, secondary_color, accent_color
             )
 

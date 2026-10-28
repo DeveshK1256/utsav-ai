@@ -111,7 +111,7 @@ class InvitationWordingAgent:
 
         ceremony_clause = ""
         if ceremony_names and len(ceremony_names) > 0:
-            ceremony_clause = f" Join us for {' • '.join(ceremony_names[:3])}."
+            ceremony_clause = f" Join us for {', '.join(ceremony_names[:3])}."
 
         muhurat_clause = f" (Auspicious Muhurat: {muhurat_time})" if muhurat_time else ""
 

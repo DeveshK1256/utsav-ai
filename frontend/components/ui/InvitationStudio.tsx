@@ -518,7 +518,7 @@ export function InvitationStudio({
                   <p className="text-xs font-bold" style={{ color: primaryColor }}>{dateStr}</p>
                   {muhuratTime && (
                     <p className="text-[11px] font-semibold text-amber-700 mt-0.5">
-                      ★ Auspicious Muhurat: {muhuratTime}
+                      Auspicious Muhurat: {muhuratTime}
                     </p>
                   )}
                 </div>
