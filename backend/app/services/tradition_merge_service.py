@@ -80,6 +80,170 @@ class DeterministicStubTraditionMergeAgent(BaseTraditionMergeAgent):
     Guarantees 100% reproducible fixtures, offline resilience, and exact acceptance criteria.
     """
 
+    def _build_maha_punjabi_show(
+        self, primary: Tradition, secondary: Tradition, p_code: str
+    ) -> tuple[str, list[CeremonyItemSchema], list[FamilyAlignmentPointSchema]]:
+        title = f"{primary.regional_name} × {secondary.regional_name} Fusion Vivah"
+        maha_name = (
+            primary.regional_name if "maharashtrian" in p_code else secondary.regional_name
+        )
+        punj_name = primary.regional_name if "punjabi" in p_code else secondary.regional_name
+
+        ceremonies = [
+            CeremonyItemSchema(
+                name="Combined Haldi, Maiyan & Vatna Ceremony",
+                origin_tradition="Shared / Combined",
+                day_offset=0,
+                start_time="15:00",
+                duration_hours=3.0,
+                venue_type="Courtyard / Floral Lawn",
+                is_outdoor=True,
+                is_muhurat_locked=False,
+                cultural_significance="Joint application of turmeric (Vatna/Halad) by loved ones from both families for purification and radiant blessings.",
+                family_guidance="Families can apply ubtan in alternating turns to folk dholak songs and Marathi lagna geet.",
+            ),
+            CeremonyItemSchema(
+                name="Lively Jaggo Night & Sangeet Celebration",
+                origin_tradition=punj_name,
+                day_offset=0,
+                start_time="19:00",
+                duration_hours=5.0,
+                venue_type="Grand Ballroom",
+                is_outdoor=False,
+                is_muhurat_locked=False,
+                cultural_significance="Nocturnal celebratory procession carrying the illuminated Jaggo brass pot, followed by high-energy Bhangra and musical performances.",
+                family_guidance="Maharashtrian family joins in carrying the Jaggo pot with sisters and maternal aunts.",
+            ),
+            CeremonyItemSchema(
+                name="Chooda Ceremony & Milni Welcome",
+                origin_tradition=punj_name,
+                day_offset=1,
+                start_time="09:00",
+                duration_hours=1.5,
+                venue_type="Promenade Gateway",
+                is_outdoor=True,
+                is_muhurat_locked=False,
+                cultural_significance="Maternal uncles bless bride with ivory red Chooda and Kalire; male counterparts of both lineages embrace during Milni with stoles and garlands.",
+                family_guidance="Allocate 5 pairs of counterparts (fathers, brothers, maternal uncles) for the Milni exchange.",
+            ),
+            CeremonyItemSchema(
+                name="Simant Pujan & Antarpat Vivah Muhurat",
+                origin_tradition=maha_name,
+                day_offset=1,
+                start_time="10:30",
+                duration_hours=2.0,
+                venue_type="Sacred Mandap Hall",
+                is_outdoor=False,
+                is_muhurat_locked=True,
+                cultural_significance="Simant Pujan welcoming of groom by bride's mother; silk Antarpat held between couple until Mangalashtaka verses culminate at exact Muhurat.",
+                family_guidance="Bride enters under Punjabi floral Phoolon Ki Chaadar, then halts behind the sacred Antarpat cloth.",
+            ),
+            CeremonyItemSchema(
+                name="Saptapadi & 4 Laavan Circumambulation",
+                origin_tradition="Shared / Combined",
+                day_offset=1,
+                start_time="12:30",
+                duration_hours=2.0,
+                venue_type="Central Vivah Mandap",
+                is_outdoor=False,
+                is_muhurat_locked=True,
+                cultural_significance="Harmonization of Vedic 7 steps (Saptapadi) around the sacred Vivah fire with the spiritual teachings of 4 Laavan / Pheras.",
+                family_guidance="Priests from both traditions coordinate the mantras: Maharashtrian Pandit leads Saptapadi vows, Punjabi elder reads the Laavan.",
+            ),
+            CeremonyItemSchema(
+                name="Grand Royal Fusion Reception & Banquet",
+                origin_tradition="Shared / Combined",
+                day_offset=1,
+                start_time="19:30",
+                duration_hours=4.5,
+                venue_type="Imperial Lawn & Ballroom",
+                is_outdoor=True,
+                is_muhurat_locked=False,
+                cultural_significance="Celebratory banquet honoring both heritages with multi-regional dining, toasts, and music.",
+                family_guidance="Bride transitions from morning Paithani saree to bridal evening lehenga.",
+            ),
+        ]
+
+        alignment_points = [
+            FamilyAlignmentPointSchema(
+                issue="Bridal Entrance Harmony (Phoolon Ki Chaadar vs. Antarpat)",
+                description="Punjabi custom requires bride to enter under a floral canopy held by brothers. Maharashtrian custom requires groom and bride separated by the Antarpat cloth.",
+                recommendation="Brothers escort bride to Mandap threshold under Phoolon Ki Chaadar; once at Mandap, uncles raise the Antarpat cloth until the Mangalashtaka shloka.",
+            ),
+            FamilyAlignmentPointSchema(
+                issue="Dining Transitions & Cultural Cuisines",
+                description="Maharashtrian traditional wedding lunch is traditionally pure satvik vegetarian served on banana leaves. Punjabi evening revelry often calls for rich Mughlai curries.",
+                recommendation="Host a traditional satvik vegetarian seated feast for post-pheras lunch (Pankat style); offer lavish multi-cuisine counters at the evening reception.",
+            ),
+            FamilyAlignmentPointSchema(
+                issue="Wardrobe and Adornment Changes",
+                description="Maharashtrian bride wears Mundavalya forehead pearls with yellow/green Paithani saree; Punjabi wedding emphasizes red Chooda bangles and hanging Kalire.",
+                recommendation="Bride wears both Chooda and Mundavalya during the morning ceremony, celebrating both her maternal lineage and new marital home.",
+            ),
+        ]
+        return title, ceremonies, alignment_points
+
+    def _build_generic_show(
+        self, primary: Tradition, secondary: Tradition, p_code: str, s_code: str
+    ) -> tuple[str, list[CeremonyItemSchema], list[FamilyAlignmentPointSchema]]:
+        title = f"{primary.regional_name} × {secondary.regional_name} Cultural Fusion"
+        t_primary_subevents = DAGScheduler.SUB_EVENT_TEMPLATES.get(
+            p_code, DAGScheduler.SUB_EVENT_TEMPLATES["default"]
+        )
+        t_sec_subevents = DAGScheduler.SUB_EVENT_TEMPLATES.get(
+            s_code, DAGScheduler.SUB_EVENT_TEMPLATES["default"]
+        )
+        ceremonies: list[CeremonyItemSchema] = []
+
+        for _idx, se in enumerate(t_primary_subevents):
+            ceremonies.append(
+                CeremonyItemSchema(
+                    name=str(se["name"]),
+                    origin_tradition=primary.regional_name,
+                    day_offset=int(str(se.get("day_offset", 0))),
+                    start_time=f"{int(str(se.get('start_time_hour', 10))):02d}:00",
+                    duration_hours=float(str(se.get("duration_hours", 3))),
+                    venue_type=str(se.get("venue_type", "Main Celebration Hall")),
+                    is_outdoor=bool(se.get("is_outdoor", False)),
+                    is_muhurat_locked=bool(se.get("is_muhurat_locked", False)),
+                    cultural_significance=f"Traditional rites of {primary.regional_name}.",
+                    family_guidance=None,
+                )
+            )
+
+        for _idx, se in enumerate(t_sec_subevents):
+            if not any(c.name == str(se["name"]) for c in ceremonies):
+                ceremonies.append(
+                    CeremonyItemSchema(
+                        name=str(se["name"]),
+                        origin_tradition=secondary.regional_name,
+                        day_offset=int(str(se.get("day_offset", 0))),
+                        start_time=f"{int(str(se.get('start_time_hour', 14))):02d}:00",
+                        duration_hours=float(str(se.get("duration_hours", 3))),
+                        venue_type=str(se.get("venue_type", "Celebration Venue")),
+                        is_outdoor=bool(se.get("is_outdoor", False)),
+                        is_muhurat_locked=bool(se.get("is_muhurat_locked", False)),
+                        cultural_significance=f"Sacred custom of {secondary.regional_name}.",
+                        family_guidance=None,
+                    )
+                )
+
+        ceremonies.sort(key=lambda c: (c.day_offset, c.start_time))
+
+        alignment_points = [
+            FamilyAlignmentPointSchema(
+                issue="Priest and Protocol Coordination",
+                description=f"Officiating priests from {primary.regional_name} and {secondary.regional_name} should coordinate vow sequencing.",
+                recommendation="Convene a 30-minute joint briefing with both priests 14 days before the ceremony.",
+            ),
+            FamilyAlignmentPointSchema(
+                issue="Cultural Attire Coordination",
+                description="Coordinate wedding attire styling to honor both backgrounds.",
+                recommendation="Allocate a 90-minute dress change window between rituals.",
+            ),
+        ]
+        return title, ceremonies, alignment_points
+
     def generate_merged_run_of_show(
         self, primary: Tradition, secondary: Tradition, start_date: date, notes: str | None = None
     ) -> MergedRunOfShowSchema:
@@ -87,167 +251,15 @@ class DeterministicStubTraditionMergeAgent(BaseTraditionMergeAgent):
         s_code = secondary.code.lower()
         pair_set = {p_code, s_code}
 
-        ceremonies: list[CeremonyItemSchema] = []
-        alignment_points: list[FamilyAlignmentPointSchema] = []
-
         # 1. Spec Acceptance Case: Maharashtrian x Punjabi
         if any("maharashtrian" in c for c in pair_set) and any("punjabi" in c for c in pair_set):
-            title = f"{primary.regional_name} × {secondary.regional_name} Fusion Vivah"
-            maha_name = (
-                primary.regional_name if "maharashtrian" in p_code else secondary.regional_name
+            title, ceremonies, alignment_points = self._build_maha_punjabi_show(
+                primary, secondary, p_code
             )
-            punj_name = primary.regional_name if "punjabi" in p_code else secondary.regional_name
-
-            ceremonies = [
-                CeremonyItemSchema(
-                    name="Combined Haldi, Maiyan & Vatna Ceremony",
-                    origin_tradition="Shared / Combined",
-                    day_offset=0,
-                    start_time="15:00",
-                    duration_hours=3.0,
-                    venue_type="Courtyard / Floral Lawn",
-                    is_outdoor=True,
-                    is_muhurat_locked=False,
-                    cultural_significance="Joint application of turmeric (Vatna/Halad) by loved ones from both families for purification and radiant blessings.",
-                    family_guidance="Families can apply ubtan in alternating turns to folk dholak songs and Marathi lagna geet.",
-                ),
-                CeremonyItemSchema(
-                    name="Lively Jaggo Night & Sangeet Celebration",
-                    origin_tradition=punj_name,
-                    day_offset=0,
-                    start_time="19:00",
-                    duration_hours=5.0,
-                    venue_type="Grand Ballroom",
-                    is_outdoor=False,
-                    is_muhurat_locked=False,
-                    cultural_significance="Nocturnal celebratory procession carrying the illuminated Jaggo brass pot, followed by high-energy Bhangra and musical performances.",
-                    family_guidance="Maharashtrian family joins in carrying the Jaggo pot with sisters and maternal aunts.",
-                ),
-                CeremonyItemSchema(
-                    name="Chooda Ceremony & Milni Welcome",
-                    origin_tradition=punj_name,
-                    day_offset=1,
-                    start_time="09:00",
-                    duration_hours=1.5,
-                    venue_type="Promenade Gateway",
-                    is_outdoor=True,
-                    is_muhurat_locked=False,
-                    cultural_significance="Maternal uncles bless bride with ivory red Chooda and Kalire; male counterparts of both lineages embrace during Milni with stoles and garlands.",
-                    family_guidance="Allocate 5 pairs of counterparts (fathers, brothers, maternal uncles) for the Milni exchange.",
-                ),
-                CeremonyItemSchema(
-                    name="Simant Pujan & Antarpat Vivah Muhurat",
-                    origin_tradition=maha_name,
-                    day_offset=1,
-                    start_time="10:30",
-                    duration_hours=2.0,
-                    venue_type="Sacred Mandap Hall",
-                    is_outdoor=False,
-                    is_muhurat_locked=True,
-                    cultural_significance="Simant Pujan welcoming of groom by bride's mother; silk Antarpat held between couple until Mangalashtaka verses culminate at exact Muhurat.",
-                    family_guidance="Bride enters under Punjabi floral Phoolon Ki Chaadar, then halts behind the sacred Antarpat cloth.",
-                ),
-                CeremonyItemSchema(
-                    name="Saptapadi & 4 Laavan Circumambulation",
-                    origin_tradition="Shared / Combined",
-                    day_offset=1,
-                    start_time="12:30",
-                    duration_hours=2.0,
-                    venue_type="Central Vivah Mandap",
-                    is_outdoor=False,
-                    is_muhurat_locked=True,
-                    cultural_significance="Harmonization of Vedic 7 steps (Saptapadi) around the sacred Vivah fire with the spiritual teachings of 4 Laavan / Pheras.",
-                    family_guidance="Priests from both traditions coordinate the mantras: Maharashtrian Pandit leads Saptapadi vows, Punjabi elder reads the Laavan.",
-                ),
-                CeremonyItemSchema(
-                    name="Grand Royal Fusion Reception & Banquet",
-                    origin_tradition="Shared / Combined",
-                    day_offset=1,
-                    start_time="19:30",
-                    duration_hours=4.5,
-                    venue_type="Imperial Lawn & Ballroom",
-                    is_outdoor=True,
-                    is_muhurat_locked=False,
-                    cultural_significance="Celebratory banquet honoring both heritages with multi-regional dining, toasts, and music.",
-                    family_guidance="Bride transitions from morning Paithani saree to bridal evening lehenga.",
-                ),
-            ]
-
-            alignment_points = [
-                FamilyAlignmentPointSchema(
-                    issue="Bridal Entrance Harmony (Phoolon Ki Chaadar vs. Antarpat)",
-                    description="Punjabi custom requires bride to enter under a floral canopy held by brothers. Maharashtrian custom requires groom and bride separated by the Antarpat cloth.",
-                    recommendation="Brothers escort bride to Mandap threshold under Phoolon Ki Chaadar; once at Mandap, uncles raise the Antarpat cloth until the Mangalashtaka shloka.",
-                ),
-                FamilyAlignmentPointSchema(
-                    issue="Dining Transitions & Cultural Cuisines",
-                    description="Maharashtrian traditional wedding lunch is traditionally pure satvik vegetarian served on banana leaves. Punjabi evening revelry often calls for rich Mughlai curries.",
-                    recommendation="Host a traditional satvik vegetarian seated feast for post-pheras lunch (Pankat style); offer lavish multi-cuisine counters at the evening reception.",
-                ),
-                FamilyAlignmentPointSchema(
-                    issue="Wardrobe and Adornment Changes",
-                    description="Maharashtrian bride wears Mundavalya forehead pearls with yellow/green Paithani saree; Punjabi wedding emphasizes red Chooda bangles and hanging Kalire.",
-                    recommendation="Bride wears both Chooda and Mundavalya during the morning ceremony, celebrating both her maternal lineage and new marital home.",
-                ),
-            ]
-
         else:
-            # Generic dual-tradition interweaving
-            title = f"{primary.regional_name} × {secondary.regional_name} Cultural Fusion"
-            t_primary_subevents = DAGScheduler.SUB_EVENT_TEMPLATES.get(
-                p_code, DAGScheduler.SUB_EVENT_TEMPLATES["default"]
+            title, ceremonies, alignment_points = self._build_generic_show(
+                primary, secondary, p_code, s_code
             )
-            t_sec_subevents = DAGScheduler.SUB_EVENT_TEMPLATES.get(
-                s_code, DAGScheduler.SUB_EVENT_TEMPLATES["default"]
-            )
-
-            for _idx, se in enumerate(t_primary_subevents):
-                ceremonies.append(
-                    CeremonyItemSchema(
-                        name=str(se["name"]),
-                        origin_tradition=primary.regional_name,
-                        day_offset=int(str(se.get("day_offset", 0))),
-                        start_time=f"{int(str(se.get('start_time_hour', 10))):02d}:00",
-                        duration_hours=float(str(se.get("duration_hours", 3))),
-                        venue_type=str(se.get("venue_type", "Main Celebration Hall")),
-                        is_outdoor=bool(se.get("is_outdoor", False)),
-                        is_muhurat_locked=bool(se.get("is_muhurat_locked", False)),
-                        cultural_significance=f"Traditional rites of {primary.regional_name}.",
-                        family_guidance=None,
-                    )
-                )
-
-            for _idx, se in enumerate(t_sec_subevents):
-                if not any(c.name == str(se["name"]) for c in ceremonies):
-                    ceremonies.append(
-                        CeremonyItemSchema(
-                            name=str(se["name"]),
-                            origin_tradition=secondary.regional_name,
-                            day_offset=int(str(se.get("day_offset", 0))),
-                            start_time=f"{int(str(se.get('start_time_hour', 14))):02d}:00",
-                            duration_hours=float(str(se.get("duration_hours", 3))),
-                            venue_type=str(se.get("venue_type", "Celebration Venue")),
-                            is_outdoor=bool(se.get("is_outdoor", False)),
-                            is_muhurat_locked=bool(se.get("is_muhurat_locked", False)),
-                            cultural_significance=f"Sacred custom of {secondary.regional_name}.",
-                            family_guidance=None,
-                        )
-                    )
-
-            ceremonies.sort(key=lambda c: (c.day_offset, c.start_time))
-
-            alignment_points = [
-                FamilyAlignmentPointSchema(
-                    issue="Priest and Protocol Coordination",
-                    description=f"Officiating priests from {primary.regional_name} and {secondary.regional_name} should coordinate vow sequencing.",
-                    recommendation="Convene a 30-minute joint briefing with both priests 14 days before the ceremony.",
-                ),
-                FamilyAlignmentPointSchema(
-                    issue="Cultural Attire Coordination",
-                    description="Coordinate wedding attire styling to honor both backgrounds.",
-                    recommendation="Allocate a 90-minute dress change window between rituals.",
-                ),
-            ]
 
         custom_accuracy_disclaimer = (
             f"This sequence was AI-drafted as a starting point based on general knowledge of {primary.regional_name} and {secondary.regional_name} customs. "
@@ -431,112 +443,114 @@ class TraditionMergeService:
     def get_tradition(self, code: str) -> Tradition | None:
         return self.db.query(Tradition).filter(Tradition.code == code).first()
 
-    def merge_traditions(
+    def _process_primary_samagri_item(
         self,
-        primary_code: str,
-        secondary_code: str,
-        start_date: date | None = None,
-        event_name: str | None = None,
-        notes: str | None = None,
-    ) -> dict[str, Any]:
-        """
-        Executes a dual-tradition merge.
-        Returns unified run-of-show with origin labels, reconciled samagri with provenance, and alignment checklist.
-        """
-        primary = self.get_tradition(primary_code)
-        secondary = self.get_tradition(secondary_code)
-
-        if not primary or not secondary:
-            raise ValueError(
-                f"Invalid tradition codes: primary={primary_code}, secondary={secondary_code}"
-            )
-
-        event_start = start_date or date.today()
-
-        # Generate run of show via LLM / Fallback Agent
-        run_of_show = self.agent.generate_merged_run_of_show(
-            primary=primary, secondary=secondary, start_date=event_start, notes=notes
-        )
-
-        # Reconcile samagri items with provenance tracking
-        primary_items = (
-            self.db.query(RitualItem).filter(RitualItem.tradition_code == primary_code).all()
-        )
-        secondary_items = (
-            self.db.query(RitualItem).filter(RitualItem.tradition_code == secondary_code).all()
-        )
-
-        reconciled_items = []
-        shared_lookup = {}
-
-        for item in primary_items:
-            category_key = self._detect_shared_key(item.item_name)
-            if category_key and category_key not in shared_lookup:
-                shared_lookup[category_key] = {
+        item: RitualItem,
+        primary: Tradition,
+        shared_lookup: dict[str, dict[str, Any]],
+        reconciled_items: list[dict[str, Any]],
+    ) -> None:
+        category_key = self._detect_shared_key(item.item_name)
+        if category_key and category_key not in shared_lookup:
+            shared_lookup[category_key] = {
+                "item_name": item.item_name,
+                "regional_name": f"{item.regional_name or item.item_name}",
+                "standard_quantity": item.standard_quantity,
+                "category": item.category,
+                "spiritual_purpose": item.spiritual_purpose,
+                "source_tradition": "Shared Vedic / Common",
+                "ritual_name": f"{item.ritual_name or 'Sacred Rites'}",
+                "is_verified": bool(item.is_verified and primary.is_verified),
+                "provenance": [primary.regional_name],
+            }
+        else:
+            reconciled_items.append(
+                {
                     "item_name": item.item_name,
-                    "regional_name": f"{item.regional_name or item.item_name}",
+                    "regional_name": item.regional_name,
                     "standard_quantity": item.standard_quantity,
                     "category": item.category,
                     "spiritual_purpose": item.spiritual_purpose,
-                    "source_tradition": "Shared Vedic / Common",
-                    "ritual_name": f"{item.ritual_name or 'Sacred Rites'}",
-                    "is_verified": item.is_verified and primary.is_verified,
+                    "source_tradition": primary.regional_name,
+                    "ritual_name": item.ritual_name,
+                    "is_verified": bool(item.is_verified and primary.is_verified),
                     "provenance": [primary.regional_name],
                 }
-            else:
-                reconciled_items.append(
-                    {
-                        "item_name": item.item_name,
-                        "regional_name": item.regional_name,
-                        "standard_quantity": item.standard_quantity,
-                        "category": item.category,
-                        "spiritual_purpose": item.spiritual_purpose,
-                        "source_tradition": primary.regional_name,
-                        "ritual_name": item.ritual_name,
-                        "is_verified": item.is_verified and primary.is_verified,
-                        "provenance": [primary.regional_name],
-                    }
-                )
+            )
 
-        for item in secondary_items:
-            category_key = self._detect_shared_key(item.item_name)
-            if category_key and category_key in shared_lookup:
-                shared_entry = shared_lookup[category_key]
-                shared_entry["provenance"].append(secondary.regional_name)
-                shared_entry["regional_name"] += f" / {item.regional_name or item.item_name}"
-                shared_entry["standard_quantity"] = (
-                    f"{shared_entry['standard_quantity']} (combined envelope)"
-                )
-                shared_entry["is_verified"] = shared_entry["is_verified"] and item.is_verified
-            elif category_key and category_key not in shared_lookup:
-                shared_lookup[category_key] = {
+    def _append_secondary_to_shared(
+        self,
+        item: RitualItem,
+        secondary: Tradition,
+        shared_entry: dict[str, Any],
+    ) -> None:
+        shared_entry["provenance"].append(secondary.regional_name)
+        shared_entry["regional_name"] += f" / {item.regional_name or item.item_name}"
+        shared_entry["standard_quantity"] = f"{shared_entry['standard_quantity']} (combined envelope)"
+        shared_entry["is_verified"] = bool(shared_entry["is_verified"] and item.is_verified)
+
+    def _process_secondary_samagri_item(
+        self,
+        item: RitualItem,
+        secondary: Tradition,
+        shared_lookup: dict[str, dict[str, Any]],
+        reconciled_items: list[dict[str, Any]],
+    ) -> None:
+        category_key = self._detect_shared_key(item.item_name)
+        if category_key and category_key in shared_lookup:
+            self._append_secondary_to_shared(item, secondary, shared_lookup[category_key])
+        elif category_key and category_key not in shared_lookup:
+            shared_lookup[category_key] = {
+                "item_name": item.item_name,
+                "regional_name": f"{item.regional_name or item.item_name}",
+                "standard_quantity": item.standard_quantity,
+                "category": item.category,
+                "spiritual_purpose": item.spiritual_purpose,
+                "source_tradition": "Shared Vedic / Common",
+                "ritual_name": f"{item.ritual_name or 'Sacred Rites'}",
+                "is_verified": bool(item.is_verified and secondary.is_verified),
+                "provenance": [secondary.regional_name],
+            }
+        else:
+            reconciled_items.append(
+                {
                     "item_name": item.item_name,
-                    "regional_name": f"{item.regional_name or item.item_name}",
+                    "regional_name": item.regional_name,
                     "standard_quantity": item.standard_quantity,
                     "category": item.category,
                     "spiritual_purpose": item.spiritual_purpose,
-                    "source_tradition": "Shared Vedic / Common",
-                    "ritual_name": f"{item.ritual_name or 'Sacred Rites'}",
-                    "is_verified": item.is_verified and secondary.is_verified,
+                    "source_tradition": secondary.regional_name,
+                    "ritual_name": item.ritual_name,
+                    "is_verified": bool(item.is_verified and secondary.is_verified),
                     "provenance": [secondary.regional_name],
                 }
-            else:
-                reconciled_items.append(
-                    {
-                        "item_name": item.item_name,
-                        "regional_name": item.regional_name,
-                        "standard_quantity": item.standard_quantity,
-                        "category": item.category,
-                        "spiritual_purpose": item.spiritual_purpose,
-                        "source_tradition": secondary.regional_name,
-                        "ritual_name": item.ritual_name,
-                        "is_verified": item.is_verified and secondary.is_verified,
-                        "provenance": [secondary.regional_name],
-                    }
-                )
+            )
+
+    def _reconcile_samagri(
+        self, primary: Tradition, secondary: Tradition
+    ) -> tuple[list[dict[str, Any]], dict[str, dict[str, Any]]]:
+        primary_items = self.db.query(RitualItem).filter(RitualItem.tradition_code == primary.code).all()
+        secondary_items = self.db.query(RitualItem).filter(RitualItem.tradition_code == secondary.code).all()
+        shared_lookup: dict[str, dict[str, Any]] = {}
+        reconciled_items: list[dict[str, Any]] = []
+
+        for item in primary_items:
+            self._process_primary_samagri_item(item, primary, shared_lookup, reconciled_items)
+        for item in secondary_items:
+            self._process_secondary_samagri_item(item, secondary, shared_lookup, reconciled_items)
 
         final_samagri = list(shared_lookup.values()) + reconciled_items
+        return final_samagri, shared_lookup
 
+    def _build_merge_response(
+        self,
+        event_name: str | None,
+        primary: Tradition,
+        secondary: Tradition,
+        run_of_show: Any,
+        final_samagri: list[dict[str, Any]],
+        shared_lookup: dict[str, dict[str, Any]],
+    ) -> dict[str, Any]:
         return {
             "status": "success",
             "event_name": event_name,
@@ -586,6 +600,39 @@ class TraditionMergeService:
                 f"Please review carefully with your family and officiant before finalizing."
             ),
         }
+
+    def merge_traditions(
+        self,
+        primary_code: str,
+        secondary_code: str,
+        start_date: date | None = None,
+        event_name: str | None = None,
+        notes: str | None = None,
+    ) -> dict[str, Any]:
+        """
+        Executes a dual-tradition merge.
+        Returns unified run-of-show with origin labels, reconciled samagri with provenance, and alignment checklist.
+        """
+        primary = self.get_tradition(primary_code)
+        secondary = self.get_tradition(secondary_code)
+
+        if not primary or not secondary:
+            raise ValueError(
+                f"Invalid tradition codes: primary={primary_code}, secondary={secondary_code}"
+            )
+
+        event_start = start_date or date.today()
+
+        # Generate run of show via LLM / Fallback Agent
+        run_of_show = self.agent.generate_merged_run_of_show(
+            primary=primary, secondary=secondary, start_date=event_start, notes=notes
+        )
+
+        final_samagri, shared_lookup = self._reconcile_samagri(primary, secondary)
+
+        return self._build_merge_response(
+            event_name, primary, secondary, run_of_show, final_samagri, shared_lookup
+        )
 
     def _detect_shared_key(self, item_name: str) -> str | None:
         lower_name = item_name.lower()

@@ -12,10 +12,23 @@ from backend.app.services.whatsapp.phone_utils import validate_and_normalize_gue
 logger = logging.getLogger(__name__)
 
 
+class GuestImportRow(BaseModel):
+    name: str
+    phone: str
+    group_side: str = "general"
+    diet: str = "veg"
+    headcount: int = 1
+    kids_count: int = 0
+    mobility_needs: bool = False
+    accommodation: bool = False
+    language: str = "en"
+    notes: str | None = None
+
+
 class GuestImportError(BaseModel):
     row_number: int
-    name: str | None = None
-    phone_raw: str | None = None
+    name: str
+    phone_raw: str
     reason: str
 
 
@@ -43,6 +56,116 @@ class RSVPSummary(BaseModel):
 
 class GuestService:
     @classmethod
+    def _validate_guest_identity(
+        cls, idx: int, name: str, phone_raw: str
+    ) -> tuple[str | None, GuestImportError | None]:
+        if not name:
+            return None, GuestImportError(
+                row_number=idx, name=name, phone_raw=phone_raw, reason="Guest name is required"
+            )
+        if not phone_raw:
+            return None, GuestImportError(
+                row_number=idx, name=name, phone_raw=phone_raw, reason="Phone number is required"
+            )
+        is_valid, norm_phone, err_msg = validate_and_normalize_guest_phone(phone_raw)
+        if not is_valid or not norm_phone:
+            return None, GuestImportError(
+                row_number=idx,
+                name=name,
+                phone_raw=phone_raw,
+                reason=err_msg or "Invalid phone number format",
+            )
+        return norm_phone, None
+
+    @classmethod
+    def _parse_kids(cls, row: dict[str, Any]) -> int:
+        val = row.get("kids_count") or row.get("kids") or 0
+        try:
+            return int(val)
+        except (ValueError, TypeError):
+            return 0
+
+    @classmethod
+    def _parse_headcount(cls, row: dict[str, Any], kids: int) -> int:
+        val = row.get("headcount")
+        if not val:
+            return 1 + kids
+        try:
+            return max(1, int(str(val)))
+        except (ValueError, TypeError):
+            return 1 + kids
+
+    @classmethod
+    def _parse_diet(cls, row: dict[str, Any]) -> str:
+        raw = str(row.get("diet") or row.get("dietary_preference") or "veg").strip().lower()
+        return raw if raw in ("veg", "jain", "non_veg", "vegan") else "veg"
+
+    @classmethod
+    def _parse_guest_attributes(cls, row: dict[str, Any]) -> dict[str, Any]:
+        group_side = str(row.get("group_side") or row.get("side") or "general").strip().lower()
+        diet = cls._parse_diet(row)
+        kids = cls._parse_kids(row)
+        headcount = cls._parse_headcount(row, kids)
+
+        mobility = bool(
+            str(row.get("mobility_needs") or "").lower() in ("true", "1", "yes", "wheelchair")
+        )
+        accommodation = bool(
+            str(row.get("accommodation") or "").lower() in ("true", "1", "yes")
+        )
+        language = str(row.get("language") or "en").strip().lower()[:10]
+        notes = str(row.get("notes") or "").strip() or None
+
+        return {
+            "group_side": group_side,
+            "diet": diet,
+            "kids_count": kids,
+            "headcount": headcount,
+            "mobility_needs": mobility,
+            "accommodation": accommodation,
+            "language": language,
+            "notes": notes,
+        }
+
+    @classmethod
+    def _process_guest_row(
+        cls,
+        event_id: str,
+        idx: int,
+        row: dict[str, Any],
+        existing_phones: set[str],
+        seen_batch_phones: set[str],
+    ) -> tuple[Guest | None, dict[str, Any] | None, GuestImportError | None, bool]:
+        name = str(row.get("name") or row.get("full_name") or "").strip()
+        phone_raw = str(row.get("phone") or row.get("phone_number") or "").strip()
+
+        norm_phone, err = cls._validate_guest_identity(idx, name, phone_raw)
+        if err or not norm_phone:
+            return None, None, err, False
+
+        if norm_phone in existing_phones or norm_phone in seen_batch_phones:
+            return None, None, None, True
+
+        seen_batch_phones.add(norm_phone)
+        attrs = cls._parse_guest_attributes(row)
+
+        guest = Guest(
+            event_id=event_id,
+            name=name,
+            phone=norm_phone,
+            rsvp_status="pending",
+            **attrs,
+        )
+        succ = {
+            "name": name,
+            "phone": norm_phone,
+            "group_side": attrs["group_side"],
+            "diet": attrs["diet"],
+            "headcount": attrs["headcount"],
+        }
+        return guest, succ, None, False
+
+    @classmethod
     def import_guest_rows(
         cls, db: Session, event_id: str, rows: list[dict[str, Any]]
     ) -> GuestImportResponse:
@@ -55,7 +178,6 @@ class GuestService:
         if not event:
             raise ValueError(f"Event {event_id} not found")
 
-        # Pre-fetch existing guest phones for this event to dedupe
         existing_phones = {
             g.phone for g in db.query(Guest.phone).filter(Guest.event_id == event_id).all()
         }
@@ -63,106 +185,19 @@ class GuestService:
         successful = []
         errors: list[GuestImportError] = []
         skipped_duplicates = 0
-        seen_batch_phones = set()
+        seen_batch_phones: set[str] = set()
 
         for idx, row in enumerate(rows, start=1):
-            name = str(row.get("name") or row.get("full_name") or "").strip()
-            phone_raw = str(row.get("phone") or row.get("phone_number") or "").strip()
-
-            if not name:
-                errors.append(
-                    GuestImportError(
-                        row_number=idx,
-                        name=name,
-                        phone_raw=phone_raw,
-                        reason="Guest name is required",
-                    )
-                )
-                continue
-
-            if not phone_raw:
-                errors.append(
-                    GuestImportError(
-                        row_number=idx,
-                        name=name,
-                        phone_raw=phone_raw,
-                        reason="Phone number is required",
-                    )
-                )
-                continue
-
-            # Validate & normalize phone to E.164
-            is_valid, norm_phone, err_msg = validate_and_normalize_guest_phone(phone_raw)
-            if not is_valid or not norm_phone:
-                errors.append(
-                    GuestImportError(
-                        row_number=idx,
-                        name=name,
-                        phone_raw=phone_raw,
-                        reason=err_msg or "Invalid phone number format",
-                    )
-                )
-                continue
-
-            # Deduplication Check
-            if norm_phone in existing_phones or norm_phone in seen_batch_phones:
+            guest, succ, err, is_dup = cls._process_guest_row(
+                event_id, idx, row, existing_phones, seen_batch_phones
+            )
+            if is_dup:
                 skipped_duplicates += 1
-                continue
-
-            seen_batch_phones.add(norm_phone)
-
-            # Parse optional fields
-            group_side = str(row.get("group_side") or row.get("side") or "general").strip().lower()
-            diet = str(row.get("diet") or row.get("dietary_preference") or "veg").strip().lower()
-            if diet not in ("veg", "jain", "non_veg", "vegan"):
-                diet = "veg"
-
-            kids = 0
-            try:
-                kids = int(row.get("kids_count") or row.get("kids") or 0)
-            except (ValueError, TypeError):
-                kids = 0
-
-            headcount = 1 + kids
-            try:
-                if row.get("headcount"):
-                    headcount = max(1, int(str(row.get("headcount") or 1)))
-            except (ValueError, TypeError):
-                pass
-
-            mobility = bool(
-                str(row.get("mobility_needs") or "").lower() in ("true", "1", "yes", "wheelchair")
-            )
-            accommodation = bool(
-                str(row.get("accommodation") or "").lower() in ("true", "1", "yes")
-            )
-            language = str(row.get("language") or "en").strip().lower()[:10]
-            notes = str(row.get("notes") or "").strip() or None
-
-            guest = Guest(
-                event_id=event_id,
-                name=name,
-                phone=norm_phone,
-                group_side=group_side,
-                diet=diet,
-                mobility_needs=mobility,
-                kids_count=kids,
-                headcount=headcount,
-                rsvp_status="pending",
-                accommodation=accommodation,
-                language=language,
-                notes=notes,
-            )
-            db.add(guest)
-            successful.append(
-                {
-                    "name": name,
-                    "phone": norm_phone,
-                    "group_side": group_side,
-                    "diet": diet,
-                    "headcount": headcount,
-                }
-            )
+            elif err:
+                errors.append(err)
+            elif guest and succ:
+                db.add(guest)
+                successful.append(succ)
 
         db.commit()
 

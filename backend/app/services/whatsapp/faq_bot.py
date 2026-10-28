@@ -1,5 +1,5 @@
 import logging
-from typing import ClassVar
+from typing import Any, ClassVar
 
 from pydantic import BaseModel
 
@@ -7,7 +7,9 @@ from backend.app.models.models import Event, EventFactSheet
 
 logger = logging.getLogger(__name__)
 
-HARD_FALLBACK_REFUSAL = "I don't have that information in the event details. I'll check with the host and get back to you!"
+HARD_FALLBACK_REFUSAL = (
+    "I don't have that information in the event details. I'll check with the host and get back to you!"
+)
 
 
 class FAQResponse(BaseModel):
@@ -48,20 +50,81 @@ class FAQBotService:
             "clothes",
             "code",
             "color code",
-            "traditional",
+            "theme",
         ],
         "timing_notes": [
+            "when",
             "time",
             "timing",
-            "when",
-            "schedule",
             "start",
-            "end",
+            "begins",
+            "schedule",
             "entry",
             "muhurat",
             "hours",
         ],
     }
+
+    @classmethod
+    def _format_standard_field_answer(
+        cls, field: str, val: Any, fact_sheet: EventFactSheet
+    ) -> str:
+        if field == "venue_address":
+            ans = f"The celebration is at: {val}."
+            if fact_sheet.map_link:
+                ans += f" Google Maps: {fact_sheet.map_link}"
+            return ans
+        if field == "parking_info":
+            return f"Parking Information: {val}"
+        if field == "dress_code":
+            return f"Dress Code & Attire: {val}"
+        if field == "timing_notes":
+            return f"Schedule & Timings: {val}"
+        if field == "map_link":
+            return f"Location directions link: {val}"
+        return str(val)
+
+    @classmethod
+    def _match_standard_field(
+        cls, fact_sheet: EventFactSheet, q_clean: str
+    ) -> FAQResponse | None:
+        for field, keywords in cls.KEYWORD_MAPPINGS.items():
+            if any(kw in q_clean for kw in keywords):
+                val = getattr(fact_sheet, field, None)
+                if val and str(val).strip():
+                    ans = cls._format_standard_field_answer(field, val, fact_sheet)
+                    return FAQResponse(
+                        answer=ans, is_in_scope=True, notified_host=False, source_field=field
+                    )
+        return None
+
+    @classmethod
+    def _match_other_facts(
+        cls, fact_sheet: EventFactSheet, q_clean: str
+    ) -> FAQResponse | None:
+        other_facts = fact_sheet.other_facts or {}
+        for fact_key, fact_val in other_facts.items():
+            clean_key = str(fact_key).lower().replace("_", " ")
+            has_match = clean_key in q_clean or any(word in q_clean for word in clean_key.split())
+            if has_match and fact_val and str(fact_val).strip():
+                return FAQResponse(
+                    answer=f"{str(fact_key).replace('_', ' ').title()}: {fact_val}",
+                    is_in_scope=True,
+                    notified_host=False,
+                    source_field=f"other_facts.{fact_key}",
+                )
+        return None
+
+    @classmethod
+    def _match_event_date(cls, event: Event, q_clean: str) -> FAQResponse | None:
+        if any(w in q_clean for w in ["date", "day", "which day"]):
+            return FAQResponse(
+                answer=f"{event.name} will be celebrated on {event.start_date.strftime('%A, %d %B %Y')} in {event.city}.",
+                is_in_scope=True,
+                notified_host=False,
+                source_field="event.start_date",
+            )
+        return None
 
     @classmethod
     def answer_question(
@@ -81,7 +144,6 @@ class FAQBotService:
             )
 
         if not fact_sheet:
-            # No fact sheet exists at all
             return FAQResponse(
                 answer=HARD_FALLBACK_REFUSAL,
                 is_in_scope=False,
@@ -91,75 +153,25 @@ class FAQBotService:
             )
 
         # 1. Check Standard Structured Fields
-        for field, keywords in cls.KEYWORD_MAPPINGS.items():
-            if any(kw in q_clean for kw in keywords):
-                val = getattr(fact_sheet, field, None)
-                if val and str(val).strip():
-                    if field == "venue_address":
-                        ans = f"The celebration is at: {val}."
-                        if fact_sheet.map_link:
-                            ans += f" Google Maps: {fact_sheet.map_link}"
-                        return FAQResponse(
-                            answer=ans, is_in_scope=True, notified_host=False, source_field=field
-                        )
-                    elif field == "parking_info":
-                        return FAQResponse(
-                            answer=f"Parking Information: {val}",
-                            is_in_scope=True,
-                            notified_host=False,
-                            source_field=field,
-                        )
-                    elif field == "dress_code":
-                        return FAQResponse(
-                            answer=f"Dress Code & Attire: {val}",
-                            is_in_scope=True,
-                            notified_host=False,
-                            source_field=field,
-                        )
-                    elif field == "timing_notes":
-                        return FAQResponse(
-                            answer=f"Schedule & Timings: {val}",
-                            is_in_scope=True,
-                            notified_host=False,
-                            source_field=field,
-                        )
-                    elif field == "map_link":
-                        return FAQResponse(
-                            answer=f"Location directions link: {val}",
-                            is_in_scope=True,
-                            notified_host=False,
-                            source_field=field,
-                        )
+        resp = cls._match_standard_field(fact_sheet, q_clean)
+        if resp:
+            return resp
 
         # 2. Check Custom Key-Value other_facts
-        other_facts = fact_sheet.other_facts or {}
-        for fact_key, fact_val in other_facts.items():
-            clean_key = str(fact_key).lower().replace("_", " ")
-            if (clean_key in q_clean or any(word in q_clean for word in clean_key.split())) and (
-                fact_val and str(fact_val).strip()
-            ):
-                return FAQResponse(
-                    answer=f"{str(fact_key).replace('_', ' ').title()}: {fact_val}",
-                    is_in_scope=True,
-                    notified_host=False,
-                    source_field=f"other_facts.{fact_key}",
-                )
+        resp = cls._match_other_facts(fact_sheet, q_clean)
+        if resp:
+            return resp
 
-        # 3. Check General Event Attributes (Name, Date, City)
-        if any(w in q_clean for w in ["date", "day", "which day"]):
-            return FAQResponse(
-                answer=f"{event.name} will be celebrated on {event.start_date.strftime('%A, %d %B %Y')} in {event.city}.",
-                is_in_scope=True,
-                notified_host=False,
-                source_field="event.start_date",
-            )
+        # 3. Check General Event Attributes
+        resp = cls._match_event_date(event, q_clean)
+        if resp:
+            return resp
 
-        # 4. Strict Boundary Enforcement: If answer is NOT in the fact sheet, refuse!
+        # 4. Strict Boundary Enforcement
         return FAQResponse(
             answer=HARD_FALLBACK_REFUSAL,
             is_in_scope=False,
             notified_host=True,
             source_field=None,
-            provider_used="deterministic_retriever",
-            fallback_warning="Question query exceeded verified fact sheet scope; host notified.",
+            fallback_warning="Question outside ground truth scope",
         )
