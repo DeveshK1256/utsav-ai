@@ -125,19 +125,8 @@ def create_event(payload: EventCreateSchema, db: Session = Depends(get_db)) -> E
     return EventResponseSchema.model_validate(event)
 
 
-@router.get("/{event_id}", response_model=EventDetailResponseSchema)
-def get_event(
-    event_id: str, event: Event = Depends(verify_event_owner_token), db: Session = Depends(get_db)
-) -> EventDetailResponseSchema:
-    returned_token = event.owner_token or (event.metadata_json or {}).get("owner_token")
-    tier = BudgetScalingEngine.resolve_city_tier(event.city)
-    owner_name = (
-        event.owner.full_name
-        if event.owner
-        else (event.metadata_json.get("host_name") if event.metadata_json else "Host")
-    )
-
-    sub_events_list = [
+def _build_sub_event_schemas(sub_events: list[Any]) -> list[SubEventResponseSchema]:
+    return [
         SubEventResponseSchema(
             id=se.id,
             name=se.name,
@@ -149,13 +138,15 @@ def get_event(
             muhurat_notes=se.muhurat_notes,
             sort_order=se.sort_order,
         )
-        for se in event.sub_events
+        for se in sub_events
     ]
 
+
+def _build_budget_schemas(budget_items: list[Any], total_budget: float) -> list[BudgetItemResponseSchema]:
     budget_list = []
-    tot_budget = float(event.total_budget) if event.total_budget else 1.0
-    for b in event.budget_items:
-        pct = round((float(b.planned_amount) / tot_budget) * 100, 1) if tot_budget > 0 else 0.0
+    tot = total_budget if total_budget > 0 else 1.0
+    for b in budget_items:
+        pct = round((float(b.planned_amount) / tot) * 100, 1) if tot > 0 else 0.0
         budget_list.append(
             BudgetItemResponseSchema(
                 id=b.id,
@@ -167,8 +158,11 @@ def get_event(
                 reasoning_spec=b.reasoning_spec,
             )
         )
+    return budget_list
 
-    tasks_list = [
+
+def _build_task_schemas(tasks: list[Any]) -> list[TaskResponseSchema]:
+    return [
         TaskResponseSchema(
             id=t.id,
             title=t.title,
@@ -178,8 +172,22 @@ def get_event(
             duration_minutes=t.duration_minutes,
             assigned_role=t.assigned_role,
         )
-        for t in event.tasks
+        for t in tasks
     ]
+
+
+@router.get("/{event_id}", response_model=EventDetailResponseSchema)
+def get_event(
+    event_id: str, event: Event = Depends(verify_event_owner_token), db: Session = Depends(get_db)
+) -> EventDetailResponseSchema:
+    returned_token = event.owner_token or (event.metadata_json or {}).get("owner_token")
+    tier = BudgetScalingEngine.resolve_city_tier(event.city)
+    owner_name = (
+        event.owner.full_name
+        if event.owner
+        else (event.metadata_json.get("host_name") if event.metadata_json else "Host")
+    )
+    tot_budget = float(event.total_budget) if event.total_budget else 0.0
 
     return EventDetailResponseSchema(
         id=event.id,
@@ -187,7 +195,7 @@ def get_event(
         name=event.name,
         event_type=event.event_type,
         guest_count=event.guest_count,
-        total_budget=float(event.total_budget),
+        total_budget=tot_budget,
         city=event.city,
         pincode=event.pincode,
         status=event.status,
@@ -197,12 +205,141 @@ def get_event(
         start_date=event.start_date,
         end_date=event.end_date,
         created_at=event.created_at,
-        sub_events=sub_events_list,
-        budget_breakdown=budget_list,
-        tasks=tasks_list,
+        sub_events=_build_sub_event_schemas(event.sub_events),
+        budget_breakdown=_build_budget_schemas(event.budget_items, tot_budget),
+        tasks=_build_task_schemas(event.tasks),
         owner_token=returned_token,
         metadata_json=event.metadata_json or {},
     )
+
+
+def _build_dynamic_osm_vendor(payload: ComposeUpdateSchema, event: Event) -> VendorProfile:
+    source = payload.source_notes or f"OpenStreetMap Selected (OSM Record: {payload.osm_id or 'user_selection'})"
+    addr_meta = {"address": payload.venue_address} if payload.venue_address else {}
+    precision = "exact_osm_node" if payload.latitude else "locality_approximate"
+    tier = getattr(event, "city_tier", None) or "tier_2"
+    city = (payload.venue_city or event.city or "Nearby")[:100]
+    loc = payload.venue_locality[:150] if payload.venue_locality else None
+    return VendorProfile(
+        id=payload.vendor_profile_id,
+        business_name=payload.venue_name.strip()[:200] if payload.venue_name else "Venue",
+        category="venue",
+        latitude=payload.latitude,
+        longitude=payload.longitude,
+        city=city,
+        locality=loc,
+        city_tier=tier,
+        is_verified_profile=False,
+        average_rating=None,
+        rating_count=0,
+        coordinate_precision=precision,
+        source_notes=source,
+        metadata_json=addr_meta,
+    )
+
+
+def _resolve_or_create_vendor_profile(
+    payload: ComposeUpdateSchema, event: Event, db: Session
+) -> VendorProfile:
+    vendor = db.query(VendorProfile).filter(VendorProfile.id == payload.vendor_profile_id).first()
+    if vendor:
+        return vendor
+
+    if not payload.venue_name:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Vendor profile with ID '{payload.vendor_profile_id}' not found in discovery directory",
+        )
+
+    new_vendor = _build_dynamic_osm_vendor(payload, event)
+    db.add(new_vendor)
+    db.commit()
+    db.refresh(new_vendor)
+    return new_vendor
+
+
+def _update_event_fact_sheet_venue(event: Event, payload: ComposeUpdateSchema, vendor: VendorProfile) -> None:
+    if not event.fact_sheet:
+        return
+    if payload.venue_address:
+        event.fact_sheet.venue_address = payload.venue_address
+    elif vendor.locality:
+        event.fact_sheet.venue_address = f"{vendor.business_name}, {vendor.locality}, {vendor.city}"
+
+
+def _handle_compose_venue_selection(
+    payload: ComposeUpdateSchema,
+    event: Event,
+    compose_state: dict[str, Any],
+    meta: dict[str, Any],
+    db: Session,
+) -> None:
+    if payload.skip_venue:
+        compose_state["venue_skipped"] = True
+        for k in ("vendor_profile_id", "venue_name", "venue_locality", "venue_city", "venue_status"):
+            compose_state.pop(k, None)
+        meta.pop("venue", None)
+        return
+
+    if not payload.vendor_profile_id:
+        if payload.step == "venue":
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Step A venue selection requires a valid vendor_profile_id from the discovery directory (or skip_venue: true)",
+            )
+        return
+
+    vendor = _resolve_or_create_vendor_profile(payload, event, db)
+    venue_display = f"{vendor.business_name}, {vendor.locality}" if vendor.locality else vendor.business_name
+    meta["venue"] = venue_display
+    compose_state["vendor_profile_id"] = vendor.id
+    compose_state["venue_name"] = vendor.business_name
+    compose_state["venue_locality"] = vendor.locality
+    compose_state["venue_city"] = vendor.city
+    compose_state["venue_status"] = "shortlist_pick"
+    compose_state["venue_skipped"] = False
+
+    _update_event_fact_sheet_venue(event, payload, vendor)
+
+
+def _handle_compose_timing_selection(
+    payload: ComposeUpdateSchema,
+    event: Event,
+    compose_state: dict[str, Any],
+    meta: dict[str, Any],
+    db: Session,
+) -> None:
+    if payload.skip_timing:
+        compose_state["timing_skipped"] = True
+        meta.pop("muhurat_time", None)
+        compose_state["muhurat_locked"] = False
+        return
+
+    if not payload.muhurat_time:
+        return
+
+    meta["muhurat_time"] = payload.muhurat_time
+    compose_state["muhurat_time"] = payload.muhurat_time
+    compose_state["muhurat_locked"] = True
+    compose_state["timing_skipped"] = False
+
+    from backend.app.models.models import SubEvent
+
+    target_sub = None
+    if payload.sub_event_name:
+        target_sub = (
+            db.query(SubEvent)
+            .filter(SubEvent.event_id == event.id, SubEvent.name.ilike(f"%{payload.sub_event_name}%"))
+            .first()
+        )
+    if not target_sub:
+        target_sub = db.query(SubEvent).filter(SubEvent.event_id == event.id).order_by(SubEvent.start_time).first()
+
+    if target_sub:
+        target_sub.is_muhurat_locked = True
+        if payload.muhurat_notes:
+            target_sub.muhurat_notes = payload.muhurat_notes
+        db.add(target_sub)
 
 
 @router.post("/{event_id}/compose", response_model=EventDetailResponseSchema)
@@ -225,119 +362,8 @@ def update_event_compose_progress(
     if payload.step:
         compose_state["current_step"] = payload.step
 
-    # Step A: Venue handling
-    if payload.skip_venue:
-        compose_state["venue_skipped"] = True
-        compose_state.pop("vendor_profile_id", None)
-        compose_state.pop("venue_name", None)
-        compose_state.pop("venue_locality", None)
-        compose_state.pop("venue_city", None)
-        compose_state.pop("venue_status", None)
-        meta.pop("venue", None)
-    elif payload.vendor_profile_id:
-        vendor = (
-            db.query(VendorProfile).filter(VendorProfile.id == payload.vendor_profile_id).first()
-        )
-        if not vendor:
-            # If not yet in DB (e.g. dynamically selected from OpenStreetMap search or client cache),
-            # dynamically INSERT a permanent row into vendor_profiles NOW so it has a real database identity
-            # for future quotes (F5) and reviews (F12) to attach via foreign key.
-            if payload.venue_name:
-                vendor = VendorProfile(
-                    id=payload.vendor_profile_id,
-                    business_name=payload.venue_name.strip()[:200],
-                    category="venue",
-                    latitude=payload.latitude,
-                    longitude=payload.longitude,
-                    city=(payload.venue_city or event.city or "Nearby")[:100],
-                    locality=payload.venue_locality[:150] if payload.venue_locality else None,
-                    city_tier=getattr(event, "city_tier", None) or "tier_2",
-                    is_verified_profile=False,
-                    average_rating=None,  # Honest unrated
-                    rating_count=0,
-                    coordinate_precision="exact_osm_node"
-                    if payload.latitude
-                    else "locality_approximate",
-                    source_notes=payload.source_notes
-                    or f"OpenStreetMap Selected (OSM Record: {payload.osm_id or 'user_selection'})",
-                    metadata_json={"address": payload.venue_address}
-                    if payload.venue_address
-                    else {},
-                )
-                db.add(vendor)
-                db.commit()
-                db.refresh(vendor)
-            else:
-                raise HTTPException(
-                    status_code=status.HTTP_404_NOT_FOUND,
-                    detail=f"Vendor profile with ID '{payload.vendor_profile_id}' not found in discovery directory",
-                )
-        venue_display = (
-            f"{vendor.business_name}, {vendor.locality}"
-            if vendor.locality
-            else vendor.business_name
-        )
-        meta["venue"] = venue_display
-        compose_state["vendor_profile_id"] = vendor.id
-        compose_state["venue_name"] = vendor.business_name
-        compose_state["venue_locality"] = vendor.locality
-        compose_state["venue_city"] = vendor.city
-        compose_state["venue_status"] = (
-            "shortlist_pick"  # Honest note: shortlist pick, not confirmed booking
-        )
-        compose_state["venue_skipped"] = False
-
-        if event.fact_sheet and payload.venue_address:
-            event.fact_sheet.venue_address = payload.venue_address
-        elif event.fact_sheet and vendor.locality:
-            event.fact_sheet.venue_address = (
-                f"{vendor.business_name}, {vendor.locality}, {vendor.city}"
-            )
-    elif payload.step == "venue" and not payload.skip_venue:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Step A venue selection requires a valid vendor_profile_id from the discovery directory (or skip_venue: true)",
-        )
-
-    # Step B: Timing & Muhurat handling
-    if payload.skip_timing:
-        compose_state["timing_skipped"] = True
-        # If timing was explicitly skipped, remove any event-level muhurat_time override
-        # so M10 cleanly falls back to 'Time to be confirmed' / placeholder
-        meta.pop("muhurat_time", None)
-        compose_state["muhurat_locked"] = False
-    elif payload.muhurat_time:
-        meta["muhurat_time"] = payload.muhurat_time
-        compose_state["muhurat_time"] = payload.muhurat_time
-        compose_state["muhurat_locked"] = True
-        compose_state["timing_skipped"] = False
-
-        # If we have sub_events, lock the primary / first ceremony
-        from backend.app.models.models import SubEvent
-
-        target_sub = None
-        if payload.sub_event_name:
-            target_sub = (
-                db.query(SubEvent)
-                .filter(
-                    SubEvent.event_id == event.id,
-                    SubEvent.name.ilike(f"%{payload.sub_event_name}%"),
-                )
-                .first()
-            )
-        if not target_sub:
-            target_sub = (
-                db.query(SubEvent)
-                .filter(SubEvent.event_id == event.id)
-                .order_by(SubEvent.start_time)
-                .first()
-            )
-
-        if target_sub:
-            target_sub.is_muhurat_locked = True
-            if payload.muhurat_notes:
-                target_sub.muhurat_notes = payload.muhurat_notes
-            db.add(target_sub)
+    _handle_compose_venue_selection(payload, event, compose_state, meta, db)
+    _handle_compose_timing_selection(payload, event, compose_state, meta, db)
 
     meta["compose_celebration"] = compose_state
     event.metadata_json = meta

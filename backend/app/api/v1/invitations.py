@@ -54,76 +54,57 @@ STANDARD_LAYOUTS = [
 DEFAULT_PALETTE = ["#B45309", "#991B1B", "#FEF3C7", "#1E3A8A", "#D97706"]
 
 
+def _resolve_host_name(event: Event) -> str | None:
+    if event.metadata_json and isinstance(event.metadata_json, dict):
+        host = event.metadata_json.get("host_name")
+        if host:
+            return str(host)
+    if event.owner and event.owner.full_name:
+        return str(event.owner.full_name)
+    return None
+
+
+def _resolve_venue_str(event: Event) -> str:
+    if event.fact_sheet and event.fact_sheet.venue_address:
+        return str(event.fact_sheet.venue_address)
+    if event.metadata_json and isinstance(event.metadata_json, dict) and event.metadata_json.get("venue"):
+        return str(event.metadata_json.get("venue"))
+    if event.city:
+        return f"{event.city} (Venue to be confirmed)"
+    return "Venue to be confirmed"
+
+
+def _format_sub_event_window(locked: SubEvent) -> str | None:
+    start_fmt = locked.start_time.strftime("%I:%M %p").lstrip("0") if locked.start_time else None
+    end_fmt = locked.end_time.strftime("%I:%M %p").lstrip("0") if locked.end_time else None
+    if start_fmt and end_fmt:
+        tr = f"{start_fmt} - {end_fmt}"
+    elif start_fmt:
+        tr = start_fmt
+    else:
+        return None
+    note = locked.muhurat_notes or locked.name
+    return f"{tr} ({note})"
+
+
+def _resolve_muhurat_time(event: Event, sub_events: list[SubEvent]) -> str | None:
+    if event.metadata_json and isinstance(event.metadata_json, dict):
+        m_time = event.metadata_json.get("muhurat_time")
+        if m_time:
+            return str(m_time)
+    locked = next((s for s in sub_events if s.is_muhurat_locked), None)
+    return _format_sub_event_window(locked) if locked else None
+
+
 def _resolve_event_logistics(
     event: Event, db: Session
 ) -> tuple[str | None, str, str, str | None, list[str]]:
     """Helper to extract confirmed event details and avoid invented facts."""
-    # 1. Host Name
-    host_name = None
-    if event.metadata_json and isinstance(event.metadata_json, dict):
-        host_name = event.metadata_json.get("host_name")
-    if not host_name and event.owner:
-        host_name = event.owner.full_name
-
-    # 2. Date String
-    date_str = (
-        event.start_date.strftime("%A, %d %B %Y") if event.start_date else "Date to be confirmed"
-    )
-
-    # 3. Venue String
-    venue_str = "Venue to be confirmed"
-    if event.fact_sheet and event.fact_sheet.venue_address:
-        venue_str = event.fact_sheet.venue_address
-    elif (
-        event.metadata_json
-        and isinstance(event.metadata_json, dict)
-        and event.metadata_json.get("venue")
-    ):
-        venue_str = str(event.metadata_json.get("venue"))
-    elif event.city:
-        venue_str = f"{event.city} (Venue to be confirmed)"
-
-    # 4. Muhurat Time:
-    # Priority A: Confirmed manual/event-level muhurat time from metadata_json
-    # Priority B: Sub-event with is_muhurat_locked == True (M5 auspicious locked time)
-    # Priority C: None (card renders without muhurat badge / with confirmed timing only, never fabricating unconfirmed panchang)
-    muhurat_time = None
-    if event.metadata_json and isinstance(event.metadata_json, dict):
-        muhurat_time = event.metadata_json.get("muhurat_time")
-
-    # Fetch sub_events for both muhurat resolution and ceremony listing
-    sub_events = (
-        db.query(SubEvent).filter(SubEvent.event_id == event.id).order_by(SubEvent.start_time).all()
-    )
-
-    if not muhurat_time:
-        locked_sub_event = next((s for s in sub_events if s.is_muhurat_locked), None)
-        if locked_sub_event:
-            # Format locked window: e.g. "10:30 AM - 12:00 PM (Vivah Muhurat)" or time range
-            start_fmt = (
-                locked_sub_event.start_time.strftime("%I:%M %p").lstrip("0")
-                if locked_sub_event.start_time
-                else None
-            )
-            end_fmt = (
-                locked_sub_event.end_time.strftime("%I:%M %p").lstrip("0")
-                if locked_sub_event.end_time
-                else None
-            )
-            if start_fmt and end_fmt:
-                time_range = f"{start_fmt} - {end_fmt}"
-            elif start_fmt:
-                time_range = start_fmt
-            else:
-                time_range = None
-
-            if time_range:
-                if locked_sub_event.muhurat_notes:
-                    muhurat_time = f"{time_range} ({locked_sub_event.muhurat_notes})"
-                else:
-                    muhurat_time = f"{time_range} ({locked_sub_event.name})"
-
-    # 5. Ceremonies from sub_events
+    host_name = _resolve_host_name(event)
+    date_str = event.start_date.strftime("%A, %d %B %Y") if event.start_date else "Date to be confirmed"
+    venue_str = _resolve_venue_str(event)
+    sub_events = db.query(SubEvent).filter(SubEvent.event_id == event.id).order_by(SubEvent.start_time).all()
+    muhurat_time = _resolve_muhurat_time(event, sub_events)
     ceremonies = [s.name for s in sub_events if s.name]
 
     return host_name, date_str, venue_str, muhurat_time, ceremonies
@@ -195,6 +176,167 @@ def get_invitation_studio_options(
     )
 
 
+def _resolve_theme_and_palette(
+    theme_proposal_id: str | None, db: Session
+) -> tuple[str | None, list[str], str | None]:
+    theme = None
+    if theme_proposal_id:
+        theme = db.query(ThemeProposal).filter(ThemeProposal.id == theme_proposal_id).first()
+    if not theme:
+        theme = (
+            db.query(ThemeProposal)
+            .join(ThemeProposal.style_profile)
+            .filter(ThemeProposal.status == "accepted")
+            .first()
+        )
+    palette = theme.palette if theme and theme.palette else DEFAULT_PALETTE
+    t_id = theme.id if theme else None
+    brief = theme.invitation_design_brief if theme else None
+    return t_id, palette, brief
+
+
+def _resolve_card_wording(
+    payload: InvitationGenerateRequest,
+    event: Event,
+    host_name: str | None,
+    date_str: str,
+    venue_str: str,
+    muhurat_time: str | None,
+    ceremonies: list[str],
+    design_brief: str | None,
+) -> str:
+    if payload.wording_text:
+        return payload.wording_text
+    wording_res = InvitationWordingAgent.compose_wording(
+        event_name=event.name,
+        host_name=host_name,
+        event_type=event.event_type,
+        date_str=date_str,
+        venue_str=venue_str,
+        muhurat_time=muhurat_time,
+        ceremony_names=ceremonies,
+        design_brief=design_brief,
+    )
+    idx = payload.wording_variant_index or 0
+    if 0 <= idx < len(wording_res.variants):
+        return wording_res.variants[idx].body_text
+    return wording_res.variants[0].body_text
+
+
+def _render_guest_cards(
+    guests: list[Guest],
+    event: Event,
+    theme_proposal_id: str | None,
+    layout_variant: str,
+    wording_text: str,
+    host_name: str | None,
+    date_str: str,
+    venue_str: str,
+    muhurat_time: str | None,
+    ceremonies: list[str],
+    palette: list[str],
+    db: Session,
+) -> tuple[list[InvitationCard], list[FailedGuestSummary]]:
+    created_cards: list[InvitationCard] = []
+    failed_guests: list[FailedGuestSummary] = []
+    for g in guests:
+        try:
+            png_bytes, pdf_bytes = InvitationCardRenderer.render_card(
+                event_name=event.name,
+                host_name=host_name,
+                date_str=date_str,
+                venue_str=venue_str,
+                wording_text=wording_text,
+                muhurat_time=muhurat_time,
+                ceremony_names=ceremonies,
+                guest_name=g.name,
+                guest_diet=g.diet,
+                palette=palette,
+                layout_variant=layout_variant,
+            )
+            card = InvitationCard(
+                event_id=event.id,
+                theme_proposal_id=theme_proposal_id,
+                layout_variant=layout_variant,
+                wording_text=wording_text,
+                guest_id=g.id,
+                rendered_png=png_bytes,
+                rendered_pdf=pdf_bytes,
+                generated_at=datetime.now(UTC),
+            )
+            db.add(card)
+            created_cards.append(card)
+        except (ValueError, RuntimeError, OSError, KeyError) as err:
+            logger.error("Failed to render card for guest %s (%s): %s", g.id, g.name, err)
+            failed_guests.append(FailedGuestSummary(guest_id=g.id, name=g.name, reason=str(err)))
+    return created_cards, failed_guests
+
+
+def _render_generic_card(
+    event: Event,
+    theme_proposal_id: str | None,
+    layout_variant: str,
+    wording_text: str,
+    host_name: str | None,
+    date_str: str,
+    venue_str: str,
+    muhurat_time: str | None,
+    ceremonies: list[str],
+    palette: list[str],
+    db: Session,
+) -> InvitationCard:
+    try:
+        png_bytes, pdf_bytes = InvitationCardRenderer.render_card(
+            event_name=event.name,
+            host_name=host_name,
+            date_str=date_str,
+            venue_str=venue_str,
+            wording_text=wording_text,
+            muhurat_time=muhurat_time,
+            ceremony_names=ceremonies,
+            guest_name=None,
+            guest_diet=None,
+            palette=palette,
+            layout_variant=layout_variant,
+        )
+        card = InvitationCard(
+            event_id=event.id,
+            theme_proposal_id=theme_proposal_id,
+            layout_variant=layout_variant,
+            wording_text=wording_text,
+            guest_id=None,
+            rendered_png=png_bytes,
+            rendered_pdf=pdf_bytes,
+            generated_at=datetime.now(UTC),
+        )
+        db.add(card)
+        return card
+    except (ValueError, RuntimeError, OSError, KeyError, SQLAlchemyError) as err:
+        logger.error("Failed to render generic card: %s", err)
+        raise HTTPException(status_code=500, detail=f"Card composition failed: {err}") from err
+
+
+def _build_card_summaries(cards: list[InvitationCard], event_id: str) -> list[InvitationCardSummary]:
+    summaries = []
+    for c in cards:
+        g_name = c.guest.name if c.guest else None
+        preview = (c.wording_text[:120] + "...") if len(c.wording_text) > 120 else c.wording_text
+        summaries.append(
+            InvitationCardSummary(
+                id=c.id,
+                event_id=c.event_id,
+                layout_variant=c.layout_variant,
+                guest_id=c.guest_id,
+                guest_name=g_name,
+                wording_preview=preview,
+                generated_at=c.generated_at,
+                png_download_url=f"/api/v1/events/{event_id}/invitations/{c.id}/download?format=png",
+                pdf_download_url=f"/api/v1/events/{event_id}/invitations/{c.id}/download?format=pdf",
+            )
+        )
+    return summaries
+
+
 @router.post(
     "/generate", response_model=InvitationBatchResponse, status_code=status.HTTP_201_CREATED
 )
@@ -213,145 +355,31 @@ def generate_invitation_cards(
     Per-guest errors are isolated and returned in failed_guests without failing the entire batch.
     """
     host_name, date_str, venue_str, muhurat_time, ceremonies = _resolve_event_logistics(event, db)
-
-    # Resolve Theme
-    theme = None
-    if payload.theme_proposal_id:
-        theme = (
-            db.query(ThemeProposal).filter(ThemeProposal.id == payload.theme_proposal_id).first()
-        )
-    if not theme:
-        theme = (
-            db.query(ThemeProposal)
-            .join(ThemeProposal.style_profile)
-            .filter(ThemeProposal.status == "accepted")
-            .first()
-        )
-
-    palette = theme.palette if theme and theme.palette else DEFAULT_PALETTE
-    theme_proposal_id = theme.id if theme else None
-    design_brief = theme.invitation_design_brief if theme else None
-
-    # Resolve Wording Text
-    wording_text = payload.wording_text
-    if not wording_text:
-        wording_res = InvitationWordingAgent.compose_wording(
-            event_name=event.name,
-            host_name=host_name,
-            event_type=event.event_type,
-            date_str=date_str,
-            venue_str=venue_str,
-            muhurat_time=muhurat_time,
-            ceremony_names=ceremonies,
-            design_brief=design_brief,
-        )
-        idx = payload.wording_variant_index or 0
-        if 0 <= idx < len(wording_res.variants):
-            wording_text = wording_res.variants[idx].body_text
-        else:
-            wording_text = wording_res.variants[0].body_text
-
+    t_id, palette, brief = _resolve_theme_and_palette(payload.theme_proposal_id, db)
+    wording_text = _resolve_card_wording(
+        payload, event, host_name, date_str, venue_str, muhurat_time, ceremonies, brief
+    )
     layout_variant = payload.layout_variant or "classic_royal"
 
-    # Fetch Guests
     guests = db.query(Guest).filter(Guest.event_id == event_id).all()
-
-    created_cards: list[InvitationCard] = []
-    failed_guests: list[FailedGuestSummary] = []
-
     if guests:
-        # Batch generation: One card per guest
-        for g in guests:
-            try:
-                png_bytes, pdf_bytes = InvitationCardRenderer.render_card(
-                    event_name=event.name,
-                    host_name=host_name,
-                    date_str=date_str,
-                    venue_str=venue_str,
-                    wording_text=wording_text,
-                    muhurat_time=muhurat_time,
-                    ceremony_names=ceremonies,
-                    guest_name=g.name,
-                    guest_diet=g.diet,
-                    palette=palette,
-                    layout_variant=layout_variant,
-                )
-
-                card = InvitationCard(
-                    event_id=event.id,
-                    theme_proposal_id=theme_proposal_id,
-                    layout_variant=layout_variant,
-                    wording_text=wording_text,
-                    guest_id=g.id,
-                    rendered_png=png_bytes,
-                    rendered_pdf=pdf_bytes,
-                    generated_at=datetime.now(UTC),
-                )
-                db.add(card)
-                created_cards.append(card)
-            except (ValueError, RuntimeError, OSError, KeyError) as err:
-                logger.error("Failed to render card for guest %s (%s): %s", g.id, g.name, err)
-                failed_guests.append(
-                    FailedGuestSummary(guest_id=g.id, name=g.name, reason=str(err))
-                )
+        created_cards, failed_guests = _render_guest_cards(
+            guests, event, t_id, layout_variant, wording_text, host_name,
+            date_str, venue_str, muhurat_time, ceremonies, palette, db
+        )
     else:
-        # Single generic card
-        try:
-            png_bytes, pdf_bytes = InvitationCardRenderer.render_card(
-                event_name=event.name,
-                host_name=host_name,
-                date_str=date_str,
-                venue_str=venue_str,
-                wording_text=wording_text,
-                muhurat_time=muhurat_time,
-                ceremony_names=ceremonies,
-                guest_name=None,
-                guest_diet=None,
-                palette=palette,
-                layout_variant=layout_variant,
-            )
-
-            card = InvitationCard(
-                event_id=event.id,
-                theme_proposal_id=theme_proposal_id,
-                layout_variant=layout_variant,
-                wording_text=wording_text,
-                guest_id=None,
-                rendered_png=png_bytes,
-                rendered_pdf=pdf_bytes,
-                generated_at=datetime.now(UTC),
-            )
-            db.add(card)
-            created_cards.append(card)
-        except (ValueError, RuntimeError, OSError, KeyError, SQLAlchemyError) as err:
-            logger.error("Failed to render generic card: %s", err)
-            raise HTTPException(status_code=500, detail=f"Card composition failed: {err}") from err
+        card = _render_generic_card(
+            event, t_id, layout_variant, wording_text, host_name,
+            date_str, venue_str, muhurat_time, ceremonies, palette, db
+        )
+        created_cards = [card]
+        failed_guests = []
 
     db.commit()
     for c in created_cards:
         db.refresh(c)
 
-    # Format summaries
-    card_summaries: list[InvitationCardSummary] = []
-    for c in created_cards:
-        g_name = None
-        if c.guest:
-            g_name = c.guest.name
-        card_summaries.append(
-            InvitationCardSummary(
-                id=c.id,
-                event_id=c.event_id,
-                layout_variant=c.layout_variant,
-                guest_id=c.guest_id,
-                guest_name=g_name,
-                wording_preview=(c.wording_text[:120] + "...")
-                if len(c.wording_text) > 120
-                else c.wording_text,
-                generated_at=c.generated_at,
-                png_download_url=f"/api/v1/events/{event.id}/invitations/{c.id}/download?format=png",
-                pdf_download_url=f"/api/v1/events/{event.id}/invitations/{c.id}/download?format=pdf",
-            )
-        )
+    card_summaries = _build_card_summaries(created_cards, event.id)
 
     return InvitationBatchResponse(
         event_id=event.id,

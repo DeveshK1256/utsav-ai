@@ -292,6 +292,51 @@ def get_muhurat_candidates(
     }
 
 
+def _get_city_coordinates(city: str) -> tuple[float, float, float]:
+    city_coords = {
+        "mumbai": (19.0760, 72.8777, 14.0),
+        "delhi": (28.6139, 77.2090, 216.0),
+        "new delhi": (28.6139, 77.2090, 216.0),
+        "bengaluru": (12.9716, 77.5946, 920.0),
+        "bangalore": (12.9716, 77.5946, 920.0),
+    }
+    return city_coords.get(city.lower(), (28.6139, 77.2090, 216.0))
+
+
+def _resolve_pandit_guide_samagri(
+    event: Event, db: Session
+) -> tuple[list[dict[str, Any]], list[Any], str]:
+    if event.secondary_tradition_code and event.tradition_code:
+        service = TraditionMergeService(db)
+        merge_res = service.merge_traditions(event.tradition_code, event.secondary_tradition_code)
+        tradition_summary = (
+            f"{merge_res['primary_tradition']['name']} & {merge_res['secondary_tradition']['name']}"
+        )
+        return merge_res["samagri_items"], merge_res["family_alignment_points"], tradition_summary
+
+    if event.tradition_code:
+        tradition = db.query(Tradition).filter(Tradition.code == event.tradition_code).first()
+        raw_items = db.query(RitualItem).filter(RitualItem.tradition_code == event.tradition_code).all()
+        source_name = tradition.regional_name if tradition else "Traditional"
+        items = [
+            {
+                "item_name": i.item_name,
+                "regional_name": i.regional_name,
+                "standard_quantity": i.standard_quantity,
+                "category": i.category,
+                "spiritual_purpose": i.spiritual_purpose,
+                "ritual_name": i.ritual_name,
+                "is_verified": i.is_verified,
+                "source_tradition": source_name,
+            }
+            for i in raw_items
+        ]
+        tradition_summary = tradition.regional_name if tradition else "Custom / Standard"
+        return items, [], tradition_summary
+
+    return [], [], "Custom / Secular"
+
+
 @router.get("/events/{event_id}/pandit-guide")
 def generate_pandit_guide(event_id: str, db: Session = Depends(get_db)) -> dict[str, Any]:
     """
@@ -302,22 +347,11 @@ def generate_pandit_guide(event_id: str, db: Session = Depends(get_db)) -> dict[
     if not event:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Event not found")
 
-    # City coordinates approximation (Delhi default if unknown)
-    city_coords = {
-        "mumbai": (19.0760, 72.8777, 14.0),
-        "delhi": (28.6139, 77.2090, 216.0),
-        "new delhi": (28.6139, 77.2090, 216.0),
-        "bengaluru": (12.9716, 77.5946, 920.0),
-        "bangalore": (12.9716, 77.5946, 920.0),
-    }
-    lat, lon, elev = city_coords.get(event.city.lower(), (28.6139, 77.2090, 216.0))
-
-    # Calculate astronomical panchang for event start date
+    lat, lon, elev = _get_city_coordinates(event.city)
     panchang = default_panchang_provider.calculate_panchang(
         event_date=event.start_date, latitude=lat, longitude=lon, elevation_meters=elev
     )
 
-    # Sub-events / Itinerary
     sub_events = (
         db.query(SubEvent).filter(SubEvent.event_id == event_id).order_by(SubEvent.sort_order).all()
     )
@@ -332,39 +366,7 @@ def generate_pandit_guide(event_id: str, db: Session = Depends(get_db)) -> dict[
         for se in sub_events
     ]
 
-    # Samagri: check if dual tradition or single tradition
-    if event.secondary_tradition_code and event.tradition_code:
-        service = TraditionMergeService(db)
-        merge_res = service.merge_traditions(event.tradition_code, event.secondary_tradition_code)
-        samagri_items = merge_res["samagri_items"]
-        alignment_points = merge_res["family_alignment_points"]
-        tradition_summary = (
-            f"{merge_res['primary_tradition']['name']} & {merge_res['secondary_tradition']['name']}"
-        )
-    elif event.tradition_code:
-        tradition = db.query(Tradition).filter(Tradition.code == event.tradition_code).first()
-        raw_items = (
-            db.query(RitualItem).filter(RitualItem.tradition_code == event.tradition_code).all()
-        )
-        samagri_items = [
-            {
-                "item_name": i.item_name,
-                "regional_name": i.regional_name,
-                "standard_quantity": i.standard_quantity,
-                "category": i.category,
-                "spiritual_purpose": i.spiritual_purpose,
-                "ritual_name": i.ritual_name,
-                "is_verified": i.is_verified,
-                "source_tradition": tradition.regional_name if tradition else "Traditional",
-            }
-            for i in raw_items
-        ]
-        alignment_points = []
-        tradition_summary = tradition.regional_name if tradition else "Custom / Standard"
-    else:
-        samagri_items = []
-        alignment_points = []
-        tradition_summary = "Custom / Secular"
+    samagri_items, alignment_points, tradition_summary = _resolve_pandit_guide_samagri(event, db)
 
     return {
         "event_id": event.id,
