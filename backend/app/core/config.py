@@ -1,9 +1,10 @@
-
 from pydantic import field_validator
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
+    model_config = SettingsConfigDict(case_sensitive=True, env_file=".env", extra="ignore")
+
     PROJECT_NAME: str = "Utsav"
     VERSION: str = "1.0.0-RELEASE"
     API_V1_STR: str = "/api/v1"
@@ -26,10 +27,6 @@ class Settings(BaseSettings):
         if v.startswith("postgresql+psycopg://"):
             return v.replace("postgresql+psycopg://", "postgresql://", 1)
         return v
-
-    class Config:
-        case_sensitive = True
-        env_file = ".env"
 
 
 settings = Settings()

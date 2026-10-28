@@ -3,7 +3,7 @@ from datetime import date, datetime
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 from sqlalchemy.orm import Session
 
 from backend.app.core.security import generate_owner_token, verify_event_owner_token
@@ -49,8 +49,7 @@ class EventResponseSchema(BaseModel):
     status: str
     owner_token: str | None = None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class EventDetailResponseSchema(EventResponseSchema):
@@ -90,7 +89,7 @@ class ComposeUpdateSchema(BaseModel):
 
 
 @router.post("", response_model=EventResponseSchema, status_code=status.HTTP_201_CREATED)
-def create_event(payload: EventCreateSchema, db: Session = Depends(get_db)):
+def create_event(payload: EventCreateSchema, db: Session = Depends(get_db)) -> EventResponseSchema:
     # Find or create user
     user = db.query(User).filter(User.phone_number == payload.host_phone).first()
     if not user:
@@ -129,7 +128,7 @@ def get_event(
     event_id: str,
     event: Event = Depends(verify_event_owner_token),
     db: Session = Depends(get_db)
-):
+) -> EventDetailResponseSchema:
     returned_token = event.owner_token or (event.metadata_json or {}).get("owner_token")
     tier = BudgetScalingEngine.resolve_city_tier(event.city)
     owner_name = (
@@ -212,7 +211,7 @@ def update_event_compose_progress(
     payload: ComposeUpdateSchema,
     event: Event = Depends(verify_event_owner_token),
     db: Session = Depends(get_db)
-):
+) -> EventDetailResponseSchema:
     """
     Orchestration progress persistence for the Compose Celebration flow.
     - Saves current step and shortlist venue picks to metadata_json.
@@ -333,7 +332,7 @@ def delete_event(
     event_id: str,
     event: Event = Depends(verify_event_owner_token),
     db: Session = Depends(get_db)
-):
+) -> dict[str, Any]:
     owner_id = event.owner_id
     db.delete(event)
     db.commit()
