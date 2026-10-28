@@ -53,7 +53,7 @@ BENCHMARK_SEEDS = [
 ]
 
 
-def seed_benchmarks():
+def seed_benchmarks() -> None:
     db = SessionLocal()
     try:
         count = db.scalar(select(VendorBenchmarkSample).limit(1))

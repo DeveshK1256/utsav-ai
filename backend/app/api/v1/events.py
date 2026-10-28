@@ -120,7 +120,7 @@ def create_event(payload: EventCreateSchema, db: Session = Depends(get_db)) -> E
     db.add(event)
     db.commit()
     db.refresh(event)
-    return event
+    return EventResponseSchema.model_validate(event)
 
 
 @router.get("/{event_id}", response_model=EventDetailResponseSchema)

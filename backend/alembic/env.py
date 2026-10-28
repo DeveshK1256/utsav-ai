@@ -18,7 +18,7 @@ if config.config_file_name is not None:
 
 target_metadata = Base.metadata
 
-def get_url():
+def get_url() -> str:
     return settings.DATABASE_URL
 
 def run_migrations_offline() -> None:
@@ -34,7 +34,8 @@ def run_migrations_offline() -> None:
         context.run_migrations()
 
 def run_migrations_online() -> None:
-    configuration = config.get_section(config.config_ini_section)
+    section = config.get_section(config.config_ini_section)
+    configuration = dict(section) if section is not None else {}
     configuration["sqlalchemy.url"] = get_url()
     connectable = engine_from_config(
         configuration,

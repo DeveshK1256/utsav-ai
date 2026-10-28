@@ -67,7 +67,7 @@ def get_panchang_for_date(
         longitude=longitude,
         elevation_meters=elevation_meters
     )
-    return res
+    return PanchangResponseSchema.model_validate(res)
 
 
 @router.get("/traditions")

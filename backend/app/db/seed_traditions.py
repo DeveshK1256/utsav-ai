@@ -1,3 +1,4 @@
+from sqlalchemy.orm import Session
 """
 Seed data for M5 Cultural Intelligence: Curated traditions and ritual items.
 Fulfills the 8 traditions per UTSAV spec:
@@ -172,7 +173,7 @@ CURATED_TRADITIONS: list[dict[str, Any]] = [
 ]
 
 
-def seed_cultural_traditions(db=None):
+def seed_cultural_traditions(db: Session | None = None) -> dict[str, Any]:
     close_db = False
     if db is None:
         db = SessionLocal()

@@ -44,7 +44,7 @@ def normalize_indian_phone(phone: str) -> str:
 class IntakeService:
 
     @classmethod
-    def ensure_default_traditions(cls, db: Session):
+    def ensure_default_traditions(cls, db: Session) -> None:
         known_traditions = [
             ("maharashtrian_vedic", "Maharashtrian Vedic Lagna", "Classical Maharashtrian wedding rituals including Sakharpuda, Haldi, Mandap Muhurat, and Saptapadi."),
             ("gujarati_hindu", "Gujarati Hindu Vivah", "Vibrant Gujarati rituals featuring Mameru, Dandiya Raas, Mandap, and Hastamelap."),

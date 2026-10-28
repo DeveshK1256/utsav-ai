@@ -1,7 +1,7 @@
 import json
 from decimal import ROUND_HALF_UP, Decimal
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 CONFIG_PATH = Path(__file__).resolve().parent.parent / "config" / "city_tiers.json"
 
@@ -9,7 +9,7 @@ CONFIG_PATH = Path(__file__).resolve().parent.parent / "config" / "city_tiers.js
 def load_city_tiers_config() -> dict[str, Any]:
     if CONFIG_PATH.exists():
         with open(CONFIG_PATH, encoding="utf-8") as f:
-            return json.load(f)
+            return cast(dict[str, Any], json.load(f))
     # Default fallback
     return {
         "multipliers": {"tier_1": 1.0, "tier_2": 0.68, "tier_3": 0.45},
@@ -82,7 +82,7 @@ class BudgetScalingEngine:
         cfg = cls.get_config()
         mapping = cfg.get("city_to_tier", {})
         cleaned = city.strip().lower()
-        return mapping.get(cleaned, mapping.get("default", "tier_2"))
+        return str(mapping.get(cleaned, mapping.get("default", "tier_2")))
 
     @classmethod
     def get_city_tier(cls, city: str) -> str:

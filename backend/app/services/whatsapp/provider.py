@@ -57,10 +57,10 @@ class MockWhatsAppProvider(WhatsAppProvider):
     and local development without incurring Meta API calls or requiring approved templates.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.sent_messages: list[dict[str, Any]] = []
 
-    def clear(self):
+    def clear(self) -> None:
         self.sent_messages.clear()
 
     def send_template(

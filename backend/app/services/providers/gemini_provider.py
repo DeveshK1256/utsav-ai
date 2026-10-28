@@ -2,7 +2,7 @@ import base64
 import json
 import logging
 import time
-from typing import Any
+from typing import Any, cast
 
 import httpx
 from pydantic import ValidationError
@@ -218,7 +218,7 @@ class GeminiNegotiationDraftProvider(BaseNegotiationDraftProvider):
                     text = text.removesuffix("```")
                     parsed = json.loads(text.strip())
                     if "polite" in parsed and "firm" in parsed and "bundle_ask" in parsed:
-                        return parsed
+                        return cast(dict[str, dict[str, str]], parsed)
             except Exception as e:
                 logger.warning(f"Gemini negotiation draft attempt {attempts} failed: {e}")
                 if attempts < 3:

@@ -1,7 +1,7 @@
 import logging
 import os
 from abc import ABC, abstractmethod
-from typing import Any
+from typing import Any, cast
 
 logger = logging.getLogger(__name__)
 
@@ -356,7 +356,7 @@ def get_quote_extraction_provider() -> BaseQuoteExtractionProvider:
             from backend.app.services.providers.openai_provider import (
                 OpenAIQuoteExtractionProvider,
             )
-            return OpenAIQuoteExtractionProvider(api_key=openai_key)
+            return cast(BaseQuoteExtractionProvider, OpenAIQuoteExtractionProvider(api_key=openai_key))
         except Exception as exc:
             logger.debug("OpenAIQuoteExtractionProvider initialization failed, falling back: %s", exc)
 
