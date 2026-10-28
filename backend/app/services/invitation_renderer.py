@@ -31,16 +31,29 @@ def hex_to_rgb(hex_str: str | None, default: tuple[int, int, int] = (180, 83, 9)
 
 def get_font(path: str, size: int) -> Any:
     try:
-        if os.path.exists(path):
+        if path and os.path.exists(path):
             return ImageFont.truetype(path, size)
     except Exception as exc:
         logger.debug("Failed loading primary font %s: %s", path, exc)
+    # Prefer bundled NotoSansDevanagari-Regular.ttf before any unbundled system font!
+    try:
+        if os.path.exists(FONT_REGULAR_PATH):
+            return ImageFont.truetype(FONT_REGULAR_PATH, size)
+    except Exception as exc:
+        logger.debug("Failed loading bundled regular font: %s", exc)
     # System fallback or default
     try:
         return ImageFont.truetype("arial.ttf", size)
     except Exception as exc:
         logger.debug("Failed loading system fallback font: %s", exc)
         return ImageFont.load_default()
+
+
+def is_devanagari_text(text: str | None) -> bool:
+    """Returns True if text contains any characters in the Unicode Devanagari block (U+0900..U+097F)."""
+    if not text:
+        return False
+    return any(0x0900 <= ord(c) <= 0x097F for c in text)
 
 
 def wrap_text(text: str, font: Any, max_width: int, draw: ImageDraw.ImageDraw) -> list[str]:
@@ -270,7 +283,7 @@ class InvitationCardRenderer:
         for cx, cy in [(40, 40), (cls.WIDTH - 40, 40), (40, cls.HEIGHT - 40), (cls.WIDTH - 40, cls.HEIGHT - 40)]:
             draw.rectangle([(cx - 8, cy - 8), (cx + 8, cy + 8)], fill=secondary)
 
-        # Fonts
+        # Fonts - All text elements strictly map to the two bundled Noto Sans Devanagari fonts
         font_header_emblem = get_font(FONT_BOLD_PATH, 32)
         font_host = get_font(FONT_REGULAR_PATH, 28)
         font_title = get_font(FONT_BOLD_PATH, 54)
@@ -280,22 +293,35 @@ class InvitationCardRenderer:
         font_guest = get_font(FONT_BOLD_PATH, 34)
         font_sub = get_font(FONT_REGULAR_PATH, 24)
 
+        is_dev = is_devanagari_text(event_name) or is_devanagari_text(host_name) or is_devanagari_text(wording)
+
         # 2. Header Emblem
         emblem_text = "|| शुभ विवाह ||" if "vivah" in event_name.lower() or "wedding" in event_name.lower() else "|| श्री गणेशाय नमः ||"
         bbox = draw.textbbox((0, 0), emblem_text, font=font_header_emblem)
         w = bbox[2] - bbox[0]
         draw.text(((cls.WIDTH - w) // 2, 120), emblem_text, fill=secondary, font=font_header_emblem)
 
-        # 3. Host Introduction
+        # 3. Host Introduction (Subtitles & Host Name)
         cur_y = 200
         if host_name:
-            host_intro = f"Together with their families\n{host_name}\nrequest the honor of your presence"
-            for line in host_intro.split("\n"):
+            if is_dev:
+                host_intro_lines = [
+                    "सस्नेह निमंत्रण",
+                    host_name,
+                    "आपल्या उपस्थितीचे नम्र आवाहन"
+                ]
+            else:
+                host_intro_lines = [
+                    "Together with their families",
+                    host_name,
+                    "request the honor of your presence"
+                ]
+            for line in host_intro_lines:
                 b = draw.textbbox((0, 0), line, font=font_host)
                 draw.text(((cls.WIDTH - (b[2] - b[0])) // 2, cur_y), line, fill=(70, 70, 70), font=font_host)
                 cur_y += 40
         else:
-            intro_line = "We cordially request the honor of your presence"
+            intro_line = "आपणास व आपल्या परिवारास सस्नेह निमंत्रण" if is_dev else "We cordially request the honor of your presence"
             b = draw.textbbox((0, 0), intro_line, font=font_host)
             draw.text(((cls.WIDTH - (b[2] - b[0])) // 2, cur_y), intro_line, fill=(70, 70, 70), font=font_host)
             cur_y += 45
@@ -335,7 +361,8 @@ class InvitationCardRenderer:
         draw.text(((cls.WIDTH - (b[2] - b[0])) // 2, box_y1 + 18), date_display, fill=primary, font=font_badge)
 
         if muhurat:
-            muhurat_text = f"Shubh Muhurat: {muhurat}"
+            muhurat_prefix = "शुभ मुहूर्त: " if is_dev else "Shubh Muhurat: "
+            muhurat_text = f"{muhurat_prefix}{muhurat}"
             b = draw.textbbox((0, 0), muhurat_text, font=font_sub)
             draw.text(((cls.WIDTH - (b[2] - b[0])) // 2, box_y1 + 68), muhurat_text, fill=secondary, font=font_sub)
 
@@ -353,7 +380,7 @@ class InvitationCardRenderer:
         draw.line([(cls.WIDTH // 2 - 120, cur_y), (cls.WIDTH // 2 + 120, cur_y)], fill=accent, width=2)
         cur_y += 25
 
-        venue_intro = "VENUE"
+        venue_intro = "स्थळ" if is_dev else "VENUE"
         b = draw.textbbox((0, 0), venue_intro, font=font_sub)
         draw.text(((cls.WIDTH - (b[2] - b[0])) // 2, cur_y), venue_intro, fill=(100, 100, 100), font=font_sub)
         cur_y += 35
@@ -371,17 +398,19 @@ class InvitationCardRenderer:
         footer_y += 35
 
         if guest_name:
-            guest_label = f"Specially Invited: {guest_name}"
+            guest_prefix = "यजमानांतर्फे निमंत्रक: " if is_dev else "Specially Invited: "
+            guest_label = f"{guest_prefix}{guest_name}"
             guest_disp = truncate_with_ellipsis(guest_label, font_guest, cls.WIDTH - 200, draw)
             b = draw.textbbox((0, 0), guest_disp, font=font_guest)
             draw.text(((cls.WIDTH - (b[2] - b[0])) // 2, footer_y), guest_disp, fill=secondary, font=font_guest)
 
             if guest_diet and guest_diet.lower() != "none":
-                diet_line = f"Special Hospitality: {guest_diet.capitalize()}"
+                diet_prefix = "विशेष आदरातिथ्य: " if is_dev else "Special Hospitality: "
+                diet_line = f"{diet_prefix}{guest_diet}"
                 b = draw.textbbox((0, 0), diet_line, font=font_sub)
                 draw.text(((cls.WIDTH - (b[2] - b[0])) // 2, footer_y + 50), diet_line, fill=(90, 90, 90), font=font_sub)
         else:
-            generic_label = "Warmest Welcome to You and Your Family"
+            generic_label = "आपले व आपल्या परिवाराचे सहर्ष स्वागत" if is_dev else "Warmest Welcome to You and Your Family"
             b = draw.textbbox((0, 0), generic_label, font=font_guest)
             draw.text(((cls.WIDTH - (b[2] - b[0])) // 2, footer_y), generic_label, fill=primary, font=font_guest)
 
@@ -411,11 +440,14 @@ class InvitationCardRenderer:
         font_guest = get_font(FONT_BOLD_PATH, 36)
         font_sub = get_font(FONT_REGULAR_PATH, 22)
 
+        is_dev = is_devanagari_text(event_name) or is_devanagari_text(host_name) or is_devanagari_text(wording)
+
         start_x = 100
         cur_y = 120
 
         # Subtitle badge
-        draw.text((start_x, cur_y), "CORDIAL INVITATION", fill=accent, font=font_label)
+        badge_text = "सस्नेह निमंत्रण" if is_dev else "CORDIAL INVITATION"
+        draw.text((start_x, cur_y), badge_text, fill=accent, font=font_label)
         cur_y += 50
 
         # Event Title
@@ -428,7 +460,8 @@ class InvitationCardRenderer:
 
         # Host
         if host_name:
-            draw.text((start_x, cur_y), f"Hosted by {host_name}", fill=(100, 100, 100), font=font_host)
+            host_text = f"निमंत्रक: {host_name}" if is_dev else f"Hosted by {host_name}"
+            draw.text((start_x, cur_y), host_text, fill=(100, 100, 100), font=font_host)
             cur_y += 50
 
         cur_y += 20
@@ -445,19 +478,22 @@ class InvitationCardRenderer:
         cur_y += 50
 
         # Date & Time block
-        draw.text((start_x, cur_y), "WHEN", fill=accent, font=font_label)
+        when_text = "दिनांक व वेळ" if is_dev else "WHEN"
+        draw.text((start_x, cur_y), when_text, fill=accent, font=font_label)
         cur_y += 35
         draw.text((start_x, cur_y), date_str, fill=secondary, font=font_meta)
         cur_y += 45
 
         if muhurat:
-            draw.text((start_x, cur_y), f"Auspicious Muhurat Window: {muhurat}", fill=primary, font=font_sub)
+            muh_prefix = "शुभ मुहूर्त: " if is_dev else "Auspicious Muhurat Window: "
+            draw.text((start_x, cur_y), f"{muh_prefix}{muhurat}", fill=primary, font=font_sub)
             cur_y += 40
 
         cur_y += 30
 
         # Venue block
-        draw.text((start_x, cur_y), "WHERE", fill=accent, font=font_label)
+        where_text = "स्थळ" if is_dev else "WHERE"
+        draw.text((start_x, cur_y), where_text, fill=accent, font=font_label)
         cur_y += 35
         venue_lines = wrap_text(venue_str, font_venue, cls.WIDTH - 200, draw)
         for v_line in venue_lines[:3]:
@@ -470,11 +506,15 @@ class InvitationCardRenderer:
         footer_y += 40
 
         if guest_name:
-            draw.text((start_x, footer_y), f"Guest of Honor: {guest_name}", fill=primary, font=font_guest)
+            guest_prefix = "यजमानांतर्फे निमंत्रक: " if is_dev else "Guest of Honor: "
+            draw.text((start_x, footer_y), f"{guest_prefix}{guest_name}", fill=primary, font=font_guest)
             if guest_diet:
-                draw.text((start_x, footer_y + 55), f"Preference: {guest_diet.capitalize()}", fill=(120, 120, 120), font=font_sub)
+                diet_prefix = "विशेष आदरातिथ्य: " if is_dev else "Preference: "
+                diet_val = guest_diet if is_dev else guest_diet.capitalize()
+                draw.text((start_x, footer_y + 55), f"{diet_prefix}{diet_val}", fill=(120, 120, 120), font=font_sub)
         else:
-            draw.text((start_x, footer_y), "A Warm Welcome Awaits You", fill=primary, font=font_guest)
+            gen_label = "आपले व आपल्या परिवाराचे सहर्ष स्वागत" if is_dev else "A Warm Welcome Awaits You"
+            draw.text((start_x, footer_y), gen_label, fill=primary, font=font_guest)
 
         return img
 
@@ -490,6 +530,8 @@ class InvitationCardRenderer:
         img = Image.new("RGB", (cls.WIDTH, cls.HEIGHT), bg_color)
         draw = ImageDraw.Draw(img)
 
+        is_dev = is_devanagari_text(event_name) or is_devanagari_text(host_name) or is_devanagari_text(wording)
+
         # Ornate double framing with scalloped effect
         draw.rectangle([(50, 50), (cls.WIDTH - 50, cls.HEIGHT - 50)], outline=secondary, width=4)
         draw.rectangle([(68, 68), (cls.WIDTH - 68, cls.HEIGHT - 68)], outline=accent, width=2)
@@ -497,7 +539,7 @@ class InvitationCardRenderer:
         # Top decorative banner
         draw.rectangle([(150, 40), (cls.WIDTH - 150, 110)], fill=primary)
         font_badge = get_font(FONT_BOLD_PATH, 30)
-        festive_banner = "UTSAHAM — CELEBRATION"
+        festive_banner = "उत्सव — आनंद सोहळा" if is_dev else "UTSAHAM — CELEBRATION"
         bbox = draw.textbbox((0, 0), festive_banner, font=font_badge)
         draw.text(((cls.WIDTH - (bbox[2] - bbox[0])) // 2, 58), festive_banner, fill=(255, 255, 255), font=font_badge)
 
@@ -512,14 +554,14 @@ class InvitationCardRenderer:
 
         # Host line
         if host_name:
-            h_line = f"With the blessings of elders & family, {host_name}"
+            h_line = f"ज्येष्ठांच्या आशीर्वादाने, {host_name}" if is_dev else f"With the blessings of elders & family, {host_name}"
             h_wrapped = wrap_text(h_line, font_host, cls.WIDTH - 240, draw)
             for hl in h_wrapped:
                 b = draw.textbbox((0, 0), hl, font=font_host)
                 draw.text(((cls.WIDTH - (b[2] - b[0])) // 2, cur_y), hl, fill=(70, 60, 50), font=font_host)
                 cur_y += 40
         else:
-            hl = "With joy and gratitude, we invite you to join"
+            hl = "सस्नेह निमंत्रणपूर्वक आपणास आग्रहाचे आमंत्रण" if is_dev else "With joy and gratitude, we invite you to join"
             b = draw.textbbox((0, 0), hl, font=font_host)
             draw.text(((cls.WIDTH - (b[2] - b[0])) // 2, cur_y), hl, fill=(70, 60, 50), font=font_host)
             cur_y += 40
@@ -555,14 +597,15 @@ class InvitationCardRenderer:
         draw.text(((cls.WIDTH - (b[2] - b[0])) // 2, cy1 + 16), date_str, fill=primary, font=font_meta)
 
         if muhurat:
-            muh_txt = f"Auspicious Shubh Muhurat: {muhurat}"
+            muh_prefix = "शुभ मुहूर्त: " if is_dev else "Auspicious Shubh Muhurat: "
+            muh_txt = f"{muh_prefix}{muhurat}"
             b = draw.textbbox((0, 0), muh_txt, font=font_sub)
             draw.text(((cls.WIDTH - (b[2] - b[0])) // 2, cy1 + 72), muh_txt, fill=secondary, font=font_sub)
 
         cur_y = cy1 + cart_h + 40
 
         # Venue
-        v_title = "— CELEBRATION VENUE —"
+        v_title = "— स्थळ —" if is_dev else "— CELEBRATION VENUE —"
         b = draw.textbbox((0, 0), v_title, font=font_sub)
         draw.text(((cls.WIDTH - (b[2] - b[0])) // 2, cur_y), v_title, fill=accent, font=font_sub)
         cur_y += 35
@@ -579,12 +622,18 @@ class InvitationCardRenderer:
         footer_y += 35
 
         if guest_name:
-            g_txt = f"Invited with Love: {guest_name}"
+            g_prefix = "यजमानांतर्फे निमंत्रक: " if is_dev else "Invited with Love: "
+            g_txt = f"{g_prefix}{guest_name}"
             g_disp = truncate_with_ellipsis(g_txt, font_guest, cls.WIDTH - 200, draw)
             b = draw.textbbox((0, 0), g_disp, font=font_guest)
             draw.text(((cls.WIDTH - (b[2] - b[0])) // 2, footer_y), g_disp, fill=secondary, font=font_guest)
+            if guest_diet and guest_diet.lower() != "none":
+                diet_prefix = "विशेष आदरातिथ्य: " if is_dev else "Special Hospitality: "
+                diet_line = f"{diet_prefix}{guest_diet}"
+                b = draw.textbbox((0, 0), diet_line, font=font_sub)
+                draw.text(((cls.WIDTH - (b[2] - b[0])) // 2, footer_y + 50), diet_line, fill=(90, 90, 90), font=font_sub)
         else:
-            g_txt = "Blessings and Presence of You & Your Family Requested"
+            g_txt = "आपले व आपल्या परिवाराचे सहर्ष स्वागत" if is_dev else "Blessings and Presence of You & Your Family Requested"
             b = draw.textbbox((0, 0), g_txt, font=font_guest)
             draw.text(((cls.WIDTH - (b[2] - b[0])) // 2, footer_y), g_txt, fill=primary, font=font_guest)
 
