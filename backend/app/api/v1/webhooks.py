@@ -1,4 +1,6 @@
+import json
 import logging
+from typing import Any
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request, Response
 from sqlalchemy.orm import Session
@@ -17,7 +19,7 @@ def verify_whatsapp_webhook(
     hub_mode: str | None = Query(None, alias="hub.mode"),
     hub_verify_token: str | None = Query(None, alias="hub.verify_token"),
     hub_challenge: str | None = Query(None, alias="hub.challenge")
-):
+) -> Response:
     """
     Meta WhatsApp Cloud API Webhook Challenge Verification.
     Responds with hub.challenge if hub.verify_token matches configured secret.
@@ -37,7 +39,7 @@ async def receive_whatsapp_webhook(
     x_hub_signature_256: str | None = Header(None, alias="X-Hub-Signature-256"),
     x_hub_timestamp: str | None = Header(None, alias="X-Hub-Timestamp"),
     db: Session = Depends(get_db)
-):
+) -> dict[str, Any]:
     """
     Receives real-time inbound events from Meta WhatsApp Cloud API:
     - Message delivery receipts (sent, delivered, read, failed)
@@ -52,8 +54,8 @@ async def receive_whatsapp_webhook(
     if x_hub_timestamp:
         try:
             ts_val = float(x_hub_timestamp)
-        except ValueError:
-            raise HTTPException(status_code=400, detail="Invalid X-Hub-Timestamp header format")
+        except ValueError as err:
+            raise HTTPException(status_code=400, detail="Invalid X-Hub-Timestamp header format") from err
 
     # Meta HMAC Signature Verification & Anti-Replay Guardrail
     is_valid = WhatsAppWebhookService.verify_meta_signature(raw_body, x_hub_signature_256, timestamp=ts_val)
@@ -63,8 +65,8 @@ async def receive_whatsapp_webhook(
 
     try:
         payload = await request.json()
-    except Exception:
-        raise HTTPException(status_code=400, detail="Invalid JSON payload")
+    except (json.JSONDecodeError, ValueError) as err:
+        raise HTTPException(status_code=400, detail="Invalid JSON payload") from err
 
     results = WhatsAppWebhookService.handle_inbound_payload(db, payload)
     return {"status": "processed", "results": results}
