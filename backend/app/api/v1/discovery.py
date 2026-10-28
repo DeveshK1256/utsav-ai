@@ -1,3 +1,4 @@
+from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy.orm import Session
@@ -21,7 +22,7 @@ def get_nearby_vendors(
     category: str | None = Query(None, description="Optional vendor category filter (e.g. venue, lawn, banquet)"),
     sort: str = Query("distance_asc", description="Sort order: distance_asc"),
     db: Session = Depends(get_db)
-):
+) -> VendorDiscoveryResponse:
     """
     Returns nearby vendors/venues ranked by distance.
     Rules:
@@ -52,7 +53,7 @@ def get_nearby_vendors(
 def geocode_location(
     request: Request,
     q: str = Query(..., min_length=2, description="City name or 6-digit Indian pincode to geocode via OpenStreetMap")
-):
+) -> dict[str, Any]:
     """
     Converts a manual city name or 6-digit pincode to coordinates using OpenStreetMap Nominatim.
     Free, no API key, zero-billing, strictly respects 1 req/sec policy with identification header.
@@ -70,4 +71,3 @@ def geocode_location(
         "lng": lng,
         "display_name": display_name
     }
-
