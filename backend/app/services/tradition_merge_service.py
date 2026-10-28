@@ -39,9 +39,10 @@ class CeremonyItemSchema(BaseModel):
 
 
 CEREMONY_CONTENT_ACCURACY_DISCLAIMER = (
-    "This sequence was AI-drafted as a starting point based on general knowledge of customs. "
-    "It has not been reviewed by a priest or community elder and may contain errors, omissions, or "
-    "regionally inappropriate details. Please review carefully with your family and officiant before finalizing."
+    "This sequence was AI-drafted as a starting point based on general knowledge of "
+    "customs. It has not been reviewed by a priest or community elder and may contain "
+    "errors, omissions, or regionally inappropriate details. Please review carefully with "
+    "your family and officiant before finalizing."
 )
 
 
@@ -59,7 +60,11 @@ class MergedRunOfShowSchema(BaseModel):
     family_alignment_points: list[FamilyAlignmentPointSchema]
     content_accuracy_disclaimer: str = Field(default=CEREMONY_CONTENT_ACCURACY_DISCLAIMER)
     timing_disclaimer: str = Field(
-        default="Panchang calculations are astronomical estimates based on Drik Ganita and Ephemeris models. Muhurat dates and ritual sequences must always be confirmed with your family's trusted priest, pandit, or religious officiant."
+        default=(
+            "Panchang calculations are astronomical estimates based on Drik Ganita and "
+            "Ephemeris models. Muhurat dates and ritual sequences must always be confirmed "
+            "with your family's trusted priest, pandit, or religious officiant."
+        )
     )
     disclaimer: str = Field(default=CEREMONY_CONTENT_ACCURACY_DISCLAIMER)
 
@@ -84,9 +89,7 @@ class DeterministicStubTraditionMergeAgent(BaseTraditionMergeAgent):
         self, primary: Tradition, secondary: Tradition, p_code: str
     ) -> tuple[str, list[CeremonyItemSchema], list[FamilyAlignmentPointSchema]]:
         title = f"{primary.regional_name} × {secondary.regional_name} Fusion Vivah"
-        maha_name = (
-            primary.regional_name if "maharashtrian" in p_code else secondary.regional_name
-        )
+        maha_name = primary.regional_name if "maharashtrian" in p_code else secondary.regional_name
         punj_name = primary.regional_name if "punjabi" in p_code else secondary.regional_name
 
         ceremonies = [
@@ -99,8 +102,14 @@ class DeterministicStubTraditionMergeAgent(BaseTraditionMergeAgent):
                 venue_type="Courtyard / Floral Lawn",
                 is_outdoor=True,
                 is_muhurat_locked=False,
-                cultural_significance="Joint application of turmeric (Vatna/Halad) by loved ones from both families for purification and radiant blessings.",
-                family_guidance="Families can apply ubtan in alternating turns to folk dholak songs and Marathi lagna geet.",
+                cultural_significance=(
+                    "Joint application of turmeric (Vatna/Halad) by loved ones from both families "
+                    "for purification and radiant blessings."
+                ),
+                family_guidance=(
+                    "Families can apply ubtan in alternating turns to folk dholak songs and "
+                    "Marathi lagna geet."
+                ),
             ),
             CeremonyItemSchema(
                 name="Lively Jaggo Night & Sangeet Celebration",
@@ -111,8 +120,14 @@ class DeterministicStubTraditionMergeAgent(BaseTraditionMergeAgent):
                 venue_type="Grand Ballroom",
                 is_outdoor=False,
                 is_muhurat_locked=False,
-                cultural_significance="Nocturnal celebratory procession carrying the illuminated Jaggo brass pot, followed by high-energy Bhangra and musical performances.",
-                family_guidance="Maharashtrian family joins in carrying the Jaggo pot with sisters and maternal aunts.",
+                cultural_significance=(
+                    "Nocturnal celebratory procession carrying the illuminated Jaggo brass pot, "
+                    "followed by high-energy Bhangra and musical performances."
+                ),
+                family_guidance=(
+                    "Maharashtrian family joins in carrying the Jaggo pot with sisters and "
+                    "maternal aunts."
+                ),
             ),
             CeremonyItemSchema(
                 name="Chooda Ceremony & Milni Welcome",
@@ -123,8 +138,14 @@ class DeterministicStubTraditionMergeAgent(BaseTraditionMergeAgent):
                 venue_type="Promenade Gateway",
                 is_outdoor=True,
                 is_muhurat_locked=False,
-                cultural_significance="Maternal uncles bless bride with ivory red Chooda and Kalire; male counterparts of both lineages embrace during Milni with stoles and garlands.",
-                family_guidance="Allocate 5 pairs of counterparts (fathers, brothers, maternal uncles) for the Milni exchange.",
+                cultural_significance=(
+                    "Maternal uncles bless bride with ivory red Chooda and Kalire; male "
+                    "counterparts of both lineages embrace during Milni with stoles and garlands."
+                ),
+                family_guidance=(
+                    "Allocate 5 pairs of counterparts (fathers, brothers, maternal uncles) for the "
+                    "Milni exchange."
+                ),
             ),
             CeremonyItemSchema(
                 name="Simant Pujan & Antarpat Vivah Muhurat",
@@ -135,8 +156,14 @@ class DeterministicStubTraditionMergeAgent(BaseTraditionMergeAgent):
                 venue_type="Sacred Mandap Hall",
                 is_outdoor=False,
                 is_muhurat_locked=True,
-                cultural_significance="Simant Pujan welcoming of groom by bride's mother; silk Antarpat held between couple until Mangalashtaka verses culminate at exact Muhurat.",
-                family_guidance="Bride enters under Punjabi floral Phoolon Ki Chaadar, then halts behind the sacred Antarpat cloth.",
+                cultural_significance=(
+                    "Simant Pujan welcoming of groom by bride's mother; silk Antarpat held between "
+                    "couple until Mangalashtaka verses culminate at exact Muhurat."
+                ),
+                family_guidance=(
+                    "Bride enters under Punjabi floral Phoolon Ki Chaadar, then halts behind the "
+                    "sacred Antarpat cloth."
+                ),
             ),
             CeremonyItemSchema(
                 name="Saptapadi & 4 Laavan Circumambulation",
@@ -147,8 +174,14 @@ class DeterministicStubTraditionMergeAgent(BaseTraditionMergeAgent):
                 venue_type="Central Vivah Mandap",
                 is_outdoor=False,
                 is_muhurat_locked=True,
-                cultural_significance="Harmonization of Vedic 7 steps (Saptapadi) around the sacred Vivah fire with the spiritual teachings of 4 Laavan / Pheras.",
-                family_guidance="Priests from both traditions coordinate the mantras: Maharashtrian Pandit leads Saptapadi vows, Punjabi elder reads the Laavan.",
+                cultural_significance=(
+                    "Harmonization of Vedic 7 steps (Saptapadi) around the sacred Vivah fire with "
+                    "the spiritual teachings of 4 Laavan / Pheras."
+                ),
+                family_guidance=(
+                    "Priests from both traditions coordinate the mantras: Maharashtrian Pandit "
+                    "leads Saptapadi vows, Punjabi elder reads the Laavan."
+                ),
             ),
             CeremonyItemSchema(
                 name="Grand Royal Fusion Reception & Banquet",
@@ -159,26 +192,50 @@ class DeterministicStubTraditionMergeAgent(BaseTraditionMergeAgent):
                 venue_type="Imperial Lawn & Ballroom",
                 is_outdoor=True,
                 is_muhurat_locked=False,
-                cultural_significance="Celebratory banquet honoring both heritages with multi-regional dining, toasts, and music.",
-                family_guidance="Bride transitions from morning Paithani saree to bridal evening lehenga.",
+                cultural_significance=(
+                    "Celebratory banquet honoring both heritages with multi-regional dining, "
+                    "toasts, and music."
+                ),
+                family_guidance=(
+                    "Bride transitions from morning Paithani saree to bridal evening lehenga."
+                ),
             ),
         ]
 
         alignment_points = [
             FamilyAlignmentPointSchema(
                 issue="Bridal Entrance Harmony (Phoolon Ki Chaadar vs. Antarpat)",
-                description="Punjabi custom requires bride to enter under a floral canopy held by brothers. Maharashtrian custom requires groom and bride separated by the Antarpat cloth.",
-                recommendation="Brothers escort bride to Mandap threshold under Phoolon Ki Chaadar; once at Mandap, uncles raise the Antarpat cloth until the Mangalashtaka shloka.",
+                description=(
+                    "Punjabi custom requires bride to enter under floral canopy held by brothers. "
+                    "Maharashtrian custom requires couple separated by Antarpat cloth."
+                ),
+                recommendation=(
+                    "Brothers escort bride to Mandap threshold under Phoolon Ki Chaadar; once at "
+                    "Mandap, uncles raise the Antarpat cloth until the Mangalashtaka shloka."
+                ),
             ),
             FamilyAlignmentPointSchema(
                 issue="Dining Transitions & Cultural Cuisines",
-                description="Maharashtrian traditional wedding lunch is traditionally pure satvik vegetarian served on banana leaves. Punjabi evening revelry often calls for rich Mughlai curries.",
-                recommendation="Host a traditional satvik vegetarian seated feast for post-pheras lunch (Pankat style); offer lavish multi-cuisine counters at the evening reception.",
+                description=(
+                    "Maharashtrian traditional wedding lunch is traditionally pure satvik "
+                    "vegetarian served on banana leaves. Punjabi evening revelry often calls for "
+                    "rich Mughlai curries."
+                ),
+                recommendation=(
+                    "Host a traditional satvik vegetarian seated feast for post-pheras lunch "
+                    "(Pankat style); offer lavish multi-cuisine counters at the evening reception."
+                ),
             ),
             FamilyAlignmentPointSchema(
                 issue="Wardrobe and Adornment Changes",
-                description="Maharashtrian bride wears Mundavalya forehead pearls with yellow/green Paithani saree; Punjabi wedding emphasizes red Chooda bangles and hanging Kalire.",
-                recommendation="Bride wears both Chooda and Mundavalya during the morning ceremony, celebrating both her maternal lineage and new marital home.",
+                description=(
+                    "Maharashtrian bride wears Mundavalya forehead pearls with Paithani saree; "
+                    "Punjabi wedding emphasizes red Chooda bangles and hanging Kalire."
+                ),
+                recommendation=(
+                    "Bride wears both Chooda and Mundavalya during the morning ceremony, "
+                    "celebrating both her maternal lineage and new marital home."
+                ),
             ),
         ]
         return title, ceremonies, alignment_points
@@ -233,8 +290,14 @@ class DeterministicStubTraditionMergeAgent(BaseTraditionMergeAgent):
         alignment_points = [
             FamilyAlignmentPointSchema(
                 issue="Priest and Protocol Coordination",
-                description=f"Officiating priests from {primary.regional_name} and {secondary.regional_name} should coordinate vow sequencing.",
-                recommendation="Convene a 30-minute joint briefing with both priests 14 days before the ceremony.",
+                description=(
+                    f"Officiating priests from {primary.regional_name} and "
+                    f"{secondary.regional_name} should coordinate vow sequencing."
+                ),
+                recommendation=(
+                    "Convene a 30-minute joint briefing with both priests 14 days before "
+                    "the ceremony."
+                ),
             ),
             FamilyAlignmentPointSchema(
                 issue="Cultural Attire Coordination",
@@ -262,9 +325,11 @@ class DeterministicStubTraditionMergeAgent(BaseTraditionMergeAgent):
             )
 
         custom_accuracy_disclaimer = (
-            f"This sequence was AI-drafted as a starting point based on general knowledge of {primary.regional_name} and {secondary.regional_name} customs. "
-            f"It has not been reviewed by a priest or community elder and may contain errors, omissions, or "
-            f"regionally inappropriate details. Please review carefully with your family and officiant before finalizing."
+            f"This sequence was AI-drafted as a starting point based on general knowledge of "
+            f"{primary.regional_name} and {secondary.regional_name} customs. "
+            "It has not been reviewed by a priest or community elder and may contain errors, "
+            "omissions, or regionally inappropriate details. Please review carefully with your "
+            "family and officiant before finalizing."
         )
 
         return MergedRunOfShowSchema(
@@ -274,7 +339,11 @@ class DeterministicStubTraditionMergeAgent(BaseTraditionMergeAgent):
             ceremonies=ceremonies,
             family_alignment_points=alignment_points,
             content_accuracy_disclaimer=custom_accuracy_disclaimer,
-            timing_disclaimer="Panchang calculations are astronomical estimates based on Drik Ganita and Ephemeris models. Muhurat dates and ritual sequences must always be confirmed with your family's trusted priest, pandit, or religious officiant.",
+            timing_disclaimer=(
+                "Panchang calculations are astronomical estimates based on Drik Ganita and "
+                "Ephemeris models. Muhurat dates and ritual sequences must always be confirmed "
+                "with your family's trusted priest, pandit, or religious officiant."
+            ),
             disclaimer=custom_accuracy_disclaimer,
         )
 
@@ -301,7 +370,8 @@ class GeminiTraditionMergeAgent(BaseTraditionMergeAgent):
 
             prompt = f"""
 You are Utsav's Senior Cultural & Ritual Intelligence Agent.
-Synthesize a harmonious, respectful cross-cultural wedding run-of-show merging two Indian traditions:
+Synthesize a harmonious, respectful cross-cultural wedding run-of-show merging two Indian
+traditions:
 1. Primary Tradition: {primary.regional_name} ({primary.description})
 2. Secondary Tradition: {secondary.regional_name} ({secondary.description})
 Event Start Date: {start_date.isoformat()}
@@ -309,8 +379,10 @@ Additional Family Context: {notes or "None"}
 
 RULES:
 1. Merge the ceremonies chronologically into a 2-day or 3-day timeline.
-2. For EVERY ceremony, explicitly specify 'origin_tradition' as either '{primary.regional_name}', '{secondary.regional_name}', or 'Shared / Combined'.
-3. Highlight potential cultural friction points (e.g. food, attire, ritual sequence) and provide respectful recommendations in 'family_alignment_points'.
+2. For EVERY ceremony, explicitly specify 'origin_tradition' as either '{primary.regional_name}',
+   '{secondary.regional_name}', or 'Shared / Combined'.
+3. Highlight potential cultural friction points (e.g. food, attire, ritual sequence) and
+   provide respectful recommendations in 'family_alignment_points'.
 4. Respond ONLY with valid JSON conforming to the schema below.
 
 JSON SCHEMA:
@@ -339,7 +411,8 @@ JSON SCHEMA:
       "recommendation": "string"
     }}
   ],
-  "disclaimer": "This sequence was AI-drafted as a starting point based on general knowledge of customs. It has not been reviewed by a priest or community elder and may contain errors, omissions, or regionally inappropriate details. Please review carefully with your family and officiant before finalizing."
+  "disclaimer": "AI-drafted baseline sequence based on general cultural customs.\n"
+                "Review with community priest before finalizing."
 }}
 """
             response = model.generate_content(
@@ -349,14 +422,17 @@ JSON SCHEMA:
             parsed = json.loads(raw_text)
             if "content_accuracy_disclaimer" not in parsed:
                 parsed["content_accuracy_disclaimer"] = (
-                    f"This sequence was AI-drafted as a starting point based on general knowledge of {primary.regional_name} and {secondary.regional_name} customs. "
-                    "It has not been reviewed by a priest or community elder and may contain errors, omissions, or regionally inappropriate details. "
+                    f"This sequence was AI-drafted as a starting point based on general "
+                    f"knowledge of {primary.regional_name} and {secondary.regional_name} customs. "
+                    "It has not been reviewed by a priest or community elder and may contain "
+                    "errors, omissions, or regionally inappropriate details. "
                     "Please review carefully with your family and officiant before finalizing."
                 )
             if "timing_disclaimer" not in parsed:
                 parsed["timing_disclaimer"] = (
-                    "Panchang calculations are astronomical estimates based on Drik Ganita and Ephemeris models. "
-                    "Muhurat dates and ritual sequences must always be confirmed with your family's trusted priest, pandit, or religious officiant."
+                    "Panchang calculations are astronomical estimates based on Drik Ganita and "
+                    "Ephemeris models. Muhurat dates and ritual sequences must always be confirmed "
+                    "with your family's trusted priest, pandit, or religious officiant."
                 )
             return MergedRunOfShowSchema(**parsed)
         except (
@@ -486,7 +562,9 @@ class TraditionMergeService:
     ) -> None:
         shared_entry["provenance"].append(secondary.regional_name)
         shared_entry["regional_name"] += f" / {item.regional_name or item.item_name}"
-        shared_entry["standard_quantity"] = f"{shared_entry['standard_quantity']} (combined envelope)"
+        shared_entry["standard_quantity"] = (
+            f"{shared_entry['standard_quantity']} (combined envelope)"
+        )
         shared_entry["is_verified"] = bool(shared_entry["is_verified"] and item.is_verified)
 
     def _process_secondary_samagri_item(
@@ -529,8 +607,12 @@ class TraditionMergeService:
     def _reconcile_samagri(
         self, primary: Tradition, secondary: Tradition
     ) -> tuple[list[dict[str, Any]], dict[str, dict[str, Any]]]:
-        primary_items = self.db.query(RitualItem).filter(RitualItem.tradition_code == primary.code).all()
-        secondary_items = self.db.query(RitualItem).filter(RitualItem.tradition_code == secondary.code).all()
+        primary_items = (
+            self.db.query(RitualItem).filter(RitualItem.tradition_code == primary.code).all()
+        )
+        secondary_items = (
+            self.db.query(RitualItem).filter(RitualItem.tradition_code == secondary.code).all()
+        )
         shared_lookup: dict[str, dict[str, Any]] = {}
         reconciled_items: list[dict[str, Any]] = []
 
@@ -588,16 +670,24 @@ class TraditionMergeService:
                 f"should review the flagged alignment points together 2 weeks before the ceremony."
             ),
             "content_accuracy_disclaimer": (
-                f"This ceremonial sequence and ritual items list were AI-drafted as a starting point based on general cultural knowledge of "
-                f"{primary.regional_name} and {secondary.regional_name} customs. "
-                f"It has NOT been reviewed by any priest, pandit, community elder, or religious authority and may contain errors, omissions, or "
-                f"regionally inappropriate details. Please review carefully with your family elders and officiant before finalizing."
+                f"This ceremonial sequence and ritual items list were AI-drafted as a starting "
+                f"point based on general cultural knowledge of {primary.regional_name} and "
+                f"{secondary.regional_name} customs. It has NOT been reviewed by any priest, "
+                "pandit, community elder, or religious authority and may contain errors, "
+                "omissions, or regionally inappropriate details. Please review carefully with your "
+                "family elders and officiant before finalizing."
             ),
-            "timing_disclaimer": "Panchang calculations are astronomical estimates based on Drik Ganita and Ephemeris models. Muhurat dates and ritual sequences must always be confirmed with your family's trusted priest, pandit, or religious officiant.",
+            "timing_disclaimer": (
+                "Panchang calculations are astronomical estimates based on Drik Ganita and "
+                "Ephemeris models. Muhurat dates and ritual sequences must always be confirmed "
+                "with your family's trusted priest, pandit, or religious officiant."
+            ),
             "disclaimer": (
-                f"This sequence was AI-drafted as a starting point based on general knowledge of {primary.regional_name} and {secondary.regional_name} customs. "
-                f"It has not been reviewed by a priest or community elder and may contain errors, omissions, or regionally inappropriate details. "
-                f"Please review carefully with your family and officiant before finalizing."
+                f"This sequence was AI-drafted as a starting point based on general knowledge of "
+                f"{primary.regional_name} and {secondary.regional_name} customs. "
+                "It has not been reviewed by a priest or community elder and may contain errors, "
+                "omissions, or regionally inappropriate details. Please review carefully with your "
+                "family and officiant before finalizing."
             ),
         }
 
@@ -611,7 +701,8 @@ class TraditionMergeService:
     ) -> dict[str, Any]:
         """
         Executes a dual-tradition merge.
-        Returns unified run-of-show with origin labels, reconciled samagri with provenance, and alignment checklist.
+        Returns unified run-of-show with origin labels, reconciled samagri with provenance,
+        and alignment checklist.
         """
         primary = self.get_tradition(primary_code)
         secondary = self.get_tradition(secondary_code)

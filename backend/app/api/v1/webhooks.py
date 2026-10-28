@@ -67,7 +67,8 @@ async def receive_whatsapp_webhook(
     )
     if not is_valid:
         logger.error(
-            "Rejected unauthorized WhatsApp webhook request: invalid HMAC signature or replayed timestamp"
+            "Rejected unauthorized WhatsApp webhook request: invalid HMAC signature "
+            "or replayed timestamp"
         )
         raise HTTPException(status_code=403, detail="Invalid HMAC signature or replayed timestamp")
 

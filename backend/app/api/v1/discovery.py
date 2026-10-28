@@ -31,7 +31,8 @@ def get_nearby_vendors(
     Returns nearby vendors/venues ranked by distance.
     Rules:
     - Pure deterministic geo query with Haversine distance math.
-    - Zero fabricated ratings: all unreviewed vendors return rating_tier='new_unrated' and average_rating=null.
+    - Zero fabricated ratings: all unreviewed vendors return rating_tier='new_unrated'
+      and average_rating=null.
     - Zero fabricated cost: cost_estimate returns {is_estimate: true, limited_data: true}.
     - If lat/lng are omitted, falls back to city center coordinates or city-name matching.
     """
@@ -64,7 +65,10 @@ def geocode_location(
     if not res:
         raise HTTPException(
             status_code=404,
-            detail=f"Could not resolve coordinates for '{q}' in OpenStreetMap. Please verify spelling or try city name.",
+            detail=(
+                f"Could not resolve coordinates for '{q}' in OpenStreetMap. "
+                "Please verify spelling or try city name."
+            ),
         )
     lat, lng, display_name = res
     return {"query": q, "lat": lat, "lng": lng, "display_name": display_name}

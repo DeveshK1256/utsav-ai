@@ -310,7 +310,8 @@ _default_mock_provider = MockWhatsAppProvider()
 def get_whatsapp_provider() -> WhatsAppProvider:
     """
     Factory resolving active WhatsApp provider.
-    Defaults to MockWhatsAppProvider if WHATSAPP_PROVIDER == 'mock' or credentials are not configured.
+    Defaults to MockWhatsAppProvider if WHATSAPP_PROVIDER == 'mock'
+    or credentials are not configured.
     """
     provider_type = os.getenv(
         "WHATSAPP_PROVIDER", getattr(settings, "WHATSAPP_PROVIDER", "mock")

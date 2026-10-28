@@ -58,9 +58,15 @@ class ReplanningService:
             "vendor_re_quote_categories": [],
             "capacity_warning": None,
             "infeasibility_reason": infeasibility_reason,
-            "explanation": f"This change proposal cannot be applied because it is infeasible: {infeasibility_reason}",
+            "explanation": (
+                f"This change proposal cannot be applied because it is infeasible: "
+                f"{infeasibility_reason}"
+            ),
             "mitigation_suggestions": [
-                "Revise parameters to valid ranges (e.g. valid future dates, positive guest counts, budget above committed costs)."
+                (
+                    "Revise parameters to valid ranges (e.g. valid future dates, "
+                    "positive guest counts, budget above committed costs)."
+                )
             ],
             "created_at": datetime.now(UTC).isoformat(),
         }
@@ -96,9 +102,7 @@ class ReplanningService:
         )
 
     @classmethod
-    def _build_guest_count_proposal(
-        cls, event: Event, payload: dict[str, Any]
-    ) -> dict[str, Any]:
+    def _build_guest_count_proposal(cls, event: Event, payload: dict[str, Any]) -> dict[str, Any]:
         from_g = int(payload.get("from_guest_count", event.guest_count))
         to_g = int(payload.get("to_guest_count") or event.guest_count or 100)
         result = BudgetRescalingEngine.rescale_for_guest_count_change(
@@ -136,7 +140,10 @@ class ReplanningService:
             "added_tasks": [
                 {
                     "title": f"Urgent: Settle replacement for {cat} ({v_name})",
-                    "description": f"Vendor {v_name} cancelled. Procure replacement quotes for {cat} immediately.",
+                    "description": (
+                        f"Vendor {v_name} cancelled. "
+                        f"Procure replacement quotes for {cat} immediately."
+                    ),
                     "assigned_role": "Procurement Lead",
                     "duration_minutes": 120,
                 }
@@ -157,7 +164,10 @@ class ReplanningService:
                         "old_amount": b_amt,
                         "new_amount": b_amt,
                         "difference": 0.0,
-                        "formula": f"{cat}: Replacement required — original planned allocation ₹{b_amt:,.2f} preserved for re-contracting",
+                        "formula": (
+                            f"{cat}: Replacement required — original planned allocation "
+                            f"₹{b_amt:,.2f} preserved for re-contracting"
+                        ),
                     }
                 )
         return {
@@ -172,18 +182,14 @@ class ReplanningService:
         }
 
     @classmethod
-    def _build_date_moved_proposal(
-        cls, event: Event, payload: dict[str, Any]
-    ) -> dict[str, Any]:
+    def _build_date_moved_proposal(cls, event: Event, payload: dict[str, Any]) -> dict[str, Any]:
         from_d = date.fromisoformat(str(payload.get("from_date")))
         to_d = date.fromisoformat(str(payload.get("to_date")))
         days_delta = (to_d - from_d).days
         payload["days_shifted"] = days_delta
 
         moved_tasks = DAGScheduler.shift_tasks_for_date_moved(event.tasks, days_delta)
-        sub_event_diffs = DAGScheduler.shift_sub_events_for_date_moved(
-            event.sub_events, days_delta
-        )
+        sub_event_diffs = DAGScheduler.shift_sub_events_for_date_moved(event.sub_events, days_delta)
         return {
             "budget_diffs": [],
             "budget_old": float(event.total_budget),
@@ -200,9 +206,7 @@ class ReplanningService:
         }
 
     @classmethod
-    def _build_budget_cut_proposal(
-        cls, event: Event, payload: dict[str, Any]
-    ) -> dict[str, Any]:
+    def _build_budget_cut_proposal(cls, event: Event, payload: dict[str, Any]) -> dict[str, Any]:
         from_b = float(payload.get("from_budget", float(event.total_budget)))
         to_b = float(payload.get("to_budget") or float(event.total_budget))
         result = BudgetRescalingEngine.rescale_for_budget_cut(
@@ -228,13 +232,18 @@ class ReplanningService:
             "added_tasks": [
                 {
                     "title": f"Emergency: Scout replacement venues for {v_name}",
-                    "description": f"Target capacity: {event.venue_capacity or event.guest_count} guests in {event.city}.",
+                    "description": (
+                        f"Target capacity: {event.venue_capacity or event.guest_count} guests "
+                        f"in {event.city}."
+                    ),
                     "assigned_role": "Host",
                     "duration_minutes": 240,
                 },
                 {
                     "title": "Conduct emergency replacement venue site inspections",
-                    "description": "Verify acoustics, fire safety, and stage layout for muhurat timings.",
+                    "description": (
+                        "Verify acoustics, fire safety, and stage layout for muhurat timings."
+                    ),
                     "assigned_role": "Logistics Lead",
                     "duration_minutes": 180,
                 },
@@ -255,7 +264,10 @@ class ReplanningService:
                         "old_amount": b_amt,
                         "new_amount": b_amt,
                         "difference": 0.0,
-                        "formula": f"venue: Replacement venue required — current budget allocation ₹{b_amt:,.2f} preserved for new contract",
+                        "formula": (
+                            "venue: Replacement venue required — current budget allocation "
+                            f"₹{b_amt:,.2f} preserved for new contract"
+                        ),
                     }
                 )
         return {
@@ -647,7 +659,8 @@ class ReplanningService:
 
         if change_event.status not in ("pending", "queued"):
             raise ValueError(
-                f"Cannot reject change event in status '{change_event.status}'. Must be pending or queued."
+                f"Cannot reject change event in status '{change_event.status}'. "
+                "Must be pending or queued."
             )
 
         was_pending = change_event.status == "pending"
@@ -745,9 +758,7 @@ class ReplanningService:
         return None
 
     @classmethod
-    def _check_date_moved_infeasibility(
-        cls, event: Event, payload: dict[str, Any]
-    ) -> str | None:
+    def _check_date_moved_infeasibility(cls, event: Event, payload: dict[str, Any]) -> str | None:
         to_d_raw = payload.get("to_date")
         from_d_raw = payload.get(
             "from_date", event.start_date.isoformat() if event.start_date else None
@@ -761,7 +772,10 @@ class ReplanningService:
             return f"Invalid date format (must be YYYY-MM-DD): {e}"
 
         if to_d < date.today():
-            return f"Cannot move event date to the past ({to_d.isoformat()} is earlier than today {date.today().isoformat()})."
+            return (
+                f"Cannot move event date to the past ({to_d.isoformat()} is earlier than today "
+                f"{date.today().isoformat()})."
+            )
         if to_d == from_d:
             return f"Target date ({to_d.isoformat()}) is identical to current date."
         return None
@@ -777,9 +791,7 @@ class ReplanningService:
         return total
 
     @classmethod
-    def _check_budget_cut_infeasibility(
-        cls, event: Event, payload: dict[str, Any]
-    ) -> str | None:
+    def _check_budget_cut_infeasibility(cls, event: Event, payload: dict[str, Any]) -> str | None:
         to_b_raw = payload.get("to_budget")
         if to_b_raw is None:
             return "Target budget 'to_budget' is required."
@@ -792,13 +804,16 @@ class ReplanningService:
         if to_b <= 0:
             return f"Target budget must be strictly positive (received ₹{to_b:,.2f})."
         if to_b >= from_b:
-            return f"Budget cut target (₹{to_b:,.2f}) must be strictly less than current budget (₹{from_b:,.2f})."
+            return (
+                f"Budget cut target (₹{to_b:,.2f}) must be strictly less than current budget "
+                f"(₹{from_b:,.2f})."
+            )
 
         committed_total = cls._calculate_committed_total(event.budget_items)
         if to_b < committed_total:
             return (
-                f"Target budget (₹{to_b:,.2f}) cannot be less than already committed/paid vendor contracts "
-                f"(₹{committed_total:,.2f})."
+                f"Target budget (₹{to_b:,.2f}) cannot be less than already committed/paid "
+                f"vendor contracts (₹{committed_total:,.2f})."
             )
         return None
 

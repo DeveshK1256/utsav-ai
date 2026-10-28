@@ -69,7 +69,8 @@ def _query_gemini_json_api(
                 hasattr(e, "response") and getattr(e.response, "status_code", None) == 429
             )
             logger.warning(
-                f"{context_desc} attempt {attempts} failed with {type(e).__name__}: {e}. Quota exhausted: {is_429}."
+                f"{context_desc} attempt {attempts} failed with {type(e).__name__}: "
+                f"{e}. Quota exhausted: {is_429}."
             )
             if attempts < 3:
                 time.sleep(2.0 * attempts)
@@ -110,10 +111,12 @@ class GeminiQuoteExtractionProvider(BaseQuoteExtractionProvider):
             )
 
         prompt_system = (
-            "You are an expert Indian wedding and cultural event vendor quote extraction specialist. "
-            "Extract all structured financial and contract information from the provided vendor quotation.\n\n"
+            "You are an expert Indian wedding and cultural event vendor quote extraction "
+            "specialist. Extract all structured financial and contract information from the "
+            "provided vendor quotation.\n\n"
             "CRITICAL RULES:\n"
-            "1. Zero invented facts: only extract numbers, dates, terms, and items present in the document.\n"
+            "1. Zero invented facts: only extract numbers, dates, terms, and items present in "
+            "the document.\n"
             "2. Preserve currency as INR unless specified otherwise.\n"
             "3. Return ONLY a valid JSON object matching this schema:\n"
             "{\n"
@@ -145,7 +148,10 @@ class GeminiQuoteExtractionProvider(BaseQuoteExtractionProvider):
         encoded_data = base64.b64encode(file_bytes).decode("utf-8")
         parts: list[dict[str, Any]] = [
             {
-                "text": f"Document category hint: {category_hint or 'unknown'}. File name: {file_name}.\n\n{prompt_system}"
+                "text": (
+                    f"Document category hint: {category_hint or 'unknown'}. "
+                    f"File name: {file_name}.\n\n{prompt_system}"
+                )
             },
             {
                 "inline_data": {
@@ -175,7 +181,7 @@ class GeminiQuoteExtractionProvider(BaseQuoteExtractionProvider):
             validated.confidence_score = validated.compute_deterministic_confidence()
             return validated
         except ValidationError as e:
-            logger.error(f"Gemini quote extraction validation failed: {e}")
+            logger.exception(f"Gemini quote extraction validation failed: {e}")
             raise ExtractionValidationError(
                 f"Schema validation failed after 2 retries (3 total attempts): {e}"
             ) from e
@@ -220,14 +226,20 @@ class GeminiNegotiationDraftProvider(BaseNegotiationDraftProvider):
 
         competing_info = ""
         if competing_vendor_name and competing_quote_total:
-            competing_info = f"Alternative competitor quote: {competing_vendor_name} offering ₹{competing_quote_total:,.0f}."
+            competing_info = (
+                f"Alternative competitor quote: {competing_vendor_name} "
+                f"offering ₹{competing_quote_total:,.0f}."
+            )
 
         prompt = (
-            f"You are an expert Indian wedding negotiator drafting respectful, culturally grounded negotiation messages for an Indian family.\n"
+            "You are an expert Indian wedding negotiator drafting respectful, culturally "
+            "grounded negotiation messages for an Indian family.\n"
             f"Vendor: {vendor_name} ({category})\n"
             f"Quoted Total: ₹{quoted_total:,.0f}\n"
-            f"Target Budget: ₹{target_amount:,.0f} ({target_discount_pct}% discount target)\n"
-            f"Key Leverage Points & Detected Cost Alerts:\n{leverage_desc}\n"
+            f"Target Budget: ₹{target_amount:,.0f} "
+            f"({target_discount_pct}% discount target)\n"
+            "Key Leverage Points & Detected Cost Alerts:\n"
+            f"{leverage_desc}\n"
             f"{competing_info}\n\n"
             f"Generate three distinct message variants: 'polite', 'firm', and 'bundle_ask'.\n"
             f"Each variant must have both an 'english' and a 'hindi' (Devanagari script) version.\n"
@@ -266,8 +278,9 @@ class GeminiNegotiationDraftProvider(BaseNegotiationDraftProvider):
 
 class GeminiReplanningExplanationProvider(BaseReplanningExplanationProvider):
     """
-    Real Google Gemini provider for generating plain-language replanning explanations and mitigations.
-    Grounded strictly in pre-computed figures. Falls back gracefully to deterministic stub.
+    Real Google Gemini provider for generating plain-language replanning
+    explanations and mitigations. Grounded strictly in pre-computed figures.
+    Falls back gracefully to deterministic stub.
     """
 
     def __init__(self, api_key: str):
@@ -288,20 +301,23 @@ class GeminiReplanningExplanationProvider(BaseReplanningExplanationProvider):
         over_amount = round(new_total - total_budget, 2) if over_budget else 0.0
 
         prompt = (
-            f"You are an expert Indian wedding and cultural event planning advisor (Plan B replanning engine).\n"
+            "You are an expert Indian wedding and cultural event planning advisor "
+            "(Plan B replanning engine).\n"
             f"A change event was processed with final computed numbers:\n"
             f"- Change Type: {change_type}\n"
             f"- Original Budget Total: ₹{diff_summary.get('budget_total_old', 0.0):,.2f}\n"
             f"- Revised Budget Total: ₹{new_total:,.2f}\n"
             f"- Net Budget Delta: ₹{delta:+,.2f}\n"
             f"- Event Ceiling Budget: ₹{total_budget:,.2f}\n"
-            f"- Over Budget: {'YES (by ₹' + f'{over_amount:,.2f}' + ')' if over_budget else 'NO'}\n"
+            f"- Over Budget: "
+            f"{'YES (by ₹' + f'{over_amount:,.2f}' + ')' if over_budget else 'NO'}\n"
             f"- Capacity Exceeded: {diff_summary.get('capacity_exceeded', False)}\n"
             f"- Capacity Warning: {diff_summary.get('capacity_warning')}\n\n"
             f"CRITICAL RULES:\n"
             f"1. Zero invented numbers: only refer to the numbers given above.\n"
             f"2. Provide a reassuring, concise plain-language explanation of what changed.\n"
-            f"3. If over budget, provide 2-3 concrete mitigation suggestions using standard categories (decor, photography, catering).\n"
+            "3. If over budget, provide 2-3 concrete mitigation suggestions using standard "
+            "categories (decor, photography, catering).\n"
             f"Return strictly JSON format:\n"
             "{\n"
             '  "explanation": "string explanation",\n'
@@ -360,14 +376,15 @@ class GeminiVibeProvider(BaseVibeExtractionProvider, BaseThemeGenerationProvider
     ) -> VibeExtractionPayloadSchema:
         if not self.api_key:
             logger.warning(
-                "No GEMINI_API_KEY provided; falling back to deterministic stub for vibe extraction."
+                "No GEMINI_API_KEY provided; fallback to deterministic stub for vibe extraction."
             )
             self.last_provider_used = "deterministic_stub"
             return self.fallback_stub.extract_vibe_from_images(images, text_description)
 
         system_instruction = (
-            "You are an expert Indian wedding and cultural event aesthetic stylist and visual designer.\n"
-            "Analyze the provided inspiration image(s) and accompanying aesthetic description.\n"
+            "You are an expert Indian wedding and cultural event aesthetic stylist and visual "
+            "designer.\nAnalyze the provided inspiration image(s) and accompanying aesthetic "
+            "description.\n"
             "Extract the visual and cultural essence into structured JSON with:\n"
             "{\n"
             '  "images": [\n'
@@ -382,7 +399,8 @@ class GeminiVibeProvider(BaseVibeExtractionProvider, BaseThemeGenerationProvider
             '  "overall_mood_words": ["regal", "vibrant", "traditional", "festive", "auspicious"]\n'
             "}\n\n"
             "CRITICAL RULES:\n"
-            "1. If N images are provided, the 'images' array MUST contain exactly N items corresponding to each image in order.\n"
+            "1. If N images are provided, the 'images' array MUST contain exactly N items "
+            "corresponding to each image in order.\n"
             "2. Each palette must have exactly 5 valid hex color codes starting with #.\n"
             "3. Ground all tags, materials, and flowers in Indian event design traditions.\n"
             "4. Return strictly valid JSON."
@@ -390,7 +408,10 @@ class GeminiVibeProvider(BaseVibeExtractionProvider, BaseThemeGenerationProvider
 
         parts: list[dict[str, Any]] = [
             {
-                "text": f"{system_instruction}\n\nUser Vision Description: {text_description or 'None provided'}"
+                "text": (
+                    f"{system_instruction}\n\n"
+                    f"User Vision Description: {text_description or 'None provided'}"
+                )
             }
         ]
 
@@ -431,14 +452,15 @@ class GeminiVibeProvider(BaseVibeExtractionProvider, BaseThemeGenerationProvider
     ) -> ThemeGenerationPayloadSchema:
         if not self.api_key:
             logger.warning(
-                "No GEMINI_API_KEY provided; falling back to deterministic stub for theme generation."
+                "No GEMINI_API_KEY provided; fallback to deterministic stub for theme generation."
             )
             self.last_provider_used = "deterministic_stub"
             return self.fallback_stub.generate_theme_proposal(style_profile, event_details)
 
         prompt = (
-            "You are an expert Indian wedding and cultural event creative director and theme designer.\n"
-            "Based on the extracted style profile and event parameters, design a comprehensive, cohesive theme.\n\n"
+            "You are an expert Indian wedding and cultural event creative director and theme "
+            "designer.\nBased on the extracted style profile and event parameters, design a "
+            "comprehensive, cohesive theme.\n\n"
             f"Event Parameters:\n"
             f"- Event Type: {event_details.get('event_type', 'Wedding')}\n"
             f"- City: {event_details.get('city', 'Jaipur')}\n"
@@ -449,7 +471,8 @@ class GeminiVibeProvider(BaseVibeExtractionProvider, BaseThemeGenerationProvider
             f"- Mood Keywords: {style_profile.get('mood_words', [])}\n"
             f"- User Vision Notes: {style_profile.get('text_description') or 'None'}\n\n"
             "CRITICAL RULES:\n"
-            "1. ZERO LLM MATH: Do NOT compute rupee amounts or multiply quantities. Only specify the formula string and cost_tier.\n"
+            "1. ZERO LLM MATH: Do NOT compute rupee amounts or multiply quantities. Only "
+            "specify the formula string and cost_tier.\n"
             "2. Return AT LEAST 10 distinct, culturally rich decor items covering:\n"
             "   - stage_backdrop (formula: '1 fixed')\n"
             "   - mandap (formula: '1 fixed')\n"
@@ -459,9 +482,13 @@ class GeminiVibeProvider(BaseVibeExtractionProvider, BaseThemeGenerationProvider
             "   - ceiling_drapes (formula: '1 fixed')\n"
             "   - photobooth (formula: '1 fixed')\n"
             "   - seating_lounges (formula: '1 per 25 guests')\n"
-            "   - cultural_performance (formula: '1 fixed', e.g. traditional welcome nagada/shehnai troupe or welcome folk dancers)\n"
-            "   - default/accents (formulas: '1 fixed', '1 per 15 guests', etc. for physical displays, torans, petal carpets)\n"
-            "   CATEGORY RULES: Live musical acts or welcome performers MUST be categorized as 'cultural_performance' (not 'default'). Full-venue overhead rigging/fabric treatments MUST be categorized as 'ceiling_drapes' (not 'default').\n"
+            "   - cultural_performance (formula: '1 fixed', e.g. traditional welcome "
+            "nagada/shehnai troupe or welcome folk dancers)\n"
+            "   - default/accents (formulas: '1 fixed', '1 per 15 guests', etc. for physical "
+            "displays, torans, petal carpets)\n"
+            "   CATEGORY RULES: Live musical acts or welcome performers MUST be categorized as "
+            "'cultural_performance' (not 'default'). Full-venue overhead rigging/fabric "
+            "treatments MUST be categorized as 'ceiling_drapes' (not 'default').\n"
             "3. cost_tier must be strictly 'low', 'medium', or 'high'.\n"
             "4. sourcing_type must be strictly 'rent', 'diy', or 'buy'.\n"
             "5. Return strictly valid JSON matching this schema:\n"
@@ -474,7 +501,9 @@ class GeminiVibeProvider(BaseVibeExtractionProvider, BaseThemeGenerationProvider
             '  "invitation_design_brief": "string",\n'
             '  "decor_items": [\n'
             "    {\n"
-            '      "category": "stage_backdrop | entrance_arch | table_centerpiece | lighting | photobooth | seating_lounges | mandap | ceiling_drapes | cultural_performance | default",\n'
+            '      "category": "stage_backdrop | entrance_arch | table_centerpiece | lighting | '
+            "photobooth | seating_lounges | mandap | ceiling_drapes | "
+            'cultural_performance | default",\n'
             '      "name": "item title",\n'
             '      "quantity_formula": "1 fixed | 1 per table | 1 per 10 guests | 2 units",\n'
             '      "cost_tier": "low | medium | high",\n'

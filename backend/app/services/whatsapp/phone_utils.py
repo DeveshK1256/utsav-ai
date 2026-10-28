@@ -19,7 +19,9 @@ def _parse_indian_phone(cleaned: str, phone_raw: str) -> str | None:
     digits = _extract_indian_digits(cleaned)
     if digits is None:
         if cleaned.startswith("+91") or (cleaned.startswith("91") and len(cleaned) >= 10):
-            raise ValueError(f"Invalid Indian mobile number '{phone_raw}': 10 digits starting with 6-9 required")
+            raise ValueError(
+                f"Invalid Indian mobile number '{phone_raw}': 10 digits starting with 6-9 required"
+            )
         return None
 
     if digits.isdigit() and digits[0] in "6789":
@@ -60,7 +62,8 @@ def normalize_e164_phone(phone_raw: str) -> str:
         return intl_res
 
     raise ValueError(
-        f"Unparseable phone number '{phone_raw}'. Provide a valid 10-digit Indian mobile or +E.164 format."
+        f"Unparseable phone number '{phone_raw}'. "
+        "Provide a valid 10-digit Indian mobile or +E.164 format."
     )
 
 

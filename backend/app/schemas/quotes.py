@@ -60,8 +60,7 @@ class QuoteExtractionPayloadSchema(BaseModel):
         sub_match = self.subtotal > 0 and abs(items_sum - self.subtotal) <= 2.0
         tot_match = self.total_amount > 0 and abs(items_sum - self.total_amount) <= 2.0
         tax_tot_match = (
-            self.total_amount > 0
-            and abs((items_sum + self.tax_amount) - self.total_amount) <= 2.0
+            self.total_amount > 0 and abs((items_sum + self.tax_amount) - self.total_amount) <= 2.0
         )
         return 0.45 if (sub_match or tot_match or tax_tot_match) else 0.0
 
@@ -81,9 +80,12 @@ class QuoteExtractionPayloadSchema(BaseModel):
           1. Essential Identity (0.10): Non-empty, non-generic vendor name
           2. Financial Non-Zero (0.10): total_amount > 0
           3. Completeness (0.10): len(line_items) >= 1
-          4. Per-Item Arithmetic (0.10): qty * unit_price == total for all line items (within 1.5 INR)
-          5. Math Consistency (0.45): sum(line_items.total) matches subtotal or total (within 2.0 INR)
-          6. Tax & Grand Total Integrity (0.15): subtotal + tax_amount == total or GST included (within 2.0 INR)
+          4. Per-Item Arithmetic (0.10): qty * unit_price == total for all line items
+             (within 1.5 INR)
+          5. Math Consistency (0.45): sum(line_items.total) matches subtotal or total
+             (within 2.0 INR)
+          6. Tax & Grand Total Integrity (0.15): subtotal + tax_amount == total or GST included
+             (within 2.0 INR)
         Guarantees that any quote failing Macro-Math Consistency cannot exceed 0.55 (< 0.60 gate).
         """
         scores = [
@@ -136,8 +138,9 @@ class QuoteDocumentResponseSchema(BaseModel):
     extraction_status: Literal["completed", "flagged_review", "failed_needs_manual_entry"] = Field(
         ...,
         description=(
-            "Extraction state: 'completed' (confidence >= 0.60), 'flagged_review' (confidence < 0.60, e.g. non-quote "
-            "or low clarity document), or 'failed_needs_manual_entry' (corrupted file, unparseable schema, or hard error)"
+            "Extraction state: 'completed' (confidence >= 0.60), 'flagged_review' "
+            "(confidence < 0.60, e.g. non-quote or low clarity document), "
+            "or 'failed_needs_manual_entry' (corrupted file, unparseable schema, or hard error)"
         ),
     )
     total_quoted_amount: float | None = None

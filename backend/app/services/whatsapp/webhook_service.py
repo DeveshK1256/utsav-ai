@@ -35,14 +35,15 @@ class WhatsAppWebhookService:
         max_age_seconds: int = 300,
     ) -> bool:
         """
-        Verifies Meta X-Hub-Signature-256 HMAC SHA256 header and enforces timestamp-based replay protection.
-        Rejects unsigned, forged, or replayed requests (fail-closed).
+        Verifies Meta X-Hub-Signature-256 HMAC SHA256 header and enforces
+        timestamp-based replay protection. Rejects unsigned, forged, or replayed requests.
         """
         if timestamp is not None:
             now = time.time()
             if (now - float(timestamp)) > max_age_seconds or (float(timestamp) - now) > 60:
                 logger.warning(
-                    "Rejected replayed/stale WhatsApp webhook: timestamp delta %.1fs exceeds %ds limit",
+                    "Rejected replayed/stale WhatsApp webhook: timestamp delta %.1fs "
+                    "exceeds %ds limit",
                     now - float(timestamp),
                     max_age_seconds,
                 )
@@ -144,7 +145,7 @@ class WhatsAppWebhookService:
             )
             return 1
         except (SQLAlchemyError, ValueError, RuntimeError, TypeError, KeyError) as e:
-            logger.error("Failed to transmit FAQ response: %s", e)
+            logger.exception("Failed to transmit FAQ response: %s", e)
             return 0
 
     @classmethod
@@ -175,7 +176,8 @@ class WhatsAppWebhookService:
 
         # 3. Free-Text RSVP
         parsed_free = RSVPParser.parse_free_text(text_content)
-        if parsed_free.confidence >= 0.70 and parsed_free.rsvp_status in ("attending", "declined", "maybe"):
+        valid_statuses = ("attending", "declined", "maybe")
+        if parsed_free.confidence >= 0.70 and parsed_free.rsvp_status in valid_statuses:
             return 0, cls._update_guest_rsvp(db, guest, parsed_free), 0
 
         # 4. FAQ query fallback
@@ -195,7 +197,12 @@ class WhatsAppWebhookService:
         except ValueError:
             from_phone = f"+{from_raw}"
 
-        guest = db.query(Guest).filter(Guest.phone == from_phone).order_by(Guest.created_at.desc()).first()
+        guest = (
+            db.query(Guest)
+            .filter(Guest.phone == from_phone)
+            .order_by(Guest.created_at.desc())
+            .first()
+        )
         event = guest.event if guest else db.query(Event).order_by(Event.created_at.desc()).first()
         text_content, button_id = cls._extract_message_content(msg)
 
@@ -239,9 +246,12 @@ class WhatsAppWebhookService:
         for entry in payload.get("entry", []):
             for change in entry.get("changes", []):
                 value = change.get("value", {})
-                results["statuses_updated"] += cls._process_status_callbacks(db, value.get("statuses", []))
+                statuses = value.get("statuses", [])
+                results["statuses_updated"] += cls._process_status_callbacks(db, statuses)
                 for msg in value.get("messages", []):
-                    opt_out, rsvp_upd, faq_sent = cls._process_inbound_message_item(db, msg, provider)
+                    opt_out, rsvp_upd, faq_sent = cls._process_inbound_message_item(
+                        db, msg, provider
+                    )
                     results["opt_outs_recorded"] += opt_out
                     results["rsvps_updated"] += rsvp_upd
                     results["faq_replies_sent"] += faq_sent

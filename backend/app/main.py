@@ -99,7 +99,7 @@ if ENABLE_M4_WHATSAPP:
         app.include_router(guests_router, prefix=settings.API_V1_STR)
         app.include_router(webhooks_router, prefix=settings.API_V1_STR)
     except (ImportError, AttributeError, ValueError) as exc:
-        logger.error("Failed to conditionally register M4 WhatsApp router, skipping: %s", exc)
+        logger.exception("Failed to conditionally register M4 WhatsApp router, skipping: %s", exc)
 
 
 def _background_db_backfill() -> None:
@@ -124,32 +124,38 @@ def _background_db_backfill() -> None:
             if engine.dialect.name == "postgresql":
                 conn.execute(
                     text(
-                        "ALTER TABLE traditions ADD COLUMN IF NOT EXISTS is_verified BOOLEAN DEFAULT FALSE;"
+                        "ALTER TABLE traditions "
+                        "ADD COLUMN IF NOT EXISTS is_verified BOOLEAN DEFAULT FALSE;"
                     )
                 )
                 conn.execute(
                     text(
-                        "ALTER TABLE traditions ADD COLUMN IF NOT EXISTS verification_source VARCHAR(255);"
+                        "ALTER TABLE traditions "
+                        "ADD COLUMN IF NOT EXISTS verification_source VARCHAR(255);"
                     )
                 )
                 conn.execute(
                     text(
-                        "ALTER TABLE ritual_items ADD COLUMN IF NOT EXISTS ritual_name VARCHAR(100);"
+                        "ALTER TABLE ritual_items "
+                        "ADD COLUMN IF NOT EXISTS ritual_name VARCHAR(100);"
                     )
                 )
                 conn.execute(
                     text(
-                        "ALTER TABLE ritual_items ADD COLUMN IF NOT EXISTS category VARCHAR(50) DEFAULT 'puja_samagri';"
+                        "ALTER TABLE ritual_items "
+                        "ADD COLUMN IF NOT EXISTS category VARCHAR(50) DEFAULT 'puja_samagri';"
                     )
                 )
                 conn.execute(
                     text(
-                        "ALTER TABLE ritual_items ADD COLUMN IF NOT EXISTS is_verified BOOLEAN DEFAULT FALSE;"
+                        "ALTER TABLE ritual_items "
+                        "ADD COLUMN IF NOT EXISTS is_verified BOOLEAN DEFAULT FALSE;"
                     )
                 )
                 conn.execute(
                     text(
-                        "ALTER TABLE events ADD COLUMN IF NOT EXISTS secondary_tradition_code VARCHAR(50);"
+                        "ALTER TABLE events "
+                        "ADD COLUMN IF NOT EXISTS secondary_tradition_code VARCHAR(50);"
                     )
                 )
                 conn.execute(
@@ -163,25 +169,45 @@ def _background_db_backfill() -> None:
                 text("""
                 UPDATE budget_items
                 SET scaling_rule = CASE
-                    WHEN lower(category) IN ('venue', 'photography', 'entertainment', 'rituals', 'ritual_priest') THEN 'fixed'
-                    WHEN lower(category) IN ('decor', 'sound_light', 'sound_and_lighting') THEN 'tiered'
-                    WHEN lower(category) IN ('catering', 'rentals', 'wardrobe', 'gifts_favors', 'invitations', 'logistics', 'contingency') THEN 'per_guest'
+                    WHEN lower(category) IN (
+                        'venue', 'photography', 'entertainment', 'rituals', 'ritual_priest'
+                    ) THEN 'fixed'
+                    WHEN lower(category) IN (
+                        'decor', 'sound_light', 'sound_and_lighting'
+                    ) THEN 'tiered'
+                    WHEN lower(category) IN (
+                        'catering', 'rentals', 'wardrobe', 'gifts_favors', 'invitations',
+                        'logistics', 'contingency'
+                    ) THEN 'per_guest'
                     ELSE 'per_guest'
                 END
                 WHERE scaling_rule IS NULL
-                   OR (scaling_rule = 'per_guest' AND lower(category) IN ('venue', 'photography', 'entertainment', 'rituals', 'ritual_priest', 'decor', 'sound_light', 'sound_and_lighting'))
-                   OR (scaling_rule = 'fixed' AND lower(category) IN ('decor', 'sound_light', 'sound_and_lighting', 'catering', 'rentals', 'wardrobe', 'gifts_favors', 'invitations', 'logistics', 'contingency'));
+                   OR (
+                       scaling_rule = 'per_guest' AND lower(category) IN (
+                           'venue', 'photography', 'entertainment', 'rituals', 'ritual_priest',
+                           'decor', 'sound_light', 'sound_and_lighting'
+                       )
+                   )
+                   OR (
+                       scaling_rule = 'fixed' AND lower(category) IN (
+                           'decor', 'sound_light', 'sound_and_lighting', 'catering', 'rentals',
+                           'wardrobe', 'gifts_favors', 'invitations', 'logistics', 'contingency'
+                       )
+                   );
             """)
             )
 
             conn.execute(
                 text(
-                    "UPDATE traditions SET is_verified = FALSE, verification_source = 'AI-drafted baseline, pending community/priest review' WHERE is_verified IS NULL OR is_verified = TRUE;"
+                    "UPDATE traditions SET is_verified = FALSE, "
+                    "verification_source = 'AI-drafted baseline, pending community/priest review' "
+                    "WHERE is_verified IS NULL OR is_verified = TRUE;"
                 )
             )
             conn.execute(
                 text(
-                    "UPDATE ritual_items SET is_verified = FALSE WHERE is_verified IS NULL OR is_verified = TRUE;"
+                    "UPDATE ritual_items SET is_verified = FALSE "
+                    "WHERE is_verified IS NULL OR is_verified = TRUE;"
                 )
             )
 

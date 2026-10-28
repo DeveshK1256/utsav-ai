@@ -185,7 +185,9 @@ def _is_name_or_city_suffix_match(norm1: str, norm2: str) -> bool:
     if norm1 == norm2:
         return True
     if (norm1.startswith(norm2) or norm2.startswith(norm1)) and abs(len(norm1) - len(norm2)) <= 10:
-        remainder = norm1.replace(norm2, "") if len(norm1) > len(norm2) else norm2.replace(norm1, "")
+        remainder = (
+            norm1.replace(norm2, "") if len(norm1) > len(norm2) else norm2.replace(norm1, "")
+        )
         if remainder in {"jaipur", "pune", "bengaluru", "indore", "delhi", "mumbai"}:
             return True
     return False
@@ -293,10 +295,13 @@ class VendorDiscoveryService:
             return (lat, lng, query_text.strip().title())
 
         try:
-            url = f"https://nominatim.openstreetmap.org/search?q={urllib.parse.quote(query_text)}&format=json&countrycodes=in&limit=1"
+            url = (
+                f"https://nominatim.openstreetmap.org/search"
+                f"?q={urllib.parse.quote(query_text)}&format=json&countrycodes=in&limit=1"
+            )
             _validate_safe_outbound_url(url)
             req = urllib.request.Request(url, headers={"User-Agent": OSM_USER_AGENT})
-            with urllib.request.urlopen(req, timeout=4) as resp:  # nosec B310
+            with urllib.request.urlopen(req, timeout=4) as resp:  # nosec B310 # noqa: S310
                 data = json.loads(resp.read().decode("utf-8"))
                 if data and len(data) > 0:
                     first = data[0]
@@ -339,9 +344,17 @@ class VendorDiscoveryService:
     ) -> bool:
         p_lat, p_lng = float(p.latitude or 0.0), float(p.longitude or 0.0)
         for item, _ in accepted:
-            if item.latitude and item.longitude and are_venues_duplicates(
-                name1=p.business_name, lat1=p_lat, lng1=p_lng,
-                name2=item.business_name, lat2=item.latitude, lng2=item.longitude,
+            if (
+                item.latitude
+                and item.longitude
+                and are_venues_duplicates(
+                    name1=p.business_name,
+                    lat1=p_lat,
+                    lng1=p_lng,
+                    name2=item.business_name,
+                    lat2=item.latitude,
+                    lng2=item.longitude,
+                )
             ):
                 return True
         return False
@@ -361,7 +374,11 @@ class VendorDiscoveryService:
         seen_names = set()
 
         for p in sorted_candidates:
-            if p.latitude is None or p.longitude is None or not is_valid_venue_name(p.business_name):
+            if (
+                p.latitude is None
+                or p.longitude is None
+                or not is_valid_venue_name(p.business_name)
+            ):
                 continue
 
             dist = haversine_distance_km(lat, lng, float(p.latitude), float(p.longitude))
@@ -399,8 +416,13 @@ class VendorDiscoveryService:
                 query = query.filter(VendorProfile.city.ilike(f"%{city.strip()}%"))
             results = [cls._profile_to_item(p, distance_km=None) for p in query.all()]
             return VendorDiscoveryResponse(
-                query_lat=None, query_lng=None, query_city=city, radius_km=radius_km,
-                category_filter=category, total_results=len(results), results=results,
+                query_lat=None,
+                query_lng=None,
+                query_city=city,
+                radius_km=radius_km,
+                category_filter=category,
+                total_results=len(results),
+                results=results,
             )
 
         deg_lat = radius_km / 111.0
@@ -421,11 +443,18 @@ class VendorDiscoveryService:
         )
 
         all_candidates = db_query.all()
-        results = cls._deduplicate_and_sort_candidates(all_candidates, resolved_lat, resolved_lng, radius_km)
+        results = cls._deduplicate_and_sort_candidates(
+            all_candidates, resolved_lat, resolved_lng, radius_km
+        )
 
         return VendorDiscoveryResponse(
-            query_lat=resolved_lat, query_lng=resolved_lng, query_city=city,
-            radius_km=radius_km, category_filter=category, total_results=len(results), results=results,
+            query_lat=resolved_lat,
+            query_lng=resolved_lng,
+            query_city=city,
+            radius_km=radius_km,
+            category_filter=category,
+            total_results=len(results),
+            results=results,
         )
 
     @staticmethod
@@ -438,7 +467,9 @@ class VendorDiscoveryService:
         return None
 
     @classmethod
-    def _parse_overpass_element(cls, el: dict[str, Any], city_hint: str | None) -> dict[str, Any] | None:
+    def _parse_overpass_element(
+        cls, el: dict[str, Any], city_hint: str | None
+    ) -> dict[str, Any] | None:
         tags = el.get("tags", {})
         v_name = tags.get("name") or tags.get("name:en")
         if not is_valid_venue_name(v_name):
@@ -475,22 +506,33 @@ class VendorDiscoveryService:
             "https://overpass.kumi.systems/api/interpreter",
             "https://overpass.private.coffee/api/interpreter",
         ]
-        ql = f"""[out:json][timeout:4];
-(
-  node["amenity"="events_venue"](around:{radius_m},{lat},{lng});
-  node["amenity"="community_centre"](around:{radius_m},{lat},{lng});
-  node["tourism"="hotel"]["name"~"banquet|lawn|marriage|garden|resort|palace|convention",i](around:{radius_m},{lat},{lng});
-  node["name"~"banquet|marriage garden|mangal karyalay|kalyana mandap|kalyana mantap|marriage hall",i](around:{radius_m},{lat},{lng});
-);
-out center 15;"""
+        names_regex = (
+            "banquet|marriage garden|mangal karyalay|"
+            "kalyana mandap|kalyana mantap|marriage hall"
+        )
+        hotel_names = "banquet|lawn|marriage|garden|resort|palace|convention"
+        ql = (
+            f"[out:json][timeout:4];\n"
+            f"(\n"
+            f'  node["amenity"="events_venue"](around:{radius_m},{lat},{lng});\n'
+            f'  node["amenity"="community_centre"](around:{radius_m},{lat},{lng});\n'
+            f'  node["tourism"="hotel"]["name"~"{hotel_names}",i]'
+            f"(around:{radius_m},{lat},{lng});\n"
+            f'  node["name"~"{names_regex}",i]'
+            f"(around:{radius_m},{lat},{lng});\n"
+            f");\n"
+            f"out center 15;"
+        )
         overpass_data = urllib.parse.urlencode({"data": ql}).encode("utf-8")
         venues = []
 
         for srv in servers:
             try:
                 _validate_safe_outbound_url(srv)
-                req = urllib.request.Request(srv, data=overpass_data, headers={"User-Agent": OSM_USER_AGENT})
-                with urllib.request.urlopen(req, timeout=1.8) as resp:  # nosec B310
+                req = urllib.request.Request(  # noqa: S310
+                    srv, data=overpass_data, headers={"User-Agent": OSM_USER_AGENT}
+                )
+                with urllib.request.urlopen(req, timeout=1.8) as resp:  # nosec B310 # noqa: S310
                     data = json.loads(resp.read().decode("utf-8"))
                     for el in data.get("elements", []):
                         parsed = cls._parse_overpass_element(el, city_hint)
@@ -498,7 +540,14 @@ out center 15;"""
                             venues.append(parsed)
                     if venues:
                         break
-            except (urllib.error.URLError, TimeoutError, json.JSONDecodeError, KeyError, ValueError, OSError) as e:
+            except (
+                urllib.error.URLError,
+                TimeoutError,
+                json.JSONDecodeError,
+                KeyError,
+                ValueError,
+                OSError,
+            ) as e:
                 logger.debug("Overpass query failed on %s: %s", srv, e)
                 continue
         return venues
@@ -523,7 +572,9 @@ out center 15;"""
             "name": str(v_name).strip(),
             "lat": v_lat,
             "lng": v_lng,
-            "locality": it.get("display_name", "").split(",")[1].strip() if "," in it.get("display_name", "") else None,
+            "locality": it.get("display_name", "").split(",")[1].strip()
+            if "," in it.get("display_name", "")
+            else None,
             "city": target_city or "Nearby",
             "category": "venue",
         }
@@ -533,15 +584,27 @@ out center 15;"""
         if city_hint:
             return city_hint
         try:
-            rev_url = f"https://nominatim.openstreetmap.org/reverse?lat={lat}&lon={lng}&format=json"
+            rev_url = (
+                f"https://nominatim.openstreetmap.org/reverse"
+                f"?lat={lat}&lon={lng}&format=json"
+            )
             _validate_safe_outbound_url(rev_url)
-            rev_req = urllib.request.Request(rev_url, headers={"User-Agent": OSM_USER_AGENT})
-            with urllib.request.urlopen(rev_req, timeout=3.0) as rev_resp:  # nosec B310
+            rev_req = urllib.request.Request(
+                rev_url, headers={"User-Agent": OSM_USER_AGENT}
+            )
+            with urllib.request.urlopen(rev_req, timeout=3.0) as rev_resp:  # nosec B310 # noqa: S310
                 rev_data = json.loads(rev_resp.read().decode("utf-8"))
                 addr: dict[str, Any] = rev_data.get("address", {})
                 city_val = addr.get("city") or addr.get("town") or addr.get("state_district")
                 return str(city_val) if city_val else None
-        except (urllib.error.URLError, TimeoutError, json.JSONDecodeError, KeyError, ValueError, OSError) as exc:
+        except (
+            urllib.error.URLError,
+            TimeoutError,
+            json.JSONDecodeError,
+            KeyError,
+            ValueError,
+            OSError,
+        ) as exc:
             logger.debug("Failed reverse geocoding city lookup: %s", exc)
         return None
 
@@ -555,17 +618,27 @@ out center 15;"""
         for term in search_terms:
             query_str = f"{term} {target_city}" if target_city else term
             try:
-                url = f"https://nominatim.openstreetmap.org/search?q={urllib.parse.quote(query_str)}&format=json&limit=6&countrycodes=in"
+                url = (
+                    f"https://nominatim.openstreetmap.org/search"
+                    f"?q={urllib.parse.quote(query_str)}&format=json&limit=6&countrycodes=in"
+                )
                 _validate_safe_outbound_url(url)
                 req = urllib.request.Request(url, headers={"User-Agent": OSM_USER_AGENT})
-                with urllib.request.urlopen(req, timeout=3.5) as resp:  # nosec B310
+                with urllib.request.urlopen(req, timeout=3.5) as resp:  # nosec B310 # noqa: S310
                     for it in json.loads(resp.read().decode("utf-8")):
                         parsed = cls._parse_nominatim_item(it, target_city, lat, lng, radius_km)
                         if parsed:
                             venues.append(parsed)
                     if len(venues) >= 6:
                         break
-            except (urllib.error.URLError, TimeoutError, json.JSONDecodeError, KeyError, ValueError, OSError) as e:
+            except (
+                urllib.error.URLError,
+                TimeoutError,
+                json.JSONDecodeError,
+                KeyError,
+                ValueError,
+                OSError,
+            ) as e:
                 logger.debug("Nominatim search failed for '%s': %s", query_str, e)
                 continue
         return venues
@@ -600,7 +673,9 @@ out center 15;"""
         if new_profiles_count > 0:
             try:
                 db.commit()
-                logger.info("Persisted %d new OpenStreetMap venues into vendor_profiles", new_profiles_count)
+                logger.info(
+                    "Persisted %d new OpenStreetMap venues into vendor_profiles", new_profiles_count
+                )
             except SQLAlchemyError as e:
                 db.rollback()
                 logger.warning("Failed to commit OSM venues: %s", e)
@@ -609,7 +684,12 @@ out center 15;"""
     def _fetch_and_persist_osm_venues(
         cls, db: Session, lat: float, lng: float, radius_km: float, city_hint: str | None = None
     ) -> None:
-        cache_key = (round(lat, 2), round(lng, 2), int(radius_km), (city_hint or "").lower().strip())
+        cache_key = (
+            round(lat, 2),
+            round(lng, 2),
+            int(radius_km),
+            (city_hint or "").lower().strip(),
+        )
         now = time.time()
 
         with _OVERPASS_CACHE_LOCK:
@@ -640,7 +720,9 @@ out center 15;"""
         return "rated"
 
     @classmethod
-    def _profile_to_item(cls, profile: VendorProfile, distance_km: float | None) -> VendorDiscoveryItem:
+    def _profile_to_item(
+        cls, profile: VendorProfile, distance_km: float | None
+    ) -> VendorDiscoveryItem:
         avg_rating = float(profile.average_rating) if profile.average_rating is not None else None
         rating_count = profile.rating_count or 0
         rating_tier = cls._resolve_rating_tier(avg_rating, rating_count)

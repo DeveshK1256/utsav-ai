@@ -66,7 +66,8 @@ def verify_event_owner_token(
     Guards mutating event operations (POST, PATCH, DELETE) and private reads (GET).
     Resolves event_id from path_params ('event_id' or 'id') or query params.
     Validates provided token against event.owner_token / event.metadata_json['owner_token'].
-    Tokens must strictly be provided via HTTP headers (X-Event-Owner-Token or Authorization: Bearer).
+    Tokens must strictly be provided via HTTP headers (X-Event-Owner-Token or
+    Authorization: Bearer).
     URL query parameter token transmission is permanently disabled to comply with CWE-598.
     Rejects with 403 Forbidden if invalid or missing.
     """
@@ -86,7 +87,9 @@ def verify_event_owner_token(
     if not provided or not expected or not hmac.compare_digest(provided, expected):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Forbidden: Invalid or missing X-Event-Owner-Token. Unauthorized access attempt.",
+            detail=(
+                "Forbidden: Invalid or missing X-Event-Owner-Token. Unauthorized access attempt."
+            ),
         )
 
     return event

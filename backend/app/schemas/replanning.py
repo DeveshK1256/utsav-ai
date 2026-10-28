@@ -53,11 +53,17 @@ class ChangeProposalResponseSchema(BaseModel):
     mitigation_suggestions: list[str] = Field(default_factory=list)
     provider_used: str = Field(
         default="deterministic_stub",
-        description="Actual provider that generated the explanation ('gemini', 'stub', 'stub_fallback_quota_exhausted', 'stub_fallback_error')",
+        description=(
+            "Actual provider that generated the explanation ('gemini', 'stub', "
+            "'stub_fallback_quota_exhausted', 'stub_fallback_error')"
+        ),
     )
     fallback_warning: str | None = Field(
         default=None,
-        description="Prominent alert when an LLM provider fails or is rate-limited and falls back to deterministic stub",
+        description=(
+            "Prominent alert when an LLM provider fails or is rate-limited "
+            "and falls back to deterministic stub"
+        ),
     )
     created_at: datetime
 

@@ -143,7 +143,18 @@ class RSVPParser:
             additional += int(kids_match.group(1))
             explicit = True
 
-        rel_terms = ["wife", "husband", "spouse", "partner", "mother", "father", "brother", "sister", "bhabhi", "bhaiya"]
+        rel_terms = [
+            "wife",
+            "husband",
+            "spouse",
+            "partner",
+            "mother",
+            "father",
+            "brother",
+            "sister",
+            "bhabhi",
+            "bhaiya",
+        ]
         rel_count = sum(1 for rel in rel_terms if rel in lower)
         if rel_count > 0:
             additional += rel_count

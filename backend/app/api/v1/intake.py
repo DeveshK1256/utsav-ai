@@ -63,7 +63,7 @@ def calculate_budget(
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
     except (KeyError, RuntimeError, SQLAlchemyError) as e:
-        logger.error("Budget calculation failed: %s", e)
+        logger.exception("Budget calculation failed: %s", e)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Budget calculation failed: {e!s}",
@@ -86,7 +86,7 @@ def generate_plan(
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
     except (KeyError, RuntimeError, SQLAlchemyError) as e:
-        logger.error("Plan generation failed: %s", e)
+        logger.exception("Plan generation failed: %s", e)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Plan generation failed: {e!s}",

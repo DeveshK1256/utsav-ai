@@ -98,7 +98,8 @@ class DecorCostEngine:
     }
 
     # Rates for standalone fixed accent/display items when categorized under 'default'
-    # Prevents 1-off focal pieces (e.g. welcome easel, brass display) from resolving to 1x distributed trinket rates
+    # Prevents 1-off focal pieces (e.g. welcome easel, brass display)
+    # from resolving to 1x distributed trinket rates
     STANDALONE_DEFAULT_COSTS: ClassVar[dict[str, tuple[float, float]]] = {
         "low": (1800.0, 3200.0),
         "medium": (3500.0, 6500.0),
@@ -196,7 +197,8 @@ class DecorCostEngine:
         """
         Resolves unit cost based on category and tier, applies city multiplier,
         and multiplies by computed quantity.
-        Enforces defensive sanity floors so standalone items never collapse below minimum viable market rates.
+        Enforces defensive sanity floors so standalone items never collapse
+        below minimum viable market rates.
         """
         qty = quantity if quantity is not None else computed_quantity
         cat_clean = (category or "").lower().strip()

@@ -111,8 +111,10 @@ def get_tradition_samagri(code: str, db: Session = Depends(get_db)) -> dict[str,
             "verification_source": tradition.verification_source,
         },
         "content_accuracy_disclaimer": (
-            f"This samagri list was AI-drafted as a starting point based on general knowledge of {tradition.regional_name} customs. "
-            "It has not been reviewed by a priest or community elder and may contain errors, omissions, or regionally inappropriate details. "
+            "This samagri list was AI-drafted as a starting point based on general "
+            f"knowledge of {tradition.regional_name} customs. "
+            "It has not been reviewed by a priest or community elder and may contain "
+            "errors, omissions, or regionally inappropriate details. "
             "Please review carefully with your family and officiant before finalizing."
         ),
         "total_items": len(items),
@@ -138,7 +140,8 @@ def merge_dual_traditions(
 ) -> dict[str, Any]:
     """
     Reconciles two distinct cultural traditions into an integrated schedule and samagri list.
-    Tags source traditions, combines shared sacred items, detects conflicts, and creates elder alignment points.
+    Tags source traditions, combines shared sacred items, detects conflicts, and creates
+    elder alignment points.
     """
     service = TraditionMergeService(db)
     event_name = None
@@ -228,8 +231,9 @@ def get_muhurat_candidates(
     elevation_meters: float = Query(216.0, description="Elevation in meters"),
 ) -> dict[str, Any]:
     """
-    Calculates 3 auspicious candidate muhurat windows (Morning Brahma/Pratah, Midday Abhijit, Evening Godhuli/Twilight)
-    alongside inauspicious Rahu Kaal prohibitions and mandatory priest verification disclaimer.
+    Calculates 3 auspicious candidate muhurat windows (Morning Brahma/Pratah,
+    Midday Abhijit, Evening Godhuli/Twilight) alongside inauspicious Rahu Kaal
+    prohibitions and mandatory priest verification disclaimer.
     """
     p_data = default_panchang_provider.calculate_panchang(
         event_date=event_date,
@@ -257,17 +261,27 @@ def get_muhurat_candidates(
             "name": "Pratah Kaal / Morning Vivah Muhurat",
             "window": f"{m1_start} - {m1_end}",
             "suitability": "Highly Auspicious",
-            "planetary_rationale": f"Solar energy ascendant, {p_data['tithi']['name']} active, favorable nakshatra alignment.",
+            "planetary_rationale": (
+                f"Solar energy ascendant, {p_data['tithi']['name']} active, "
+                "favorable nakshatra alignment."
+            ),
             "is_recommended": True,
         },
         {
             "id": "muhurat-abhijit",
             "name": "Abhijit Muhurat (Midday Solar Zenith)",
-            "window": f"{p_data['abhijit_muhurat']['start'][:5]} - {p_data['abhijit_muhurat']['end'][:5]}",
-            "suitability": "Auspicious (Universal Victory Muhurat)"
-            if p_data["abhijit_muhurat"]["is_auspicious"]
-            else "Caution on Wednesdays",
-            "planetary_rationale": "8th Muhurat of daytime, removes blemishes except when falling on Wednesdays.",
+            "window": (
+                f"{p_data['abhijit_muhurat']['start'][:5]} - "
+                f"{p_data['abhijit_muhurat']['end'][:5]}"
+            ),
+            "suitability": (
+                "Auspicious (Universal Victory Muhurat)"
+                if p_data["abhijit_muhurat"]["is_auspicious"]
+                else "Caution on Wednesdays"
+            ),
+            "planetary_rationale": (
+                "8th Muhurat of daytime, removes blemishes except when falling on Wednesdays."
+            ),
             "is_recommended": p_data["abhijit_muhurat"]["is_auspicious"],
         },
         {
@@ -275,7 +289,10 @@ def get_muhurat_candidates(
             "name": "Godhuli Bela (Twilight Sacred Window)",
             "window": f"{m3_start} - {m3_end}",
             "suitability": "Auspicious Evening Horizon",
-            "planetary_rationale": "Sacred twilight transition, revered across Vedic, Rajasthani, and Bengali traditions.",
+            "planetary_rationale": (
+                "Sacred twilight transition, revered across Vedic, Rajasthani, "
+                "and Bengali traditions."
+            ),
             "is_recommended": False,
         },
     ]
@@ -284,7 +301,10 @@ def get_muhurat_candidates(
         "event_date": event_date.isoformat(),
         "sunrise": p_data["sunrise"],
         "sunset": p_data["sunset"],
-        "rahu_kaal_prohibited_window": f"{p_data['rahu_kaal']['start'][:5]} - {p_data['rahu_kaal']['end'][:5]}",
+        "rahu_kaal_prohibited_window": (
+            f"{p_data['rahu_kaal']['start'][:5]} - "
+            f"{p_data['rahu_kaal']['end'][:5]}"
+        ),
         "tithi": p_data["tithi"],
         "nakshatra": p_data["nakshatra"],
         "candidates": candidates,
@@ -316,7 +336,9 @@ def _resolve_pandit_guide_samagri(
 
     if event.tradition_code:
         tradition = db.query(Tradition).filter(Tradition.code == event.tradition_code).first()
-        raw_items = db.query(RitualItem).filter(RitualItem.tradition_code == event.tradition_code).all()
+        raw_items = (
+            db.query(RitualItem).filter(RitualItem.tradition_code == event.tradition_code).all()
+        )
         source_name = tradition.regional_name if tradition else "Traditional"
         items = [
             {
@@ -383,8 +405,10 @@ def generate_pandit_guide(event_id: str, db: Session = Depends(get_db)) -> dict[
             "Please review all samagri quantities against local family kul-parampara."
         ),
         "content_accuracy_disclaimer": (
-            f"This ceremonial sequence and samagri list were AI-drafted as a starting point based on general cultural knowledge of {tradition_summary} customs. "
-            "It has NOT been reviewed by any priest, pandit, community elder, or religious authority and may contain errors, omissions, or regionally inappropriate details. "
+            "This ceremonial sequence and samagri list were AI-drafted as a starting point "
+            f"based on general cultural knowledge of {tradition_summary} customs. "
+            "It has NOT been reviewed by any priest, pandit, community elder, or religious "
+            "authority and may contain errors, omissions, or regionally inappropriate details. "
             "Please review carefully with your family elders and officiant before finalizing."
         ),
         "disclaimer": panchang["priest_disclaimer"],

@@ -49,7 +49,8 @@ def submit_change_event(
 ) -> ChangeProposalResponseSchema:
     """
     Submits a change event (guest count, vendor cancel, date move, budget cut, venue unavailable).
-    Computes deterministic diffs and returns proposal without mutating database (unless later accepted).
+    Computes deterministic diffs and returns proposal without mutating database
+    (unless later accepted).
     """
     try:
         proposal = ReplanningService.create_change_proposal(db, event_id=id, change_req=payload)
@@ -57,7 +58,7 @@ def submit_change_event(
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
     except (KeyError, RuntimeError, SQLAlchemyError) as e:
-        logger.error("Replanning error for event %s: %s", id, e)
+        logger.exception("Replanning error for event %s: %s", id, e)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Replanning error: {e!s}"
         ) from e
@@ -92,7 +93,7 @@ def accept_change_proposal(
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
     except (KeyError, RuntimeError, SQLAlchemyError) as e:
-        logger.error("Failed to accept proposal %s: %s", change_id, e)
+        logger.exception("Failed to accept proposal %s: %s", change_id, e)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Accept error: {e!s}"
         ) from e
@@ -113,7 +114,7 @@ def reject_change_proposal(
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
     except (KeyError, RuntimeError, SQLAlchemyError) as e:
-        logger.error("Failed to reject proposal %s: %s", change_id, e)
+        logger.exception("Failed to reject proposal %s: %s", change_id, e)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Reject error: {e!s}"
         ) from e
@@ -137,7 +138,7 @@ def patch_change_proposal(
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
     except (KeyError, RuntimeError, SQLAlchemyError) as e:
-        logger.error("Failed to patch proposal %s: %s", change_id, e)
+        logger.exception("Failed to patch proposal %s: %s", change_id, e)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Patch error: {e!s}"
         ) from e

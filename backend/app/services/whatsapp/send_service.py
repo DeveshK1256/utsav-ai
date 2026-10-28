@@ -47,17 +47,20 @@ class WhatsAppSendService:
         if event.event_type == "birthday":
             return (
                 f"Hey {guest_name}! 🎂 You're invited to celebrate {event_name} with {host_name} "
-                f"on {date_str} in {city}. Please RSVP to help us plan the party! Reply 'Yes', 'No', or 'Maybe'."
+                f"on {date_str} in {city}. Please RSVP to help us plan the party! "
+                "Reply 'Yes', 'No', or 'Maybe'."
             )
         elif event.event_type in ("community_festival", "puja"):
             return (
-                f"Namaste {guest_name}! 🙏 {host_name} warmly invites you and your family to {event_name} "
-                f"on {date_str} in {city}. Please confirm your attendance for prasad/seating arrangements."
+                f"Namaste {guest_name}! 🙏 {host_name} warmly invites you and your family "
+                f"to {event_name} on {date_str} in {city}. "
+                "Please confirm your attendance for prasad/seating arrangements."
             )
         else:  # Wedding / general
             return (
-                f"Namaste {guest_name}! 🌸 With the blessings of our elders, {host_name} joyfully invites you "
-                f"to celebrate {event_name} on {date_str} in {city}. Please reply 'Yes' or 'No' to RSVP."
+                f"Namaste {guest_name}! 🌸 With the blessings of our elders, {host_name} "
+                f"joyfully invites you to celebrate {event_name} on {date_str} in {city}. "
+                "Please reply 'Yes' or 'No' to RSVP."
             )
 
     @classmethod

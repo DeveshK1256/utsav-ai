@@ -7,12 +7,14 @@ CRITICAL INTEGRITY INVARIANT:
 All traditions and ritual items are marked is_verified: False with
 verification_source: "AI-drafted baseline, pending community/priest review".
 No liturgical texts or scholarly directories were consulted in sandbox isolation.
-Content represents unverified algorithmic draft baselines requiring mandatory human elder/officiant review.
+Content represents unverified algorithmic draft baselines requiring
+mandatory human elder/officiant review.
 """
 
 import logging
 from typing import Any
 
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from backend.app.db.session import SessionLocal
@@ -26,8 +28,13 @@ CURATED_TRADITIONS: list[dict[str, Any]] = [
     {
         "code": "maharashtrian_vedic",
         "regional_name": "Maharashtrian Vedic Lagna",
-        "description": "Traditional Maharashtrian Hindu wedding customs based on common cultural knowledge.",
-        "cultural_notes": "Key customs include Sakhar Puda, Kelvan, Antarpat separation, Mundavalya adornment, and Saptapadi.",
+        "description": (
+            "Traditional Maharashtrian Hindu wedding customs based on common cultural knowledge."
+        ),
+        "cultural_notes": (
+            "Key customs include Sakhar Puda, Kelvan, Antarpat separation, Mundavalya "
+            "adornment, and Saptapadi."
+        ),
         "is_verified": False,
         "verification_source": UNVERIFIED_SOURCE_LABEL,
         "items": [
@@ -36,7 +43,10 @@ CURATED_TRADITIONS: list[dict[str, Any]] = [
                 "मुंडावळ्या",
                 "2 pairs (Pearl/Bead strings)",
                 "bridal_adornment",
-                "Worn across bride and groom forehead to ward off negative gaze and signify readiness for vivah",
+                (
+                    "Worn across bride and groom forehead to ward off negative gaze and signify "
+                    "readiness for vivah"
+                ),
                 "Vivah Muhurat",
             ),
             (
@@ -44,7 +54,10 @@ CURATED_TRADITIONS: list[dict[str, Any]] = [
                 "अंतरपाट",
                 "1 silk cloth with Swastika print",
                 "ceremonial_fabrics",
-                "Held between bride and groom until the Mangalashtaka shlokas culminate at exact Muhurat",
+                (
+                    "Held between bride and groom until the Mangalashtaka shlokas culminate at "
+                    "exact Muhurat"
+                ),
                 "Mangalashtaka",
             ),
             (
@@ -108,7 +121,10 @@ CURATED_TRADITIONS: list[dict[str, Any]] = [
                 "लाह्या",
                 "500 grams",
                 "offerings",
-                "Poured into holy fire by bride with brother's assistance for prosperity and lineage",
+                (
+                    "Poured into holy fire by bride with brother's assistance for prosperity and "
+                    "lineage"
+                ),
                 "Laja Homa",
             ),
             (
@@ -124,8 +140,14 @@ CURATED_TRADITIONS: list[dict[str, Any]] = [
     {
         "code": "punjabi_traditional",
         "regional_name": "Punjabi Traditional Vivah / Anand Karaj",
-        "description": "Vibrant Punjabi celebration featuring Anand Karaj / Vedic Vivah, Maiyan, Jaggo, and Milni customs.",
-        "cultural_notes": "Characterized by Chooda ceremony, Kalire tying, energetic Jaggo night, Milni elder embrace, and 4 Laavan/Pheras.",
+        "description": (
+            "Vibrant Punjabi celebration featuring Anand Karaj / Vedic Vivah, Maiyan, "
+            "Jaggo, and Milni customs."
+        ),
+        "cultural_notes": (
+            "Characterized by Chooda ceremony, Kalire tying, energetic Jaggo night, "
+            "Milni elder embrace, and 4 Laavan/Pheras."
+        ),
         "is_verified": False,
         "verification_source": UNVERIFIED_SOURCE_LABEL,
         "items": [
@@ -207,7 +229,10 @@ CURATED_TRADITIONS: list[dict[str, Any]] = [
         "code": "bengali_vedic",
         "regional_name": "Bengali Vedic Bibaho",
         "description": "Lyrical Bengali Hindu wedding customs based on common cultural knowledge.",
-        "cultural_notes": "Noted for Gaye Holud, Boron welcoming, Saat Paake Ghomar, Shubho Drishti eye-contact, Mala Badal, and Sindoor Daan.",
+        "cultural_notes": (
+            "Noted for Gaye Holud, Boron welcoming, Saat Paake Ghomar, Shubho Drishti "
+            "eye-contact, Mala Badal, and Sindoor Daan."
+        ),
         "is_verified": False,
         "verification_source": UNVERIFIED_SOURCE_LABEL,
         "items": [
@@ -240,7 +265,10 @@ CURATED_TRADITIONS: list[dict[str, Any]] = [
                 "শাঁখা ও পলা",
                 "1 pair white conch bangles + 1 pair red coral bangles",
                 "bridal_adornment",
-                "Quintessential signs of married Bengali Hindu women symbolizing coolness and warmth",
+                (
+                    "Quintessential signs of married Bengali Hindu women symbolizing coolness "
+                    "and warmth"
+                ),
                 "Saat Paake Ghomar",
             ),
             (
@@ -289,7 +317,10 @@ CURATED_TRADITIONS: list[dict[str, Any]] = [
         "code": "tamil_brahmin_hindu",
         "regional_name": "Tamil Brahmin Iyer Kalyanam",
         "description": "Tamil Brahmin marriage customs based on common cultural knowledge.",
-        "cultural_notes": "Highlights include Vratham, Kasi Yatra, Oonjal swing songs, Kanyadaanam on father's lap, Mangalya Dharanam, and Nalangu.",
+        "cultural_notes": (
+            "Highlights include Vratham, Kasi Yatra, Oonjal swing songs, Kanyadaanam on "
+            "father's lap, Mangalya Dharanam, and Nalangu."
+        ),
         "is_verified": False,
         "verification_source": UNVERIFIED_SOURCE_LABEL,
         "items": [
@@ -314,7 +345,10 @@ CURATED_TRADITIONS: list[dict[str, Any]] = [
                 "மாங்கல்யம் / மஞ்சள் கயிறு",
                 "Gold Thali on turmeric-dyed yellow cord",
                 "sacred_ornaments",
-                "Sacred pendant tied around bride's neck with three knots representing mind, speech, deed",
+                (
+                    "Sacred pendant tied around bride's neck with three knots representing mind, "
+                    "speech, deed"
+                ),
                 "Mangalya Dharanam",
             ),
             (
@@ -346,7 +380,10 @@ CURATED_TRADITIONS: list[dict[str, Any]] = [
                 "அம்மிக்கல்",
                 "1 traditional stone slab",
                 "ceremonial_props",
-                "Bride places right foot on stone (Asmarohana) signifying steadfast rock-like devotion",
+                (
+                    "Bride places right foot on stone (Asmarohana) signifying steadfast "
+                    "rock-like devotion"
+                ),
                 "Saptapadi",
             ),
             (
@@ -378,8 +415,14 @@ CURATED_TRADITIONS: list[dict[str, Any]] = [
     {
         "code": "gujarati_hindu",
         "regional_name": "Gujarati Hindu Vivah",
-        "description": "Joyous Gujarati Vivah customs celebrating familial bond, Grah Shanti, and Pokhana groom welcome.",
-        "cultural_notes": "Distinguished by Gol Dhana, Mandap Mahurat, Mameru/Mosalu gifts, Pokhana, and 4 Mangal Pheras.",
+        "description": (
+            "Joyous Gujarati Vivah customs celebrating familial bond, Grah Shanti, and "
+            "Pokhana groom welcome."
+        ),
+        "cultural_notes": (
+            "Distinguished by Gol Dhana, Mandap Mahurat, Mameru/Mosalu gifts, Pokhana, "
+            "and 4 Mangal Pheras."
+        ),
         "is_verified": False,
         "verification_source": UNVERIFIED_SOURCE_LABEL,
         "items": [
@@ -396,7 +439,10 @@ CURATED_TRADITIONS: list[dict[str, Any]] = [
                 "પોંખણું",
                 "1 set (mini mortar, pestle, churner, yoke)",
                 "welcome_customs",
-                "Mother-in-law playful test to groom to remind him of patience and domestic responsibility",
+                (
+                    "Mother-in-law playful test to groom to remind him of patience and domestic "
+                    "responsibility"
+                ),
                 "Pokhana",
             ),
             (
@@ -468,8 +514,14 @@ CURATED_TRADITIONS: list[dict[str, Any]] = [
     {
         "code": "muslim_nikah",
         "regional_name": "Muslim Traditional Nikah",
-        "description": "Solemn Islamic marriage customs and rich South Asian cultural traditions based on common knowledge.",
-        "cultural_notes": "Distinguished by Manjha (Haldi), Istiqbal welcome, Ijab-o-Qubool (offer and acceptance), Mehr settlement, Arsi Mushaf, and Walima reception.",
+        "description": (
+            "Solemn Islamic marriage customs and rich South Asian cultural traditions "
+            "based on common knowledge."
+        ),
+        "cultural_notes": (
+            "Distinguished by Manjha (Haldi), Istiqbal welcome, Ijab-o-Qubool (offer and "
+            "acceptance), Mehr settlement, Arsi Mushaf, and Walima reception."
+        ),
         "is_verified": False,
         "verification_source": UNVERIFIED_SOURCE_LABEL,
         "items": [
@@ -478,7 +530,10 @@ CURATED_TRADITIONS: list[dict[str, Any]] = [
                 "نکاح نامہ",
                 "1 official marriage contract ledger + calligraphic pen",
                 "legal_sacred_document",
-                "Signed by the couple, Qazi, and two male witnesses formalizing the marriage covenant",
+                (
+                    "Signed by the couple, Qazi, and two male witnesses formalizing the marriage "
+                    "covenant"
+                ),
                 "Nikah Ijab-o-Qubool",
             ),
             (
@@ -494,7 +549,10 @@ CURATED_TRADITIONS: list[dict[str, Any]] = [
                 "آرسی مصحف",
                 "1 ornate silver mirror + Holy Quran with velvet stand",
                 "ceremonial_props",
-                "The couple glances at each other's reflection for the first time as spouses under a sheer veil",
+                (
+                    "The couple glances at each other's reflection for the first time as spouses "
+                    "under a sheer veil"
+                ),
                 "Arsi Mushaf",
             ),
             (
@@ -534,8 +592,14 @@ CURATED_TRADITIONS: list[dict[str, Any]] = [
     {
         "code": "christian_traditional",
         "regional_name": "Indian Christian Traditional Wedding",
-        "description": "Christian Holy Matrimony integrating church order with Indian cultural motifs (Minnu/Manthrakodi) based on common knowledge.",
-        "cultural_notes": "Features Church Nuptial Blessing, Exchange of Vows and Rings, Minnu (Thali) tying, Manthrakodi bridal gifting, and Gala Reception.",
+        "description": (
+            "Christian Holy Matrimony integrating church order with Indian cultural "
+            "motifs (Minnu/Manthrakodi) based on common knowledge."
+        ),
+        "cultural_notes": (
+            "Features Church Nuptial Blessing, Exchange of Vows and Rings, Minnu (Thali) "
+            "tying, Manthrakodi bridal gifting, and Gala Reception."
+        ),
         "is_verified": False,
         "verification_source": UNVERIFIED_SOURCE_LABEL,
         "items": [
@@ -568,7 +632,10 @@ CURATED_TRADITIONS: list[dict[str, Any]] = [
                 "Unity Candles",
                 "1 master pillar candle + 2 taper candles with floral wreaths",
                 "liturgical_props",
-                "Lit by the bride and groom together symbolizing two independent lives merged in Christ",
+                (
+                    "Lit by the bride and groom together symbolizing two independent lives "
+                    "merged in Christ"
+                ),
                 "Service of Light",
             ),
             (
@@ -584,7 +651,10 @@ CURATED_TRADITIONS: list[dict[str, Any]] = [
                 "Roce / Haldi Bath",
                 "1 bowl fresh coconut milk and rose petals",
                 "cleansing_pastes",
-                "Applied by maternal elders on eve of wedding symbolizing purification and blessing",
+                (
+                    "Applied by maternal elders on eve of wedding symbolizing purification and "
+                    "blessing"
+                ),
                 "Roce Eve",
             ),
             (
@@ -601,7 +671,10 @@ CURATED_TRADITIONS: list[dict[str, Any]] = [
         "code": "telugu_hindu",
         "regional_name": "Telugu Vaidika Kalyanam",
         "description": "Telugu Hindu marriage customs based on common cultural knowledge.",
-        "cultural_notes": "Characterized by Pellikuthuru, Snathakam, Jeelakarra Bellam at exact muhurat, Mangalsutra Dharana, and celebratory Talambralu.",
+        "cultural_notes": (
+            "Characterized by Pellikuthuru, Snathakam, Jeelakarra Bellam at exact "
+            "muhurat, Mangalsutra Dharana, and celebratory Talambralu."
+        ),
         "is_verified": False,
         "verification_source": UNVERIFIED_SOURCE_LABEL,
         "items": [
@@ -729,9 +802,9 @@ def seed_cultural_traditions(db: Session | None = None) -> dict[str, Any]:
             "traditions_configured": len(CURATED_TRADITIONS),
             "ritual_items_seeded": items_seeded,
         }
-    except Exception as e:
+    except (SQLAlchemyError, RuntimeError, ValueError):
         db.rollback()
-        raise e
+        raise
     finally:
         if close_db:
             db.close()

@@ -29,7 +29,8 @@ class HiddenCostDetector:
     ) -> list[HiddenCostAlertSchema]:
         """
         Pure deterministic diff between extracted quote line items and the category checklist.
-        Returns list of alerts with status 'missing_from_quote', 'explicitly_covered', or 'ambiguous'.
+        Returns list of alerts with status 'missing_from_quote', 'explicitly_covered',
+        or 'ambiguous'.
         Zero LLM calls.
         """
         checklist = cls.load_checklist().get(category.lower(), [])

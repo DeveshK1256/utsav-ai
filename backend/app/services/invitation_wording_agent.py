@@ -133,23 +133,24 @@ class InvitationWordingAgent:
 
         # Variant 1: Traditional & Warm
         v1_text = (
-            f"With the blessings of our elders and the Divine, {host_intro} warmly invite you and your family "
-            f"to celebrate the auspicious occasion of {clean_event} on {clean_date}{muhurat_clause} at {clean_venue}.{ceremony_clause} "
-            f"Your gracious presence and blessings will bring great joy to our celebration."
+            f"With the blessings of our elders and the Divine, {host_intro} warmly invite you "
+            f"and your family to celebrate the auspicious occasion of {clean_event} on "
+            f"{clean_date}{muhurat_clause} at {clean_venue}.{ceremony_clause} "
+            "Your gracious presence and blessings will bring great joy to our celebration."
         )
 
         # Variant 2: Modern & Celebratory
         v2_text = (
-            f"Joy, love, and cherished beginnings! You are cordially invited to celebrate {clean_event} "
-            f"with us on {clean_date} at {clean_venue}.{ceremony_clause} "
-            f"Please join us in making this milestone truly unforgettable."
+            "Joy, love, and cherished beginnings! You are cordially invited to celebrate "
+            f"{clean_event} with us on {clean_date} at {clean_venue}.{ceremony_clause} "
+            "Please join us in making this milestone truly unforgettable."
         )
 
         # Variant 3: Formal & Classic
         v3_text = (
-            f"{host_intro} request the pleasure of your company at the celebration of {clean_event} "
-            f"on {clean_date} at {clean_venue}.{muhurat_clause} "
-            f"Festivities and dinner will follow the ceremony."
+            f"{host_intro} request the pleasure of your company at the celebration of "
+            f"{clean_event} on {clean_date} at {clean_venue}.{muhurat_clause} "
+            "Festivities and dinner will follow the ceremony."
         )
 
         return InvitationWordingResponse(
@@ -194,7 +195,8 @@ class InvitationWordingAgent:
 
         prompt = f"""
 You are the Utsav Invitation Text Composer Agent.
-Write 3 distinct, culturally resonant invitation wording options for an Indian {event_type} celebration.
+Write 3 distinct, culturally resonant invitation wording options for an Indian
+{event_type} celebration.
 
 STRICT INVENTED-FACTS POLICY:
 - Use ONLY the confirmed details provided below.
@@ -234,7 +236,11 @@ OUTPUT JSON FORMAT ONLY:
   ]
 }}
 """
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={gemini_key}"
+        gemini_model = "gemini-2.0-flash"
+        url = (
+            f"https://generativelanguage.googleapis.com/v1beta/models/"
+            f"{gemini_model}:generateContent?key={gemini_key}"
+        )
         payload = {
             "contents": [{"parts": [{"text": prompt}]}],
             "generationConfig": {"temperature": 0.4, "responseMimeType": "application/json"},

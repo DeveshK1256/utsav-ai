@@ -60,7 +60,9 @@ class DAGScheduler:
                 "duration_hours": 4,
                 "is_outdoor": False,
                 "is_muhurat_locked": True,
-                "muhurat_notes": "Auspicious window based on astronomical ephemeris (10:30 AM - 12:15 PM)",
+                "muhurat_notes": (
+                    "Auspicious window based on astronomical ephemeris (10:30 AM - 12:15 PM)"
+                ),
                 "venue_type": "Sacred Mandap Hall",
             },
             {
@@ -322,13 +324,15 @@ class DAGScheduler:
             },
             {
                 "key": "nikah_ceremony",
-                "name": "Nikah Ceremony, Khutbah & Ijab-o-Qubool",
+                "name": "Nikah Ceremony & Ijab-o-Qubool",
                 "day_offset": 1,
                 "start_time_hour": 20,
                 "duration_hours": 2,
                 "is_outdoor": False,
                 "is_muhurat_locked": True,
-                "muhurat_notes": "Auspicious evening Waqt for Nikahnama signing and Mehr settlement",
+                "muhurat_notes": (
+                    "Auspicious evening Waqt for Nikahnama signing and Mehr settlement"
+                ),
                 "venue_type": "Draped Nikah Diwan Hall",
             },
             {
@@ -371,7 +375,9 @@ class DAGScheduler:
                 "duration_hours": 2,
                 "is_outdoor": False,
                 "is_muhurat_locked": True,
-                "muhurat_notes": "Solemn Church liturgy with consent of vows, exchange of rings & Minnu",
+                "muhurat_notes": (
+                    "Solemn Church liturgy with consent of vows, exchange of rings & Minnu"
+                ),
                 "venue_type": "Parish Church / Cathedral",
             },
             {
@@ -415,7 +421,9 @@ class DAGScheduler:
                 "duration_hours": 2,
                 "is_outdoor": False,
                 "is_muhurat_locked": True,
-                "muhurat_notes": "Exact astronomical fraction of a second for Jeelakarra Bellam placement",
+                "muhurat_notes": (
+                    "Exact astronomical fraction of a second for Jeelakarra Bellam placement"
+                ),
                 "venue_type": "Central Kalyana Mandapam",
             },
             {
@@ -898,17 +906,23 @@ class DAGScheduler:
     ]
 
     @classmethod
-    def _resolve_sub_event_template(cls, tradition_code: str, event_type: str) -> list[dict[str, Any]]:
+    def _resolve_sub_event_template(
+        cls, tradition_code: str, event_type: str
+    ) -> list[dict[str, Any]]:
         t_key = (tradition_code or "").lower()
         e_key = (event_type or "").lower()
 
         if t_key in cls.SUB_EVENT_TEMPLATES:
             return cls.SUB_EVENT_TEMPLATES[t_key]
         if "birthday" in e_key or "birthday" in t_key:
-            return cls.SUB_EVENT_TEMPLATES.get("birthday_kids_carnival", cls.SUB_EVENT_TEMPLATES["default"])
+            return cls.SUB_EVENT_TEMPLATES.get(
+                "birthday_kids_carnival", cls.SUB_EVENT_TEMPLATES["default"]
+            )
         fest_keys = ("community", "festival", "mela", "society", "ganesh", "navratri")
         if any(k in e_key or k in t_key for k in fest_keys):
-            return cls.SUB_EVENT_TEMPLATES.get("community_sarvajanik", cls.SUB_EVENT_TEMPLATES["default"])
+            return cls.SUB_EVENT_TEMPLATES.get(
+                "community_sarvajanik", cls.SUB_EVENT_TEMPLATES["default"]
+            )
         return cls.SUB_EVENT_TEMPLATES.get(e_key, cls.SUB_EVENT_TEMPLATES["default"])
 
     @classmethod
@@ -1004,8 +1018,8 @@ class DAGScheduler:
     @classmethod
     def shift_tasks_for_date_moved(cls, tasks: list[Any], days_delta: int) -> list[dict[str, Any]]:
         """
-        Shifts scheduled timing of existing tasks by days_delta while preserving dependency ordering.
-        Returns list of task diffs.
+        Shifts scheduled timing of existing tasks by days_delta while preserving
+        dependency ordering. Returns list of task diffs.
         """
         diffs = []
         for t in tasks:
@@ -1026,7 +1040,9 @@ class DAGScheduler:
                     "old_end": old_end.isoformat() if old_end else None,
                     "new_end": new_end.isoformat() if new_end else None,
                     "days_shifted": days_delta,
-                    "formula": f"Date moved: shifted by {days_delta:+d} days to match new event date",
+                    "formula": (
+                        f"Date moved: shifted by {days_delta:+d} days to match new event date"
+                    ),
                 }
             )
         return diffs
@@ -1059,7 +1075,10 @@ class DAGScheduler:
                     "old_end": old_end.isoformat() if old_end else None,
                     "new_end": new_end.isoformat() if new_end else None,
                     "is_muhurat_locked": is_muhurat_locked,
-                    "formula": f"Event date moved: shifted by {days_delta:+d} days (Muhurat lock: {'Preserved' if is_muhurat_locked else 'Standard'})",
+                    "formula": (
+                        f"Event date moved: shifted by {days_delta:+d} days "
+                        f"(Muhurat lock: {'Preserved' if is_muhurat_locked else 'Standard'})"
+                    ),
                 }
             )
         return diffs

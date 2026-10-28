@@ -22,8 +22,10 @@ class BudgetScalingEngine:
     Deterministic Budget Scaling Engine.
     Rules:
     - Zero LLM math. All monetary calculations are performed deterministically.
-    - Zero floating point drift: computes exact 2-decimal rounded shares and balances any residual to contingency.
-    - Loads calibrated city-tier cost multipliers from config/city_tiers.json at runtime, not hardcoded literals.
+    - Zero floating point drift: computes exact 2-decimal rounded shares and balances
+      any residual to contingency.
+    - Loads calibrated city-tier cost multipliers from config/city_tiers.json at runtime,
+      not hardcoded literals.
     """
 
     ALLOCATION_MODELS: ClassVar[dict[str, dict[str, Decimal]]] = {
@@ -157,7 +159,9 @@ class BudgetScalingEngine:
                         "formula": f"{float(scaled_envelope)} * {float(percentage)}",
                         "city_tier": tier,
                         "guest_count": guest_count,
-                        "benchmark_basis": f"Standard Indian {model_key} allocation benchmark model",
+                        "benchmark_basis": (
+                            f"Standard Indian {model_key} allocation benchmark model"
+                        ),
                     },
                 }
             )
@@ -177,7 +181,10 @@ class BudgetScalingEngine:
                     "formula": f"Residual balance of {float(scaled_envelope)}",
                     "city_tier": tier,
                     "guest_count": guest_count,
-                    "benchmark_basis": "Contingency buffer calibrated for unexpected vendor overtime/generator fuel",
+                    "benchmark_basis": (
+                        "Contingency buffer calibrated for unexpected "
+                        "vendor overtime/generator fuel"
+                    ),
                 },
             }
         )

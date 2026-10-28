@@ -48,7 +48,8 @@ class IntakeService:
             (
                 "maharashtrian_vedic",
                 "Maharashtrian Vedic Lagna",
-                "Classical Maharashtrian wedding rituals including Sakharpuda, Haldi, Mandap Muhurat, and Saptapadi.",
+                "Classical Maharashtrian wedding rituals including Sakharpuda, "
+                "Haldi, Mandap Muhurat, and Saptapadi.",
             ),
             (
                 "gujarati_hindu",
@@ -78,37 +79,44 @@ class IntakeService:
             (
                 "community_festival",
                 "Sarvajanik Community Festival",
-                "Public community festival celebration with cultural programs, aarti, and volunteer coordination.",
+                "Public community festival celebration with cultural programs, "
+                "aarti, and volunteer coordination.",
             ),
             (
                 "birthday_kids_carnival",
                 "Kids Themed Birthday Carnival",
-                "Fun-filled kids birthday celebration with interactive games, magic show, custom cake, and return gifts.",
+                "Fun-filled kids birthday celebration with interactive games, magic show, "
+                "custom cake, and return gifts.",
             ),
             (
                 "birthday_milestone",
                 "Milestone Jubilee Birthday",
-                "Celebration for 18th, 21st, 50th, or 60th birthday with family blessings, toasts, and gala feast.",
+                "Celebration for 18th, 21st, 50th, or 60th birthday with family blessings, "
+                "toasts, and gala feast.",
             ),
             (
                 "birthday_traditional",
                 "Traditional Vedic Ayushya Homa",
-                "Sacred birthday rituals including Ayushya Homa, Ganapati puja, elder blessings, and satvik meal.",
+                "Sacred birthday rituals including Ayushya Homa, Ganapati puja, "
+                "elder blessings, and satvik meal.",
             ),
             (
                 "community_sarvajanik",
                 "Sarvajanik Utsav & Pandal",
-                "Public festival (Ganesh Utsav / Durga Puja) with murti sthapana, maha aarti, cultural night, and bhandara.",
+                "Public festival (Ganesh Utsav / Durga Puja) with murti sthapana, maha aarti, "
+                "cultural night, and bhandara.",
             ),
             (
                 "community_navratri",
                 "Navratri Garba & Dandiya Mahotsav",
-                "Multi-night folk dance celebration with live orchestra, Dandiya Raas, awards, and prasad.",
+                "Multi-night folk dance celebration with live orchestra, Dandiya Raas, "
+                "awards, and prasad.",
             ),
             (
                 "community_society_mela",
                 "Housing Society Cultural Mela",
-                "Residential community gathering with food & game stalls, resident talent show, and society feast.",
+                "Residential community gathering with food & game stalls, resident talent show, "
+                "and society feast.",
             ),
         ]
         for code, name, desc in known_traditions:

@@ -1,6 +1,6 @@
 import re
 from collections import Counter
-from typing import Any
+from typing import Any, ClassVar
 
 from backend.app.schemas.vibe import SingleImageVibeSchema
 
@@ -23,7 +23,7 @@ class VibeAggregationEngine:
     Zero LLM involvement. Easily unit-tested.
     """
 
-    DEFAULT_PALETTE = ["#E2725B", "#FFD700", "#FFF8DC", "#2E8B57", "#800020"]
+    DEFAULT_PALETTE: ClassVar[list[str]] = ["#E2725B", "#FFD700", "#FFF8DC", "#2E8B57", "#800020"]
 
     @classmethod
     def _update_colors_and_tags(

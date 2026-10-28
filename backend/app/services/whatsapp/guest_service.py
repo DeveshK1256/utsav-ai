@@ -110,9 +110,7 @@ class GuestService:
         mobility = bool(
             str(row.get("mobility_needs") or "").lower() in ("true", "1", "yes", "wheelchair")
         )
-        accommodation = bool(
-            str(row.get("accommodation") or "").lower() in ("true", "1", "yes")
-        )
+        accommodation = bool(str(row.get("accommodation") or "").lower() in ("true", "1", "yes"))
         language = str(row.get("language") or "en").strip().lower()[:10]
         notes = str(row.get("notes") or "").strip() or None
 

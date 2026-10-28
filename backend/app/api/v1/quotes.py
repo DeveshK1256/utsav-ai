@@ -294,8 +294,9 @@ async def upload_quote(
 ) -> QuoteDocumentResponseSchema:
     """
     Accepts multipart upload of a vendor quote document.
-    Stores the raw file in DB bytea (DEC-017), extracts structured line items via LLM provider,
-    runs deterministic hidden-cost detection, saves quote + line items, and returns enriched analysis.
+    Stores the raw file in DB bytea (DEC-017), extracts structured line items via LLM
+    provider, runs deterministic hidden-cost detection, saves quote + line items,
+    and returns enriched analysis.
     """
     event = db.scalar(select(Event).where(Event.id == event_id))
     if not event:
@@ -321,7 +322,13 @@ async def upload_quote(
     )
     if not extracted:
         return _handle_extraction_fallback(
-            event_id, category, filename, content_type, file_bytes, err_msg or "Extraction failed", db
+            event_id,
+            category,
+            filename,
+            content_type,
+            file_bytes,
+            err_msg or "Extraction failed",
+            db,
         )
 
     assigned_category = (category or extracted.category or "caterer").lower()
@@ -405,7 +412,10 @@ def _validate_comparison_category(quotes: Sequence[QuoteDocument], requested_ids
     if len(categories) > 1:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"All quotes in a comparison must belong to the same category. Found: {list(categories)}",
+            detail=(
+                "All quotes in a comparison must belong to the same category. "
+                f"Found: {list(categories)}"
+            ),
         )
     return str(next(iter(categories)))
 
@@ -515,7 +525,8 @@ def _gather_leverage_points(
     b_comp = _compute_benchmark_for_quote(quote.category, quote.total_quoted_amount, event, db)
     if b_comp and not b_comp.is_limited_data and b_comp.cost_status == "above_median":
         leverage_points.append(
-            f"Rate is {b_comp.percentage_diff_vs_median}% higher than median market rates in {b_comp.city_tier}"
+            f"Rate is {b_comp.percentage_diff_vs_median}% higher than "
+            f"median market rates in {b_comp.city_tier}"
         )
 
     return leverage_points, comp_name, comp_total

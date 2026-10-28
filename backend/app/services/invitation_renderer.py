@@ -50,7 +50,9 @@ def get_font(path: str, size: int) -> Any:
 
 
 def is_devanagari_text(text: str | None) -> bool:
-    """Returns True if text contains any characters in the Unicode Devanagari block (U+0900..U+097F)."""
+    """
+    Returns True if text contains characters in the Unicode Devanagari block (U+0900..U+097F).
+    """
     if not text:
         return False
     return any(0x0900 <= ord(c) <= 0x097F for c in text)
@@ -263,9 +265,8 @@ class InvitationCardRenderer:
     @classmethod
     def _image_to_lossless_pdf(cls, image: Image.Image, dpi: float = 300.0) -> bytes:
         """
-        Encapsulates an RGB image into a single-page PDF using FlateDecode (lossless zlib compression).
-        Unlike Pillow's default PDF driver (which encodes RGB images as DCTDecode/JPEG, causing edge
-        artifacts on fine typography and motifs), this produces a bitwise-lossless raster print PDF.
+        Encapsulates an RGB image into a single-page PDF using FlateDecode
+        (lossless zlib compression). Produces a bitwise-lossless raster print PDF.
         """
         rgb = image.convert("RGB")
         w, h = rgb.size
@@ -292,7 +293,8 @@ class InvitationCardRenderer:
         offsets[3] = len(body)
         page_dict = (
             f"3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 {pt_w:.4f} {pt_h:.4f}] "
-            f"/Contents 4 0 R /Resources << /XObject << /Im1 5 0 R >> /ProcSet [/PDF /ImageC] >> >>\nendobj\n"
+            f"/Contents 4 0 R /Resources << /XObject << /Im1 5 0 R >> "
+            "/ProcSet [/PDF /ImageC] >> >>\nendobj\n"
         ).encode("ascii")
         body.extend(page_dict)
 

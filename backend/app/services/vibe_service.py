@@ -47,7 +47,9 @@ class VibeService:
             if len(content) > max_image_size_bytes:
                 raise HTTPException(
                     status_code=400,
-                    detail=f"Image '{f.filename or 'upload'}' exceeds 5MB limit ({len(content)} bytes)",
+                    detail=(
+                        f"Image '{f.filename or 'upload'}' exceeds 5MB limit ({len(content)} bytes)"
+                    ),
                 )
             m_type = f.content_type or "image/jpeg"
             raw_images_for_provider.append(
@@ -293,7 +295,11 @@ class VibeService:
             id=task_id,
             event_id=event_id,
             title=f"Source {item.name} ({item.sourcing_type.upper()})",
-            description=f"Quantity: {item.computed_quantity}. Estimated Cost: ₹{item.cost_range_low:,.0f} - ₹{item.cost_range_high:,.0f} ({item.sourcing_type.upper()})",
+            description=(
+                f"Quantity: {item.computed_quantity}. Estimated Cost: "
+                f"₹{item.cost_range_low:,.0f} - ₹{item.cost_range_high:,.0f} "
+                f"({item.sourcing_type.upper()})"
+            ),
             status="pending",
         )
         db.add(task)

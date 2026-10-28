@@ -58,10 +58,15 @@ class QuoteComparisonEngine:
             percentage_diff_vs_median=diff_pct,
             is_limited_data=False,
             reasoning={
-                "formula": f"(({quote_unit_cost:.2f} - {median_val:.2f}) / {median_val:.2f}) * 100 = {diff_pct:.1f}%",
+                "formula": (
+                    f"(({quote_unit_cost:.2f} - {median_val:.2f}) / {median_val:.2f}) "
+                    f"* 100 = {diff_pct:.1f}%"
+                ),
                 "sample_count": n,
                 "city_tier": city_tier,
-                "benchmark_basis": f"Median of {n} verified {category} vendor contracts in {city_tier}",
+                "benchmark_basis": (
+                    f"Median of {n} verified {category} vendor contracts in {city_tier}"
+                ),
             },
         )
 
@@ -155,9 +160,14 @@ class QuoteComparisonEngine:
             benchmark_is_limited_data=(n_samples < 5),
             best_value_quote_id=best_quote.quote_id if best_quote else None,
             reasoning={
-                "formula": "Effective Total = Normalized Base Quote + (Missing Hidden Cost Items * ₹12,500 Risk Buffer)",
+                "formula": (
+                    "Effective Total = Normalized Base Quote + "
+                    "(Missing Hidden Cost Items * ₹12,500 Risk Buffer)"
+                ),
                 "normalized_guest_count": target_guest_count,
                 "benchmark_sample_size": n_samples,
-                "comparison_metric": "Effective Total Cost after normalizing headcounts and risk buffers",
+                "comparison_metric": (
+                    "Effective Total Cost after normalizing headcounts and risk buffers"
+                ),
             },
         )

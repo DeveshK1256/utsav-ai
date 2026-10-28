@@ -52,16 +52,18 @@ class ReminderScheduler:
 
         templates = {
             "7_days_before": (
-                f"Reminder: {event.name}'s '{sub_name}' is 1 week away on {date_str} at {start_str}! "
-                f"We look forward to celebrating together. Let us know if your travel plans change."
+                f"Reminder: {event.name}'s '{sub_name}' is 1 week away on {date_str} at "
+                f"{start_str}! We look forward to celebrating together. "
+                "Let us know if your travel plans change."
             ),
             "1_day_before": (
                 f"Tomorrow is the day! '{sub_name}' begins tomorrow ({date_str}) at {start_str}. "
-                f"Location directions & schedule details are available on your invite link."
+                "Location directions & schedule details are available on your invite link."
             ),
             "morning_of": (
                 f"Good morning! '{sub_name}' kicks off today at {start_str}. "
-                f"Please arrive 15 minutes early for seating and welcome refreshments. See you soon!"
+                "Please arrive 15 minutes early for seating and welcome refreshments. "
+                "See you soon!"
             ),
         }
         return templates.get(offset_type, f"Upcoming: '{sub_name}' on {date_str} at {start_str}.")

@@ -111,7 +111,9 @@ class DeterministicStubQuoteExtractionProvider(BaseQuoteExtractionProvider):
                         unit_price=1200.0,
                         total=420000.0,
                         category_tag="food_buffet",
-                        notes="Includes 4 starters, 3 main vegetables, dal baati churma, 3 desserts",
+                        notes=(
+                            "Includes 4 starters, 3 main vegetables, dal baati churma, 3 desserts"
+                        ),
                     ),
                     ExtractedLineItemSchema(
                         name="Live Chaat & Mocktail Counter",
@@ -275,15 +277,22 @@ class DeterministicStubNegotiationDraftProvider(BaseNegotiationDraftProvider):
 
         polite_en = (
             f"Dear {vendor_name},\n\n"
-            f"Thank you for sharing your detailed proposal for our upcoming celebration. Our family deeply admires your work and craft.\n\n"
-            f"We are working within a predetermined family budget envelope. Based on our requirements and local benchmarks ({leverage_summary_en}), "
-            f"we would love to finalize your team immediately if we can align on an inclusive rate of ₹{target_amount:,.0f} (a modest adjustment of ₹{diff_amount:,.0f}).\n\n"
-            f"Could we confirm this inclusive figure so we can proceed with the advance token today?\n\nWarm regards,\nFamily Host"
+            "Thank you for sharing your detailed proposal for our upcoming celebration. "
+            "Our family deeply admires your work and craft.\n\n"
+            "We are working within a predetermined family budget envelope. Based on our "
+            f"requirements and local benchmarks ({leverage_summary_en}), "
+            f"we would love to finalize your team immediately if we can align on an inclusive "
+            f"rate of ₹{target_amount:,.0f} (a modest adjustment of ₹{diff_amount:,.0f}).\n\n"
+            "Could we confirm this inclusive figure so we can proceed with the advance token "
+            "today?\n\nWarm regards,\nFamily Host"
         )
         polite_hi = (
             f"नमस्ते {vendor_name} जी,\n\n"
-            f"आपके द्वारा भेजे गए कोटेशन के लिए बहुत-बहुत धन्यवाद। हमारे परिवार को आपका काम बहुत पसंद आया है।\n\n"
-            f"हमारे परिवार का बजट सीमित है। यदि आप इसे कुल ₹{target_amount:,.0f} में अंतिम रूप दे सकें, तो हम आज ही टोकन राशि देकर बुकिंग कन्फर्म करना चाहते हैं।\n\n"
+            "आपके द्वारा भेजे गए कोटेशन के लिए बहुत-बहुत धन्यवाद। "
+            "हमारे परिवार को आपका काम बहुत पसंद आया है।\n\n"
+            "हमारे परिवार का बजट सीमित है। यदि आप इसे कुल "
+            f"₹{target_amount:,.0f} में अंतिम रूप दे सकें, तो हम आज ही टोकन राशि देकर "
+            "बुकिंग कन्फर्म करना चाहते हैं।\n\n"
             f"कृपया बताएं कि क्या हम इस बजट पर आगे बढ़ सकते हैं?\n\nसादर,\nहोस्ट परिवार"
         )
 
@@ -291,36 +300,55 @@ class DeterministicStubNegotiationDraftProvider(BaseNegotiationDraftProvider):
             f"Dear {vendor_name},\n\n"
             f"We have thoroughly reviewed your quote of ₹{quoted_total:,.0f}. "
             + (
-                f"We currently have a competitive and fully itemized proposal from {competing_vendor_name} at ₹{competing_quote_total:,.0f}. "
+                f"We currently have a competitive and fully itemized proposal from "
+                f"{competing_vendor_name} at ₹{competing_quote_total:,.0f}. "
                 if competing_vendor_name and competing_quote_total
                 else ""
             )
-            + f"Furthermore, we noted potential extra contingencies ({leverage_summary_en}) that need to be explicitly capped.\n\n"
-            f"We are prepared to close today at ₹{target_amount:,.0f} inclusive of all taxes, overtime, and logistics with zero hidden surcharges. "
-            f"Please let us know if this works so we can sign the agreement.\n\nRegards,\nEvent Host"
+            + (
+                f"Furthermore, we noted potential extra contingencies ({leverage_summary_en}) "
+                "that need to be explicitly capped.\n\n"
+            )
+            + (
+                f"We are prepared to close today at ₹{target_amount:,.0f} inclusive of all taxes, "
+                "overtime, and logistics with zero hidden surcharges. "
+                "Please let us know if this works so we can sign the agreement.\n\n"
+                "Regards,\nEvent Host"
+            )
         )
         firm_hi = (
             f"नमस्कार {vendor_name} जी,\n\n"
             f"हमने आपके ₹{quoted_total:,.0f} के प्रस्ताव की समीक्षा की है। "
             + (
-                f"हमारे पास {competing_vendor_name} से ₹{competing_quote_total:,.0f} का पूरा प्रस्ताव भी उपलब्ध है। "
+                f"हमारे पास {competing_vendor_name} से ₹{competing_quote_total:,.0f} का "
+                "पूरा प्रस्ताव भी उपलब्ध है। "
                 if competing_vendor_name and competing_quote_total
                 else ""
             )
             + f"साथ ही कुछ अतिरिक्त खर्चों ({leverage_summary_en}) पर स्पष्टता जरूरी है।\n\n"
-            f"यदि आप बिना किसी छिपे शुल्क के सभी कर सहित ₹{target_amount:,.0f} में तैयार हैं, तो हम आज ही अनुबंध कर सकते हैं।\n\nधन्यवाद,\nहोस्ट"
+            + (
+                f"यदि आप बिना किसी छिपे शुल्क के सभी कर सहित ₹{target_amount:,.0f} में तैयार हैं, "
+                "तो हम आज ही अनुबंध कर सकते हैं।\n\nधन्यवाद,\nहोस्ट"
+            )
         )
 
         bundle_en = (
             f"Dear {vendor_name},\n\n"
-            f"We would love to retain your team at the quoted price of ₹{quoted_total:,.0f}, provided we can bundle key critical services "
-            f"that are currently unmentioned ({leverage_summary_en}) into this comprehensive package.\n\n"
-            f"If you can include these elements within the quoted ₹{quoted_total:,.0f} with an all-inclusive formal invoice, we will sign and pay the booking advance immediately.\n\nBest regards,\nHost Family"
+            f"We would love to retain your team at the quoted price of ₹{quoted_total:,.0f}, "
+            "provided we can bundle key critical services "
+            f"that are currently unmentioned ({leverage_summary_en}) into this "
+            "comprehensive package.\n\n"
+            f"If you can include these elements within the quoted ₹{quoted_total:,.0f} with an "
+            "all-inclusive formal invoice, we will sign and pay the booking advance "
+            "immediately.\n\n"
+            "Best regards,\nHost Family"
         )
         bundle_hi = (
             f"नमस्ते {vendor_name} जी,\n\n"
-            f"हम आपके ₹{quoted_total:,.0f} के मूल्य पर काम करने के लिए तैयार हैं, यदि आप कुछ जरूरी सेवाएं ({leverage_summary_en}) इसी पैकेज में सम्मिलित कर लें।\n\n"
-            f"यदि यह सब ₹{quoted_total:,.0f} के कुल बिल में शामिल हो जाता है, तो हम आज ही बुकिंग अग्रिम राशि जारी कर देंगे।\n\nसादर,\nहोस्ट परिवार"
+            f"हम आपके ₹{quoted_total:,.0f} के मूल्य पर काम करने के लिए तैयार हैं, यदि आप कुछ "
+            f"जरूरी सेवाएं ({leverage_summary_en}) इसी पैकेज में सम्मिलित कर लें।\n\n"
+            f"यदि यह सब ₹{quoted_total:,.0f} के कुल बिल में शामिल हो जाता है, तो हम आज ही "
+            "बुकिंग अग्रिम राशि जारी कर देंगे।\n\nसादर,\nहोस्ट परिवार"
         )
 
         return {
@@ -404,8 +432,8 @@ class DeterministicStubReplanningExplanationProvider(BaseReplanningExplanationPr
             to_g = diff_summary.get("to_guest_count", 0)
             explanation = (
                 f"Guest count adjusted from {from_g} to {to_g}. "
-                f"Per-guest allocations (catering, rentals, invitations) were rescaled accordingly, "
-                f"resulting in a net budget change of ₹{delta:+,.2f}."
+                "Per-guest allocations (catering, rentals, invitations) were rescaled "
+                f"accordingly, resulting in a net budget change of ₹{delta:+,.2f}."
             )
             if capacity_exceeded and capacity_warning:
                 explanation += f" Note: {capacity_warning}"
@@ -416,24 +444,30 @@ class DeterministicStubReplanningExplanationProvider(BaseReplanningExplanationPr
             to_d = diff_summary.get("to_date", "")
             return (
                 f"Event date shifted by {days:+d} days (from {from_d} to {to_d}). "
-                f"All operational tasks and ritual sub-events have been shifted in lockstep while preserving dependency chains."
+                "All operational tasks and ritual sub-events have been shifted in lockstep "
+                "while preserving dependency chains."
             )
         if change_type == "vendor_cancelled":
             cat = diff_summary.get("vendor_category", "vendor")
             name = diff_summary.get("vendor_name", "Vendor")
             return (
                 f"Cancellation of {name} ({cat}) recorded. "
-                f"High-priority replacement sourcing tasks have been scheduled and quote requirements flagged."
+                "High-priority replacement sourcing tasks have been scheduled and quote "
+                "requirements flagged."
             )
         if change_type == "budget_cut":
             cut = diff_summary.get("cut_amount", abs(delta))
             return (
-                f"Target budget decreased by ₹{cut:,.2f}. Flexible categories have been proportionally scaled down "
-                f"while locked contracts and paid deposits remain protected."
+                f"Target budget decreased by ₹{cut:,.2f}. Flexible categories have been "
+                "proportionally scaled down while locked contracts and paid deposits "
+                "remain protected."
             )
         if change_type == "venue_unavailable":
             v_name = diff_summary.get("venue_name", "primary venue")
-            return f"Venue unavailability noted for {v_name}. Critical path emergency venue scouting tasks have been added."
+            return (
+                f"Venue unavailability noted for {v_name}. "
+                "Critical path emergency venue scouting tasks have been added."
+            )
         return f"Change event ({change_type}) evaluated with total budget delta of ₹{delta:+,.2f}."
 
     def generate_explanation_and_mitigations(
@@ -449,9 +483,15 @@ class DeterministicStubReplanningExplanationProvider(BaseReplanningExplanationPr
         mitigations = []
         if over_budget:
             mitigations = [
-                f"Reduce flexible decor and lighting production tiers to absorb the ₹{over_amount:,.0f} overage.",
+                (
+                    f"Reduce flexible decor and lighting production tiers to absorb the "
+                    f"₹{over_amount:,.0f} overage."
+                ),
                 "Negotiate fixed lump-sum packages with photography and entertainment vendors.",
-                "Review high-cost catering line items (live stations, exotic desserts) to trim per-plate costs.",
+                (
+                    "Review high-cost catering line items (live stations, exotic desserts) "
+                    "to trim per-plate costs."
+                ),
             ]
 
         return {
@@ -471,7 +511,8 @@ class DeterministicStubReplanningExplanationProvider(BaseReplanningExplanationPr
 
 def get_replanning_explanation_provider() -> BaseReplanningExplanationProvider:
     """
-    Factory returning replanning explanation provider (Gemini if key configured, otherwise deterministic stub).
+    Factory returning replanning explanation provider (Gemini if key configured,
+    otherwise deterministic stub).
     """
     gemini_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
     if gemini_key:
@@ -634,21 +675,31 @@ class DeterministicStubVibeProvider(BaseVibeExtractionProvider, BaseThemeGenerat
         return ThemeGenerationPayloadSchema(
             theme_name="Royal Marigold & Heritage Brass",
             palette=palette[:5],
-            menu_direction="Heritage Rajasthani Royal Thali & live chaat counters, featuring Dal Baati Churma, Ker Sangri, and saffron Ghewar.",
+            menu_direction=(
+                "Heritage Rajasthani Royal Thali & live chaat counters, featuring Dal Baati "
+                "Churma, Ker Sangri, and saffron Ghewar."
+            ),
             playlist_genres=[
                 "Rajasthani Folk & Manganiyar",
                 "Sufi Bollywood",
                 "Acoustic Shehnai Fusion",
             ],
-            dress_code_suggestion="Royal Traditional (Bandhani, Leheriya, Sherwanis in Marigold Yellow, Rust, and Deep Crimson)",
-            invitation_design_brief="Handmade raw-silk textured digital invites featuring gold foil Pichwai motifs, elephant borders, and royal devanagari typography.",
+            dress_code_suggestion=(
+                "Royal Traditional (Bandhani, Leheriya, Sherwanis in Marigold Yellow, Rust, "
+                "and Deep Crimson)"
+            ),
+            invitation_design_brief=(
+                "Handmade raw-silk textured digital invites featuring gold foil Pichwai motifs, "
+                "elephant borders, and royal devanagari typography."
+            ),
             decor_items=decor_items,
         )
 
 
 def get_vibe_extraction_provider() -> BaseVibeExtractionProvider:
     """
-    Factory returning vibe extraction provider (Gemini if key configured, otherwise deterministic stub).
+    Factory returning vibe extraction provider (Gemini if key configured,
+    otherwise deterministic stub).
     """
     gemini_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
     if gemini_key:
@@ -666,7 +717,8 @@ def get_vibe_extraction_provider() -> BaseVibeExtractionProvider:
 
 def get_theme_generation_provider() -> BaseThemeGenerationProvider:
     """
-    Factory returning theme generation provider (Gemini if key configured, otherwise deterministic stub).
+    Factory returning theme generation provider (Gemini if key configured,
+    otherwise deterministic stub).
     """
     gemini_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
     if gemini_key:

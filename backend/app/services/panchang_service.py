@@ -100,7 +100,8 @@ class EphemPanchangProvider(PanchangProvider):
     ]
 
     # Traditional 1-based octile mapping for Rahu Kaalam
-    # Monday: 2nd, Tuesday: 7th, Wednesday: 5th, Thursday: 6th, Friday: 4th, Saturday: 3rd, Sunday: 8th
+    # Monday: 2nd, Tuesday: 7th, Wednesday: 5th, Thursday: 6th
+    # Friday: 4th, Saturday: 3rd, Sunday: 8th
     RAHU_OCTILES: ClassVar[dict[int, int]] = {
         0: 2,  # Monday
         1: 7,  # Tuesday
@@ -114,8 +115,9 @@ class EphemPanchangProvider(PanchangProvider):
     DISCLAIMER_COPY = (
         "Calculated using Drik astronomical formulas with Chitrapaksha (Lahiri) Ayanamsha "
         "for your specific venue location. Regional traditions, family Kul-Purohits, and local "
-        "panchang almanacs often vary by 10–20 minutes due to differing horizon and refraction models. "
-        "ALWAYS confirm your final wedding pheras and vidhi muhurat with your family priest / Panditji."
+        "panchang almanacs often vary by 10–20 minutes due to differing horizon and "
+        "refraction models. ALWAYS confirm your final wedding pheras and vidhi muhurat "
+        "with your family priest / Panditji."
     )
 
     @staticmethod
@@ -194,7 +196,8 @@ class EphemPanchangProvider(PanchangProvider):
         tithi_progress = (elongation % 12.0) / 12.0
         paksha = "Shukla" if tithi_idx < 15 else "Krishna"
 
-        # Nakshatra: Nirayana (sidereal) Moon longitude using Lahiri Ayanamsha (13° 20' per Nakshatra)
+        # Nakshatra: Nirayana (sidereal) Moon longitude using Lahiri Ayanamsha
+        # (13° 20' per Nakshatra)
         jd = ephem.julian_date(sunrise_ephem)
         ayanamsha = self.get_lahiri_ayanamsha(jd)
         sidereal_moon_lon = (moon_lon_deg - ayanamsha) % 360.0

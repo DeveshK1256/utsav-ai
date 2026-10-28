@@ -8,7 +8,8 @@ from backend.app.models.models import Event, EventFactSheet
 logger = logging.getLogger(__name__)
 
 HARD_FALLBACK_REFUSAL = (
-    "I don't have that information in the event details. I'll check with the host and get back to you!"
+    "I don't have that information in the event details. "
+    "I'll check with the host and get back to you!"
 )
 
 
@@ -66,9 +67,7 @@ class FAQBotService:
     }
 
     @classmethod
-    def _format_standard_field_answer(
-        cls, field: str, val: Any, fact_sheet: EventFactSheet
-    ) -> str:
+    def _format_standard_field_answer(cls, field: str, val: Any, fact_sheet: EventFactSheet) -> str:
         if field == "venue_address":
             ans = f"The celebration is at: {val}."
             if fact_sheet.map_link:
@@ -85,9 +84,7 @@ class FAQBotService:
         return str(val)
 
     @classmethod
-    def _match_standard_field(
-        cls, fact_sheet: EventFactSheet, q_clean: str
-    ) -> FAQResponse | None:
+    def _match_standard_field(cls, fact_sheet: EventFactSheet, q_clean: str) -> FAQResponse | None:
         for field, keywords in cls.KEYWORD_MAPPINGS.items():
             if any(kw in q_clean for kw in keywords):
                 val = getattr(fact_sheet, field, None)
@@ -99,9 +96,7 @@ class FAQBotService:
         return None
 
     @classmethod
-    def _match_other_facts(
-        cls, fact_sheet: EventFactSheet, q_clean: str
-    ) -> FAQResponse | None:
+    def _match_other_facts(cls, fact_sheet: EventFactSheet, q_clean: str) -> FAQResponse | None:
         other_facts = fact_sheet.other_facts or {}
         for fact_key, fact_val in other_facts.items():
             clean_key = str(fact_key).lower().replace("_", " ")
@@ -118,8 +113,9 @@ class FAQBotService:
     @classmethod
     def _match_event_date(cls, event: Event, q_clean: str) -> FAQResponse | None:
         if any(w in q_clean for w in ["date", "day", "which day"]):
+            date_fmt = event.start_date.strftime("%A, %d %B %Y")
             return FAQResponse(
-                answer=f"{event.name} will be celebrated on {event.start_date.strftime('%A, %d %B %Y')} in {event.city}.",
+                answer=f"{event.name} will be celebrated on {date_fmt} in {event.city}.",
                 is_in_scope=True,
                 notified_host=False,
                 source_field="event.start_date",

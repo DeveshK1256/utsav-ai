@@ -10,7 +10,8 @@ class Settings(BaseSettings):
     API_V1_STR: str = "/api/v1"
     ENVIRONMENT: str = "development"
 
-    DATABASE_URL: str = "sqlite:///./utsav_dev.db"  # Defaults to SQLite for local development/testing, overridden by env for PostgreSQL
+    # Defaults to SQLite for local development/testing, overridden by env for PostgreSQL
+    DATABASE_URL: str = "sqlite:///./utsav_dev.db"
 
     # M4: WhatsApp Native Guest Coordination Settings
     WHATSAPP_PROVIDER: str = "mock"  # "mock" or "cloud_api"

@@ -107,8 +107,8 @@ class MasterPlanResponseSchema(BaseModel):
     guest_count: int
     tradition_code: str
     elder_verification_disclaimer: str = (
-        "Auspicious timings & ritual checklists are algorithmic estimates computed via astronomical "
-        "ephemeris models. Please verify with your family Guruji or elders."
+        "Auspicious timings & ritual checklists are algorithmic estimates computed "
+        "via astronomical ephemeris models. Please verify with your family Guruji or elders."
     )
     sub_events: list[SubEventResponseSchema]
     budget_breakdown: list[BudgetItemResponseSchema]

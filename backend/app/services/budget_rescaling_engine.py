@@ -111,7 +111,8 @@ class BudgetRescalingEngine:
             if old_tier != new_tier:
                 formula = (
                     f"{cat}: Stepped from '{old_tier}' to '{new_tier}' "
-                    f"({old_guest_count}→{new_guest_count} guests, {old_mult:.2f}x→{new_mult:.2f}x) = ₹{new_amt:,.2f}"
+                    f"({old_guest_count}→{new_guest_count} guests, "
+                    f"{old_mult:.2f}x→{new_mult:.2f}x) = ₹{new_amt:,.2f}"
                 )
             else:
                 formula = (
@@ -166,8 +167,9 @@ class BudgetRescalingEngine:
             capacity_exceeded = True
             capacity_delta = new_guest_count - venue_capacity
             capacity_warning = (
-                f"CRITICAL CAPACITY ALERT: Revised guest count ({new_guest_count}) exceeds venue capacity "
-                f"({venue_capacity}) by {capacity_delta} guests. Risk of fire-code violation and overcrowding."
+                f"CRITICAL CAPACITY ALERT: Revised guest count ({new_guest_count}) exceeds "
+                f"venue capacity ({venue_capacity}) by {capacity_delta} guests. "
+                "Risk of fire-code violation and overcrowding."
             )
 
         return BudgetRescalingResult(
@@ -216,14 +218,10 @@ class BudgetRescalingEngine:
 
         if is_paid or actual_amt > 0:
             new_amt = old_amt
-            formula = (
-                f"{cat}: {old_amt:.2f} * (Locked/Paid item - non-reducible) = {new_amt:.2f}"
-            )
+            formula = f"{cat}: {old_amt:.2f} * (Locked/Paid item - non-reducible) = {new_amt:.2f}"
         else:
             new_amt = round(old_amt * cut_ratio, 2)
-            formula = (
-                f"{cat}: {old_amt:.2f} * (Flexible cut ratio {cut_ratio:.4f}) = {new_amt:.2f}"
-            )
+            formula = f"{cat}: {old_amt:.2f} * (Flexible cut ratio {cut_ratio:.4f}) = {new_amt:.2f}"
 
         return BudgetItemDiff(
             budget_item_id=b_id,

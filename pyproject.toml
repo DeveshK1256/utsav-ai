@@ -5,7 +5,7 @@ description = "Culture-native GenAI event planning assistant for Indian celebrat
 requires-python = ">=3.11"
 
 [tool.ruff]
-line-length = 120
+line-length = 100
 target-version = "py312"
 
 [tool.ruff.lint]
@@ -19,16 +19,21 @@ select = [
     "C4",
     "PIE",
     "SIM",
-    "RUF"
+    "RUF",
+    "BLE",
+    "S",
+    "PTH",
+    "T20",
+    "C90",
 ]
 ignore = [
-    "E501",   # Line too long (handled by formatter / long prompt strings)
     "RUF001", # Ambiguous unicode character (Indian currency symbol, Devanagari script, em-dashes)
-    "E402",   # Module level import not at top of file (sys.path manipulation in Alembic / main)
-    "B904",   # Within an except clause, raise exceptions with raise ... from err (FastAPI HTTPExceptions)
-    "RUF012", # Mutable default value for class attribute (class constants)
-    "SIM116", # Use a dictionary instead of consecutive if statements
+    "RUF002", # Docstring ambiguous unicode character
+    "RUF003", # Comment ambiguous unicode character
 ]
+
+[tool.ruff.lint.mccabe]
+max-complexity = 10
 
 [tool.ruff.lint.flake8-bugbear]
 extend-immutable-calls = [

@@ -30,8 +30,12 @@ def upgrade() -> None:
     op.execute("""
         UPDATE budget_items
         SET scaling_rule = CASE
-            WHEN lower(category) IN ('catering', 'rentals', 'wardrobe', 'gifts_favors', 'invitations') THEN 'per_guest'
-            WHEN lower(category) IN ('venue', 'photography', 'entertainment', 'ritual_priest') THEN 'fixed'
+            WHEN lower(category) IN (
+                'catering', 'rentals', 'wardrobe', 'gifts_favors', 'invitations'
+            ) THEN 'per_guest'
+            WHEN lower(category) IN (
+                'venue', 'photography', 'entertainment', 'ritual_priest'
+            ) THEN 'fixed'
             WHEN lower(category) IN ('decor', 'sound_light') THEN 'tiered'
             ELSE 'per_guest'
         END

@@ -34,19 +34,27 @@ STANDARD_LAYOUTS = [
     LayoutOption(
         id="classic_royal",
         name="Classic Royal (पारंपरिक राजेशाही)",
-        description="Symmetrical royal framing with auspicious shubh-muhurat emblem and intricate gold accents.",
+        description=(
+            "Symmetrical royal framing with auspicious shubh-muhurat emblem "
+            "and intricate gold accents."
+        ),
         recommended_for="Traditional weddings, Vivah, and auspicious milestone ceremonies",
     ),
     LayoutOption(
         id="modern_minimal",
         name="Modern Contemporary (आधुनिक)",
-        description="Clean vertical accent bar, airy typography, modern spacing, and minimalist geometry.",
+        description=(
+            "Clean vertical accent bar, airy typography, modern spacing, and minimalist geometry."
+        ),
         recommended_for="Contemporary celebrations, cocktail parties, and modern receptions",
     ),
     LayoutOption(
         id="floral_festive",
         name="Floral Festive (उत्सव बहार)",
-        description="Warm celebratory marigold motifs, centerpiece cartouche, and joyful decorative framing.",
+        description=(
+            "Warm celebratory marigold motifs, centerpiece cartouche, "
+            "and joyful decorative framing."
+        ),
         recommended_for="Sangeet, Mehendi, Diwali Sneh Milan, and Community Festivals",
     ),
 ]
@@ -67,8 +75,9 @@ def _resolve_host_name(event: Event) -> str | None:
 def _resolve_venue_str(event: Event) -> str:
     if event.fact_sheet and event.fact_sheet.venue_address:
         return str(event.fact_sheet.venue_address)
-    if event.metadata_json and isinstance(event.metadata_json, dict) and event.metadata_json.get("venue"):
-        return str(event.metadata_json.get("venue"))
+    meta = event.metadata_json
+    if meta and isinstance(meta, dict) and meta.get("venue"):
+        return str(meta.get("venue"))
     if event.city:
         return f"{event.city} (Venue to be confirmed)"
     return "Venue to be confirmed"
@@ -101,9 +110,13 @@ def _resolve_event_logistics(
 ) -> tuple[str | None, str, str, str | None, list[str]]:
     """Helper to extract confirmed event details and avoid invented facts."""
     host_name = _resolve_host_name(event)
-    date_str = event.start_date.strftime("%A, %d %B %Y") if event.start_date else "Date to be confirmed"
+    date_str = (
+        event.start_date.strftime("%A, %d %B %Y") if event.start_date else "Date to be confirmed"
+    )
     venue_str = _resolve_venue_str(event)
-    sub_events = db.query(SubEvent).filter(SubEvent.event_id == event.id).order_by(SubEvent.start_time).all()
+    sub_events = (
+        db.query(SubEvent).filter(SubEvent.event_id == event.id).order_by(SubEvent.start_time).all()
+    )
     muhurat_time = _resolve_muhurat_time(event, sub_events)
     ceremonies = [s.name for s in sub_events if s.name]
 
@@ -267,7 +280,7 @@ def _render_guest_cards(
             db.add(card)
             created_cards.append(card)
         except (ValueError, RuntimeError, OSError, KeyError) as err:
-            logger.error("Failed to render card for guest %s (%s): %s", g.id, g.name, err)
+            logger.exception("Failed to render card for guest %s (%s): %s", g.id, g.name, err)
             failed_guests.append(FailedGuestSummary(guest_id=g.id, name=g.name, reason=str(err)))
     return created_cards, failed_guests
 
@@ -312,12 +325,15 @@ def _render_generic_card(
         db.add(card)
         return card
     except (ValueError, RuntimeError, OSError, KeyError, SQLAlchemyError) as err:
-        logger.error("Failed to render generic card: %s", err)
+        logger.exception("Failed to render generic card: %s", err)
         raise HTTPException(status_code=500, detail=f"Card composition failed: {err}") from err
 
 
-def _build_card_summaries(cards: list[InvitationCard], event_id: str) -> list[InvitationCardSummary]:
+def _build_card_summaries(
+    cards: list[InvitationCard], event_id: str
+) -> list[InvitationCardSummary]:
     summaries = []
+    base_url = f"/api/v1/events/{event_id}/invitations"
     for c in cards:
         g_name = c.guest.name if c.guest else None
         preview = (c.wording_text[:120] + "...") if len(c.wording_text) > 120 else c.wording_text
@@ -330,8 +346,8 @@ def _build_card_summaries(cards: list[InvitationCard], event_id: str) -> list[In
                 guest_name=g_name,
                 wording_preview=preview,
                 generated_at=c.generated_at,
-                png_download_url=f"/api/v1/events/{event_id}/invitations/{c.id}/download?format=png",
-                pdf_download_url=f"/api/v1/events/{event_id}/invitations/{c.id}/download?format=pdf",
+                png_download_url=f"{base_url}/{c.id}/download?format=png",
+                pdf_download_url=f"{base_url}/{c.id}/download?format=pdf",
             )
         )
     return summaries
@@ -364,13 +380,32 @@ def generate_invitation_cards(
     guests = db.query(Guest).filter(Guest.event_id == event_id).all()
     if guests:
         created_cards, failed_guests = _render_guest_cards(
-            guests, event, t_id, layout_variant, wording_text, host_name,
-            date_str, venue_str, muhurat_time, ceremonies, palette, db
+            guests,
+            event,
+            t_id,
+            layout_variant,
+            wording_text,
+            host_name,
+            date_str,
+            venue_str,
+            muhurat_time,
+            ceremonies,
+            palette,
+            db,
         )
     else:
         card = _render_generic_card(
-            event, t_id, layout_variant, wording_text, host_name,
-            date_str, venue_str, muhurat_time, ceremonies, palette, db
+            event,
+            t_id,
+            layout_variant,
+            wording_text,
+            host_name,
+            date_str,
+            venue_str,
+            muhurat_time,
+            ceremonies,
+            palette,
+            db,
         )
         created_cards = [card]
         failed_guests = []
@@ -417,8 +452,12 @@ def list_invitation_cards(
                 if len(c.wording_text) > 120
                 else c.wording_text,
                 generated_at=c.generated_at,
-                png_download_url=f"/api/v1/events/{event_id}/invitations/{c.id}/download?format=png",
-                pdf_download_url=f"/api/v1/events/{event_id}/invitations/{c.id}/download?format=pdf",
+                png_download_url=(
+                    f"/api/v1/events/{event_id}/invitations/{c.id}/download?format=png"
+                ),
+                pdf_download_url=(
+                    f"/api/v1/events/{event_id}/invitations/{c.id}/download?format=pdf"
+                ),
             )
         )
     return summaries
