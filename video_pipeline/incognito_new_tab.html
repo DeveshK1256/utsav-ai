@@ -1,0 +1,326 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <title>New Tab</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      body {
+        width: 1920px;
+        height: 1080px;
+        overflow: hidden;
+        background: #202124;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        color: #e8eaed;
+        user-select: none;
+      }
+
+      /* Chrome Incognito Window Top Bar */
+      #chrome-header {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        background: #1f1f23;
+        z-index: 10000;
+        border-bottom: 1px solid #3c4043;
+      }
+
+      .tab-row {
+        height: 44px;
+        display: flex;
+        align-items: center;
+        padding: 0 16px;
+        justify-content: space-between;
+      }
+
+      .window-dots {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+      }
+      .dot {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+      }
+      .dot-red { background: #ed6a5e; }
+      .dot-yellow { background: #f5bf4f; }
+      .dot-green { background: #62c554; }
+
+      .tab-item {
+        margin-left: 20px;
+        background: #2b2b30;
+        color: #f1f3f4;
+        padding: 8px 24px;
+        border-radius: 10px 10px 0 0;
+        font-size: 14px;
+        font-weight: 500;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        border-top: 2px solid #8ab4f8;
+      }
+
+      .incognito-tag {
+        color: #e8eaed;
+        font-size: 13px;
+        font-weight: 600;
+        background: #2b2b30;
+        padding: 6px 14px;
+        border-radius: 6px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        border: 1px solid #3c4043;
+      }
+
+      .nav-row {
+        height: 48px;
+        background: #2b2b30;
+        display: flex;
+        align-items: center;
+        padding: 0 18px;
+        gap: 16px;
+        position: relative;
+      }
+
+      .nav-buttons {
+        display: flex;
+        gap: 14px;
+        color: #9aa0a6;
+        font-size: 18px;
+      }
+
+      .address-bar {
+        flex: 1;
+        background: #1f1f23;
+        height: 36px;
+        border-radius: 18px;
+        display: flex;
+        align-items: center;
+        padding: 0 18px;
+        color: #ffffff;
+        font-size: 15px;
+        gap: 10px;
+        border: 1px solid #3c4043;
+        transition: all 0.2s ease;
+      }
+
+      .address-bar.focused {
+        border-color: #8ab4f8;
+        box-shadow: 0 0 0 2px rgba(138, 180, 248, 0.3);
+        background: #202124;
+      }
+
+      .loading-line {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        height: 3px;
+        background: #8ab4f8;
+        width: 0%;
+        transition: width 0.8s ease;
+      }
+
+      /* Incognito Body Content */
+      #incognito-body {
+        margin-top: 92px;
+        height: calc(1080px - 92px);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        padding: 0 40px;
+      }
+
+      .fedora-icon {
+        width: 80px;
+        height: 80px;
+        margin-bottom: 24px;
+        opacity: 0.85;
+      }
+
+      .title {
+        font-size: 32px;
+        font-weight: 500;
+        color: #e8eaed;
+        margin-bottom: 16px;
+      }
+
+      .subtitle {
+        font-size: 16px;
+        color: #9aa0a6;
+        max-width: 650px;
+        line-height: 1.6;
+        margin-bottom: 40px;
+      }
+
+      .info-cards {
+        display: flex;
+        gap: 40px;
+        text-align: left;
+        max-width: 800px;
+      }
+
+      .info-col {
+        flex: 1;
+        background: #292a2d;
+        border-radius: 12px;
+        padding: 24px;
+        border: 1px solid #3c4043;
+      }
+
+      .info-col h3 {
+        font-size: 15px;
+        color: #e8eaed;
+        margin-bottom: 14px;
+        font-weight: 600;
+      }
+
+      .info-col ul {
+        list-style: none;
+        font-size: 14px;
+        color: #9aa0a6;
+        line-height: 1.8;
+      }
+
+      .info-col ul li::before {
+        content: "• ";
+        color: #8ab4f8;
+      }
+
+      /* Animated simulated cursor */
+      #sim-cursor {
+        position: fixed;
+        width: 24px;
+        height: 24px;
+        pointer-events: none;
+        z-index: 999999;
+        transition: transform 0.1s ease;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Top Chrome Window Frame -->
+    <div id="chrome-header">
+      <div class="tab-row">
+        <div style="display: flex; align-items: center;">
+          <div class="window-dots">
+            <span class="dot dot-red"></span>
+            <span class="dot dot-yellow"></span>
+            <span class="dot dot-green"></span>
+          </div>
+          <div class="tab-item" id="tab-title">
+            <span>🕶️</span>
+            <span>New Tab</span>
+          </div>
+        </div>
+        <div class="incognito-tag">
+          <span>🕶️</span>
+          <span>Incognito</span>
+        </div>
+      </div>
+      <div class="nav-row">
+        <div class="nav-buttons">
+          <span>←</span>
+          <span>→</span>
+          <span>↻</span>
+        </div>
+        <div class="address-bar" id="address-box">
+          <span id="addr-icon" style="color: #9aa0a6;">🔍</span>
+          <span id="addr-text" style="color: #9aa0a6;">Search Google or type a URL</span>
+        </div>
+        <div style="color: #9aa0a6; font-size: 18px;">★</div>
+        <div class="loading-line" id="loader"></div>
+      </div>
+    </div>
+
+    <!-- Incognito Page Body -->
+    <div id="incognito-body">
+      <svg class="fedora-icon" viewBox="0 0 24 24" fill="none" stroke="#e8eaed" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M2 17h20M12 2a4 4 0 0 0-4 4v3h8V6a4 4 0 0 0-4-4zM6 17v-4a6 6 0 0 1 12 0v4M6 21a2 2 0 1 0 4 0 2 2 0 0 0-4 0zm8 0a2 2 0 1 0 4 0 2 2 0 0 0-4 0z"></path>
+      </svg>
+      <h1 class="title">You've gone incognito</h1>
+      <p class="subtitle">
+        Now you can browse privately, and other people who use this device won't see your activity. However, downloads, bookmarks, and reading list items will be saved.
+      </p>
+
+      <div class="info-cards">
+        <div class="info-col">
+          <h3>Chrome won't save:</h3>
+          <ul>
+            <li>Your browsing history</li>
+            <li>Cookies and site data</li>
+            <li>Information entered in forms</li>
+          </ul>
+        </div>
+        <div class="info-col">
+          <h3>Your activity might still be visible to:</h3>
+          <ul>
+            <li>Websites that you visit</li>
+            <li>Your employer or school</li>
+            <li>Your internet service provider</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- Realistic Cursor SVG -->
+    <svg id="sim-cursor" viewBox="0 0 24 24" style="top: 540px; left: 960px;">
+      <path d="M4 4l7 17 2.5-6.5L20 12 4 4z" fill="#ffffff" stroke="#000000" stroke-width="1.5"></path>
+    </svg>
+
+    <script>
+      // Simulated browser interaction script
+      async function runPasteAnimation() {
+        const cursor = document.getElementById('sim-cursor');
+        const addrBox = document.getElementById('address-box');
+        const addrText = document.getElementById('addr-text');
+        const addrIcon = document.getElementById('addr-icon');
+        const tabTitle = document.getElementById('tab-title');
+        const loader = document.getElementById('loader');
+
+        const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+        await sleep(1000);
+
+        // 1. Move cursor to address bar (x: 480, y: 68)
+        cursor.style.transition = 'top 1.2s cubic-bezier(0.25, 1, 0.5, 1), left 1.2s cubic-bezier(0.25, 1, 0.5, 1)';
+        cursor.style.top = '68px';
+        cursor.style.left = '480px';
+
+        await sleep(1300);
+
+        // 2. Click address bar
+        addrBox.classList.add('focused');
+        addrText.style.color = '#ffffff';
+        addrText.textContent = '|';
+
+        await sleep(600);
+
+        // 3. Paste deployed link
+        const targetUrl = 'https://utsav-ai.netlify.app';
+        addrText.innerHTML = '<span style="color: #8ab4f8;">https://</span><span style="color: #e8eaed; font-weight: 500;">utsav-ai.netlify.app</span>';
+        addrIcon.innerHTML = '🔒';
+        addrIcon.style.color = '#81c995';
+
+        await sleep(1000);
+
+        // 4. Hit Enter -> Trigger loader
+        loader.style.width = '100%';
+        tabTitle.innerHTML = '<span>🕶️</span><span>Utsav (उत्सव) — Celebrations, Composed</span>';
+
+        await sleep(900);
+      }
+
+      window.runPasteAnimation = runPasteAnimation;
+    </script>
+  </body>
+</html>

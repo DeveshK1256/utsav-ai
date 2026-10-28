@@ -1,0 +1,49 @@
+# Utsav (उत्सव) — Launch & Demo Share Copy Package
+
+## 1. LinkedIn Post (Full Deployed Demo + Project Showcase)
+
+Planning an Indian celebration shouldn't mean wrestling with chaotic WhatsApp groups, broken spreadsheet math, or fake dates invented by generic AI tools.
+
+Here is a full live demo showing **Utsav (उत्सव)** opened directly in an **Incognito browser window** using our live deployed link: https://utsav-ai.netlify.app
+
+Watch the walkthrough:
+1. Pasting the production Netlify URL in Incognito mode.
+2. The live 3D Diya celebration hub honoring cultural traditions.
+3. Rapid onboarding: selecting "Wedding" in Jaipur with deterministic rupee budgeting.
+4. The Unified Celebration Dashboard: transparent vendor quote audits, live OpenStreetMap venue discovery, and auspicious muhurat alignments.
+5. Pixel-perfect Devanagari wedding invitation card generation (Noto Sans Devanagari) with sacred Sanskrit shlokas and zero tofu boxes (□).
+
+Built with Google Gemini for Prompt Wars Virtual!
+
+🔗 Live App: https://utsav-ai.netlify.app
+💻 GitHub Repo: https://github.com/DeveshK1256/utsav-ai
+⚙️ Backend API: https://utsav-ai-ycg2.onrender.com
+
+#BuildwithAI #PromptWarsVirtual #Challenge1 @googlefordevelopers @hack2skill
+
+---
+
+## 2. Instagram Reel / Shorts Copy (Incognito Walkthrough)
+
+Testing our AI wedding planner in Incognito mode on the live deployed production URL 🪔✨
+
+From pasting https://utsav-ai.netlify.app to generating a full celebration plan with deterministic budget math, live venue mapping in Jaipur, and authentic Devanagari invitations with zero hallucinations.
+
+Try it out live: https://utsav-ai.netlify.app
+GitHub: https://github.com/DeveshK1256/utsav-ai
+
+Built for Prompt Wars Virtual with Google Gemini!
+@googlefordevelopers @hack2skill #BuildwithAI #PromptWarsVirtual #Challenge1 #IndianWedding #GenAI
+
+---
+
+## 3. Video Assets Summary
+
+1. **Incognito Deployed Walkthrough (Full HD 1080p, 45s):**
+   - Video: `brag-output/utsav_deployed_incognito_demo.mp4`
+   - Poster: `brag-output/utsav_deployed_incognito_demo.jpg`
+   - Web Asset: `frontend/public/media/utsav_deployed_incognito_demo.mp4`
+
+2. **Vertical Reel (1080x1920, 30s):**
+   - Video: `brag-output/brag.mp4`
+   - Poster: `brag-output/brag.jpg`

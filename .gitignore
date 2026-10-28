@@ -75,6 +75,14 @@ build_master_doc.py
 video_pipeline/clips/
 video_pipeline/trimmed/
 video_pipeline/concat_video.mp4
+video_pipeline/clips_incognito/
+video_pipeline/trimmed_incognito/
+video_pipeline/incognito_vo/
+video_pipeline/incognito_video_concat.mp4
+video_pipeline/*.m4a
+video_pipeline/*.txt
+test_incognito_*.png
+brag-output/composition/
 tools/
 *.exe
 lh-*.json
