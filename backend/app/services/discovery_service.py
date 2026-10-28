@@ -180,6 +180,35 @@ GENERIC_NAME_MODIFIERS = {
 }
 
 
+def _is_name_or_city_suffix_match(norm1: str, norm2: str) -> bool:
+    if norm1 == norm2:
+        return True
+    if (norm1.startswith(norm2) or norm2.startswith(norm1)) and abs(len(norm1) - len(norm2)) <= 10:
+        remainder = norm1.replace(norm2, "") if len(norm1) > len(norm2) else norm2.replace(norm1, "")
+        if remainder in {"jaipur", "pune", "bengaluru", "indore", "delhi", "mumbai"}:
+            return True
+    return False
+
+
+def _are_tokens_duplicate(toks1: set[str], toks2: set[str]) -> bool:
+    if not toks1 or not toks2:
+        return False
+    if toks1 == toks2:
+        return not toks1.issubset(GENERIC_NAME_MODIFIERS)
+
+    shared = toks1 & toks2
+    diff = toks1 ^ toks2
+    if not shared or shared.issubset(GENERIC_NAME_MODIFIERS):
+        return False
+
+    has_substantial_proper_noun = any(
+        len(t) >= 4 and t not in GENERIC_NAME_MODIFIERS for t in shared
+    )
+    if not has_substantial_proper_noun:
+        return False
+    return bool(diff.issubset(ALLOWABLE_CHAIN_QUALIFIERS))
+
+
 def are_venues_duplicates(
     name1: str, lat1: float, lng1: float, name2: str, lat2: float, lng2: float
 ) -> bool:
@@ -188,56 +217,20 @@ def are_venues_duplicates(
     Guards strictly against over-merging distinct businesses while ensuring true duplicates
     (e.g., 'Rambagh Palace' vs 'The Rambagh Palace, Jaipur') are cleanly collapsed.
     """
-    # 1. Exact normalized alphanumeric match (ignoring case, spaces, punctuation)
     norm1 = re.sub(r"[^a-z0-9]", "", name1.lower())
     norm2 = re.sub(r"[^a-z0-9]", "", name2.lower())
     if norm1 == norm2:
         return True
 
-    # Check physical distance
-    dist_km = haversine_distance_km(lat1, lng1, lat2, lng2)
-    # Beyond 350 meters, two venues are never considered the same physical venue
-    if dist_km > 0.35:
+    if haversine_distance_km(lat1, lng1, lat2, lng2) > 0.35:
         return False
 
-    # Normalized prefix/suffix match with city name (e.g. 'rambaghpalacejaipur' vs 'rambaghpalace')
-    if (norm1.startswith(norm2) or norm2.startswith(norm1)) and abs(len(norm1) - len(norm2)) <= 10:
-        remainder = (
-            norm1.replace(norm2, "") if len(norm1) > len(norm2) else norm2.replace(norm1, "")
-        )
-        if remainder in {"jaipur", "pune", "bengaluru", "indore", "delhi", "mumbai"}:
-            return True
+    if _is_name_or_city_suffix_match(norm1, norm2):
+        return True
 
     toks1 = extract_distinctive_tokens(name1)
     toks2 = extract_distinctive_tokens(name2)
-
-    if not toks1 or not toks2:
-        return False
-
-    # 2. Distinctive token set equality (e.g. {'rambagh'} == {'rambagh'}, {'jw', 'marriott'} == {'jw', 'marriott'})
-    if toks1 == toks2:
-        # If the ONLY tokens are generic modifiers (e.g. {'royal'} or {'grand'}),
-        # do NOT merge without exact normalized match
-        # Specific brand/proper noun match
-        return not toks1.issubset(GENERIC_NAME_MODIFIERS)
-
-    # 3. Subset match with corporate chain qualifiers (e.g. {'taj', 'rambagh'} vs {'rambagh'})
-    shared = toks1 & toks2
-    diff = toks1 ^ toks2
-
-    # If shared tokens are only generic modifiers (e.g. 'shree', 'sai', 'royal', 'grand'), do NOT merge
-    if not shared or shared.issubset(GENERIC_NAME_MODIFIERS):
-        return False
-
-    # Must share at least one substantial specific proper noun (>= 4 chars, not generic)
-    has_substantial_proper_noun = any(
-        len(t) >= 4 and t not in GENERIC_NAME_MODIFIERS for t in shared
-    )
-    if not has_substantial_proper_noun:
-        return False
-
-    # If all differing tokens are allowable hotel chain/qualifiers, they are the same physical venue
-    return bool(diff.issubset(ALLOWABLE_CHAIN_QUALIFIERS))
+    return _are_tokens_duplicate(toks1, toks2)
 
 
 def haversine_distance_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
@@ -324,6 +317,67 @@ class VendorDiscoveryService:
         return None
 
     @classmethod
+    def _resolve_coordinates(
+        cls, lat: float | None, lng: float | None, city: str | None
+    ) -> tuple[float | None, float | None]:
+        if lat is not None and lng is not None:
+            return lat, lng
+        if not city:
+            return None, None
+        clean_city = city.strip().lower()
+        if clean_city in CITY_CENTERS:
+            return CITY_CENTERS[clean_city]
+        geocoded = cls.geocode_query(city)
+        if geocoded:
+            return geocoded[0], geocoded[1]
+        return None, None
+
+    @classmethod
+    def _is_candidate_duplicate(
+        cls, p: VendorProfile, accepted: list[tuple[VendorDiscoveryItem, float]]
+    ) -> bool:
+        p_lat, p_lng = float(p.latitude or 0.0), float(p.longitude or 0.0)
+        for item, _ in accepted:
+            if item.latitude and item.longitude and are_venues_duplicates(
+                name1=p.business_name, lat1=p_lat, lng1=p_lng,
+                name2=item.business_name, lat2=item.latitude, lng2=item.longitude,
+            ):
+                return True
+        return False
+
+    @classmethod
+    def _deduplicate_and_sort_candidates(
+        cls, candidates: list[VendorProfile], lat: float, lng: float, radius_km: float
+    ) -> list[VendorDiscoveryItem]:
+        def candidate_priority(p: VendorProfile) -> int:
+            notes = (p.source_notes or "").lower()
+            if "pickyourtrail" in notes or "venuelook" in notes:
+                return 0
+            return 1 if p.is_verified_profile else 2
+
+        sorted_candidates = sorted(candidates, key=candidate_priority)
+        accepted: list[tuple[VendorDiscoveryItem, float]] = []
+        seen_names = set()
+
+        for p in sorted_candidates:
+            if p.latitude is None or p.longitude is None or not is_valid_venue_name(p.business_name):
+                continue
+
+            dist = haversine_distance_km(lat, lng, float(p.latitude), float(p.longitude))
+            if dist > radius_km:
+                continue
+
+            norm_name = re.sub(r"[^a-z0-9]", "", p.business_name.lower())
+            if norm_name in seen_names or cls._is_candidate_duplicate(p, accepted):
+                continue
+
+            seen_names.add(norm_name)
+            accepted.append((cls._profile_to_item(p, distance_km=dist), dist))
+
+        accepted.sort(key=lambda x: x[1])
+        return [item for item, _ in accepted]
+
+    @classmethod
     def search_vendors(
         cls,
         db: Session,
@@ -334,189 +388,88 @@ class VendorDiscoveryService:
         category: str | None = None,
         sort_by: str = "distance_asc",
     ) -> VendorDiscoveryResponse:
-        resolved_lat = lat
-        resolved_lng = lng
+        resolved_lat, resolved_lng = cls._resolve_coordinates(lat, lng, city)
 
-        # Fallback to city center or Nominatim geocode if lat/lng not provided
-        if (resolved_lat is None or resolved_lng is None) and city:
-            clean_city = city.strip().lower()
-            if clean_city in CITY_CENTERS:
-                resolved_lat, resolved_lng = CITY_CENTERS[clean_city]
-            else:
-                geocoded = cls.geocode_query(city)
-                if geocoded:
-                    resolved_lat, resolved_lng, _ = geocoded
-
-        # If lat/lng could not be resolved, fall back to pure text city match
         if resolved_lat is None or resolved_lng is None:
             query = db.query(VendorProfile)
             if category:
                 query = query.filter(VendorProfile.category.ilike(f"%{category.strip()}%"))
             if city:
                 query = query.filter(VendorProfile.city.ilike(f"%{city.strip()}%"))
-            profiles = query.all()
-
-            results: list[VendorDiscoveryItem] = [
-                cls._profile_to_item(p, distance_km=None) for p in profiles
-            ]
+            results = [cls._profile_to_item(p, distance_km=None) for p in query.all()]
             return VendorDiscoveryResponse(
-                query_lat=None,
-                query_lng=None,
-                query_city=city,
-                radius_km=radius_km,
-                category_filter=category,
-                total_results=len(results),
-                results=results,
+                query_lat=None, query_lng=None, query_city=city, radius_km=radius_km,
+                category_filter=category, total_results=len(results), results=results,
             )
 
-        # 1. Fetch existing DB profiles in bounding box (including curated Jaipur/Pune seeds)
         deg_lat = radius_km / 111.0
         rad_lat = math.radians(resolved_lat)
         deg_lng = radius_km / (111.0 * max(0.1, math.cos(rad_lat)))
 
-        min_lat = resolved_lat - deg_lat
-        max_lat = resolved_lat + deg_lat
-        min_lng = resolved_lng - deg_lng
-        max_lng = resolved_lng + deg_lng
-
         db_query = db.query(VendorProfile).filter(
-            VendorProfile.latitude >= min_lat,
-            VendorProfile.latitude <= max_lat,
-            VendorProfile.longitude >= min_lng,
-            VendorProfile.longitude <= max_lng,
+            VendorProfile.latitude >= resolved_lat - deg_lat,
+            VendorProfile.latitude <= resolved_lat + deg_lat,
+            VendorProfile.longitude >= resolved_lng - deg_lng,
+            VendorProfile.longitude <= resolved_lng + deg_lng,
         )
         if category:
             db_query = db_query.filter(VendorProfile.category.ilike(f"%{category.strip()}%"))
 
-        db_query.all()
-
-        # 2. Query OpenStreetMap for nationwide venues (Overpass + Nominatim)
-        # Extend real coverage anywhere in India without fabricating
         cls._fetch_and_persist_osm_venues(
             db=db, lat=resolved_lat, lng=resolved_lng, radius_km=radius_km, city_hint=city
         )
 
-        # 3. Re-query all candidates in bounding box (seed + persisted OSM venues)
         all_candidates = db_query.all()
-
-        # 4. Compute Haversine distance, deduplicate, filter nameless/garbage, and sort
-        # Prioritize curated baseline seeds (pickyourtrail/venuelook) first so duplicates from OSM are dropped
-        def candidate_priority(p: VendorProfile) -> int:
-            notes = (p.source_notes or "").lower()
-            if "pickyourtrail" in notes or "venuelook" in notes:
-                return 0  # Curated seed (highest priority)
-            if p.is_verified_profile:
-                return 1
-            return 2  # External OSM record
-
-        sorted_candidates = sorted(all_candidates, key=candidate_priority)
-
-        accepted_items: list[tuple[VendorDiscoveryItem, float]] = []
-        seen_normalized_names = set()
-
-        for p in sorted_candidates:
-            if p.latitude is None or p.longitude is None:
-                continue
-
-            # Check 2: Filter nameless/garbage/raw-ID venues
-            if not is_valid_venue_name(p.business_name):
-                continue
-
-            dist = haversine_distance_km(
-                resolved_lat, resolved_lng, float(p.latitude), float(p.longitude)
-            )
-            if dist > radius_km:
-                continue
-
-            # Deduplication: Check against already accepted higher-priority venues
-            # Match A: exact normalized alphanumeric string
-            norm_name = re.sub(r"[^a-z0-9]", "", p.business_name.lower())
-            if norm_name in seen_normalized_names:
-                continue
-
-            # Match B: Intelligent deduplication (spatial proximity + specific proper nouns)
-            # Guards strictly against over-merging distinct businesses with short or generic words
-            p_lat = float(p.latitude)
-            p_lng = float(p.longitude)
-
-            is_duplicate = False
-            for accepted_item, _ in accepted_items:
-                if (
-                    accepted_item.latitude
-                    and accepted_item.longitude
-                    and are_venues_duplicates(
-                        name1=p.business_name,
-                        lat1=p_lat,
-                        lng1=p_lng,
-                        name2=accepted_item.business_name,
-                        lat2=accepted_item.latitude,
-                        lng2=accepted_item.longitude,
-                    )
-                ):
-                    logger.info(
-                        "Deduplicating duplicate venue '%s' against higher-priority '%s'",
-                        p.business_name,
-                        accepted_item.business_name,
-                    )
-                    is_duplicate = True
-                    break
-
-            if is_duplicate:
-                continue
-
-            seen_normalized_names.add(norm_name)
-            item = cls._profile_to_item(p, distance_km=dist)
-            accepted_items.append((item, dist))
-
-        # Sort by distance
-        accepted_items.sort(key=lambda x: x[1])
-        results = [item for item, _ in accepted_items]
+        results = cls._deduplicate_and_sort_candidates(all_candidates, resolved_lat, resolved_lng, radius_km)
 
         return VendorDiscoveryResponse(
-            query_lat=resolved_lat,
-            query_lng=resolved_lng,
-            query_city=city,
-            radius_km=radius_km,
-            category_filter=category,
-            total_results=len(results),
-            results=results,
+            query_lat=resolved_lat, query_lng=resolved_lng, query_city=city,
+            radius_km=radius_km, category_filter=category, total_results=len(results), results=results,
         )
+
+    @staticmethod
+    def _extract_el_coords(el: dict[str, Any]) -> tuple[float, float] | None:
+        center = el.get("center") or {}
+        lat = el.get("lat") if el.get("lat") is not None else center.get("lat")
+        lon = el.get("lon") if el.get("lon") is not None else center.get("lon")
+        if lat is not None and lon is not None:
+            return float(lat), float(lon)
+        return None
 
     @classmethod
-    def _fetch_and_persist_osm_venues(
-        cls, db: Session, lat: float, lng: float, radius_km: float, city_hint: str | None = None
-    ) -> None:
-        """
-        Queries OpenStreetMap (via Overpass API with Nominatim fallback) for real venue records.
-        Uses in-process thread-safe TTL caching (15 minutes) to avoid redundant external network round trips.
-        Any newly discovered OSM venue is persisted into `vendor_profiles` with a deterministic UUID,
-        guaranteeing that `POST /events/{id}/compose` can reference it via `vendor_profile_id`
-        with 100% database relational integrity.
-        """
-        cache_key = (
-            round(lat, 2),
-            round(lng, 2),
-            int(radius_km),
-            (city_hint or "").lower().strip(),
-        )
-        now = time.time()
+    def _parse_overpass_element(cls, el: dict[str, Any], city_hint: str | None) -> dict[str, Any] | None:
+        tags = el.get("tags", {})
+        v_name = tags.get("name") or tags.get("name:en")
+        if not is_valid_venue_name(v_name):
+            return None
+        coords = cls._extract_el_coords(el)
+        if coords is None:
+            return None
+        v_lat, v_lon = coords
 
-        with _OVERPASS_CACHE_LOCK:
-            if cache_key in _OVERPASS_CACHE:
-                cached_time, _ = _OVERPASS_CACHE[cache_key]
-                if now - cached_time < OVERPASS_CACHE_TTL_SECONDS:
-                    logger.info(
-                        "Overpass in-process TTL cache HIT for key %s (age: %.1fs) - skipping external network query",
-                        cache_key,
-                        now - cached_time,
-                    )
-                    return
+        locality = None
+        for k in ("addr:suburb", "addr:neighbourhood", "addr:street"):
+            val = tags.get(k)
+            if val:
+                locality = str(val)
+                break
 
-        osm_venues: list[dict] = []
-        radius_m = int(min(radius_km, 35.0) * 1000)
+        return {
+            "osm_type": el.get("type", "node"),
+            "osm_id": el.get("id"),
+            "name": str(v_name).strip(),
+            "lat": v_lat,
+            "lng": v_lon,
+            "locality": locality,
+            "city": city_hint.title() if city_hint else (tags.get("addr:city") or "Nearby"),
+            "category": "events_venue" if tags.get("amenity") == "events_venue" else "venue",
+        }
 
-        # Strategy A: Overpass API across mirrors (3.5s timeout)
-        overpass_servers = [
+    @classmethod
+    def _query_overpass_mirrors(
+        cls, lat: float, lng: float, radius_m: int, city_hint: str | None
+    ) -> list[dict]:
+        servers = [
             "https://overpass-api.de/api/interpreter",
             "https://overpass.kumi.systems/api/interpreter",
             "https://overpass.private.coffee/api/interpreter",
@@ -530,143 +483,93 @@ class VendorDiscoveryService:
 );
 out center 15;"""
         overpass_data = urllib.parse.urlencode({"data": ql}).encode("utf-8")
+        venues = []
 
-        for srv in overpass_servers:
+        for srv in servers:
             try:
                 _validate_safe_outbound_url(srv)
-                req = urllib.request.Request(  # noqa: S310
-                    srv, data=overpass_data, headers={"User-Agent": OSM_USER_AGENT}
-                )
+                req = urllib.request.Request(srv, data=overpass_data, headers={"User-Agent": OSM_USER_AGENT})  # noqa: S310
                 with urllib.request.urlopen(req, timeout=1.8) as resp:  # noqa: S310 # nosec B310
                     data = json.loads(resp.read().decode("utf-8"))
-                    elements = data.get("elements", [])
-                    for el in elements:
-                        tags = el.get("tags", {})
-                        v_name = tags.get("name") or tags.get("name:en")
-                        if not is_valid_venue_name(v_name):
-                            continue
-                        v_lat = el.get("lat") or el.get("center", {}).get("lat")
-                        v_lon = el.get("lon") or el.get("center", {}).get("lon")
-                        if v_lat is None or v_lon is None:
-                            continue
-                        osm_type = el.get("type", "node")
-                        osm_id = el.get("id")
-                        osm_venues.append(
-                            {
-                                "osm_type": osm_type,
-                                "osm_id": osm_id,
-                                "name": v_name.strip(),
-                                "lat": float(v_lat),
-                                "lng": float(v_lon),
-                                "locality": tags.get("addr:suburb")
-                                or tags.get("addr:neighbourhood")
-                                or tags.get("addr:street")
-                                or (
-                                    tags.get("addr:city")
-                                    if city_hint and tags.get("addr:city") != city_hint
-                                    else None
-                                ),
-                                "city": city_hint.title()
-                                if city_hint
-                                else (tags.get("addr:city") or "Nearby"),
-                                "category": "events_venue"
-                                if tags.get("amenity") == "events_venue"
-                                else "venue",
-                            }
-                        )
-                    if osm_venues:
+                    for el in data.get("elements", []):
+                        parsed = cls._parse_overpass_element(el, city_hint)
+                        if parsed:
+                            venues.append(parsed)
+                    if venues:
                         break
-            except (
-                urllib.error.URLError,
-                TimeoutError,
-                json.JSONDecodeError,
-                KeyError,
-                ValueError,
-                OSError,
-            ) as e:
+            except (urllib.error.URLError, TimeoutError, json.JSONDecodeError, KeyError, ValueError, OSError) as e:
                 logger.debug("Overpass query failed on %s: %s", srv, e)
                 continue
+        return venues
 
-        # Strategy B: If Overpass is busy/down, query OpenStreetMap Nominatim
-        if not osm_venues:
-            # Cultural terms by region
-            search_terms = ["marriage garden", "mangal karyalay", "kalyana mantapa", "banquet hall"]
-            # Resolve city name if not provided
-            target_city = city_hint
-            if not target_city:
-                try:
-                    rev_url = f"https://nominatim.openstreetmap.org/reverse?lat={lat}&lon={lng}&format=json"
-                    _validate_safe_outbound_url(rev_url)
-                    rev_req = urllib.request.Request(
-                        rev_url, headers={"User-Agent": OSM_USER_AGENT}
-                    )
-                    with urllib.request.urlopen(rev_req, timeout=3.0) as rev_resp:  # noqa: S310 # nosec B310
-                        rev_data = json.loads(rev_resp.read().decode("utf-8"))
-                        addr = rev_data.get("address", {})
-                        target_city = (
-                            addr.get("city") or addr.get("town") or addr.get("state_district")
-                        )
-                except (
-                    urllib.error.URLError,
-                    TimeoutError,
-                    json.JSONDecodeError,
-                    KeyError,
-                    ValueError,
-                    OSError,
-                ) as exc:
-                    logger.debug("Failed reverse geocoding city lookup: %s", exc)
+    @classmethod
+    def _parse_nominatim_item(
+        cls, it: dict[str, Any], target_city: str | None, lat: float, lng: float, radius_km: float
+    ) -> dict[str, Any] | None:
+        v_name = it.get("name") or it.get("display_name", "").split(",")[0]
+        if not is_valid_venue_name(v_name):
+            return None
+        v_lat, v_lng = float(it.get("lat")), float(it.get("lon"))
+        if haversine_distance_km(lat, lng, v_lat, v_lng) > radius_km:
+            return None
+        return {
+            "osm_type": it.get("osm_type", "node"),
+            "osm_id": it.get("osm_id"),
+            "name": str(v_name).strip(),
+            "lat": v_lat,
+            "lng": v_lng,
+            "locality": it.get("display_name", "").split(",")[1].strip() if "," in it.get("display_name", "") else None,
+            "city": target_city or "Nearby",
+            "category": "venue",
+        }
 
-            for term in search_terms:
-                query_str = f"{term} {target_city}" if target_city else term
-                try:
-                    url = f"https://nominatim.openstreetmap.org/search?q={urllib.parse.quote(query_str)}&format=json&limit=6&countrycodes=in"
-                    _validate_safe_outbound_url(url)
-                    req = urllib.request.Request(url, headers={"User-Agent": OSM_USER_AGENT})
-                    with urllib.request.urlopen(req, timeout=3.5) as resp:  # noqa: S310 # nosec B310
-                        items = json.loads(resp.read().decode("utf-8"))
-                        for it in items:
-                            v_name = it.get("name") or it.get("display_name", "").split(",")[0]
-                            if not is_valid_venue_name(v_name):
-                                continue
-                            osm_type = it.get("osm_type", "node")
-                            osm_id = it.get("osm_id")
-                            v_lat = float(it.get("lat"))
-                            v_lng = float(it.get("lon"))
-                            # Check distance
-                            if haversine_distance_km(lat, lng, v_lat, v_lng) <= radius_km:
-                                osm_venues.append(
-                                    {
-                                        "osm_type": osm_type,
-                                        "osm_id": osm_id,
-                                        "name": v_name.strip(),
-                                        "lat": v_lat,
-                                        "lng": v_lng,
-                                        "locality": it.get("display_name", "").split(",")[1].strip()
-                                        if "," in it.get("display_name", "")
-                                        else None,
-                                        "city": target_city or "Nearby",
-                                        "category": "venue",
-                                    }
-                                )
-                        if len(osm_venues) >= 6:
-                            break
-                except (
-                    urllib.error.URLError,
-                    TimeoutError,
-                    json.JSONDecodeError,
-                    KeyError,
-                    ValueError,
-                    OSError,
-                ) as e:
-                    logger.debug("Nominatim search failed for '%s': %s", query_str, e)
-                    continue
+    @classmethod
+    def _resolve_target_city(cls, lat: float, lng: float, city_hint: str | None) -> str | None:
+        if city_hint:
+            return city_hint
+        try:
+            rev_url = f"https://nominatim.openstreetmap.org/reverse?lat={lat}&lon={lng}&format=json"
+            _validate_safe_outbound_url(rev_url)
+            rev_req = urllib.request.Request(rev_url, headers={"User-Agent": OSM_USER_AGENT})
+            with urllib.request.urlopen(rev_req, timeout=3.0) as rev_resp:  # noqa: S310 # nosec B310
+                rev_data = json.loads(rev_resp.read().decode("utf-8"))
+                addr = rev_data.get("address", {})
+                return addr.get("city") or addr.get("town") or addr.get("state_district")
+        except (urllib.error.URLError, TimeoutError, json.JSONDecodeError, KeyError, ValueError, OSError) as exc:
+            logger.debug("Failed reverse geocoding city lookup: %s", exc)
+        return None
 
-        # Persist newly discovered OSM venues into vendor_profiles table
+    @classmethod
+    def _query_nominatim_venues(
+        cls, lat: float, lng: float, radius_km: float, city_hint: str | None
+    ) -> list[dict]:
+        target_city = cls._resolve_target_city(lat, lng, city_hint)
+        search_terms = ["marriage garden", "mangal karyalay", "kalyana mantapa", "banquet hall"]
+        venues = []
+        for term in search_terms:
+            query_str = f"{term} {target_city}" if target_city else term
+            try:
+                url = f"https://nominatim.openstreetmap.org/search?q={urllib.parse.quote(query_str)}&format=json&limit=6&countrycodes=in"
+                _validate_safe_outbound_url(url)
+                req = urllib.request.Request(url, headers={"User-Agent": OSM_USER_AGENT})
+                with urllib.request.urlopen(req, timeout=3.5) as resp:  # noqa: S310 # nosec B310
+                    for it in json.loads(resp.read().decode("utf-8")):
+                        parsed = cls._parse_nominatim_item(it, target_city, lat, lng, radius_km)
+                        if parsed:
+                            venues.append(parsed)
+                    if len(venues) >= 6:
+                        break
+            except (urllib.error.URLError, TimeoutError, json.JSONDecodeError, KeyError, ValueError, OSError) as e:
+                logger.debug("Nominatim search failed for '%s': %s", query_str, e)
+                continue
+        return venues
+
+    @classmethod
+    def _persist_discovered_osm_venues(cls, db: Session, osm_venues: list[dict]) -> None:
         new_profiles_count = 0
         for v in osm_venues:
             if not is_valid_venue_name(v.get("name")):
                 continue
-            # Deterministic UUID from OSM entity
             osm_uuid = str(uuid.uuid5(uuid.NAMESPACE_URL, f"osm_{v['osm_type']}_{v['osm_id']}"))
             existing = db.query(VendorProfile).filter(VendorProfile.id == osm_uuid).first()
             if not existing:
@@ -680,7 +583,7 @@ out center 15;"""
                     locality=v["locality"][:150] if v["locality"] else None,
                     city_tier="tier_2",
                     is_verified_profile=False,
-                    average_rating=None,  # Honest unrated
+                    average_rating=None,
                     rating_count=0,
                     coordinate_precision="exact_osm_node",
                     source_notes=f"OpenStreetMap (Real OSM Record: {v['osm_type']}/{v['osm_id']})",
@@ -691,32 +594,50 @@ out center 15;"""
         if new_profiles_count > 0:
             try:
                 db.commit()
-                logger.info(
-                    "Persisted %d new OpenStreetMap venues into vendor_profiles", new_profiles_count
-                )
+                logger.info("Persisted %d new OpenStreetMap venues into vendor_profiles", new_profiles_count)
             except SQLAlchemyError as e:
                 db.rollback()
                 logger.warning("Failed to commit OSM venues: %s", e)
 
-        # Store in in-process TTL cache
+    @classmethod
+    def _fetch_and_persist_osm_venues(
+        cls, db: Session, lat: float, lng: float, radius_km: float, city_hint: str | None = None
+    ) -> None:
+        cache_key = (round(lat, 2), round(lng, 2), int(radius_km), (city_hint or "").lower().strip())
+        now = time.time()
+
+        with _OVERPASS_CACHE_LOCK:
+            if cache_key in _OVERPASS_CACHE:
+                cached_time, _ = _OVERPASS_CACHE[cache_key]
+                if now - cached_time < OVERPASS_CACHE_TTL_SECONDS:
+                    logger.info("Overpass in-process TTL cache HIT for key %s", cache_key)
+                    return
+
+        radius_m = int(min(radius_km, 35.0) * 1000)
+        osm_venues = cls._query_overpass_mirrors(lat, lng, radius_m, city_hint)
+        if not osm_venues:
+            osm_venues = cls._query_nominatim_venues(lat, lng, radius_km, city_hint)
+
+        cls._persist_discovered_osm_venues(db, osm_venues)
+
         with _OVERPASS_CACHE_LOCK:
             _OVERPASS_CACHE[cache_key] = (now, osm_venues)
 
     @staticmethod
-    def _profile_to_item(profile: VendorProfile, distance_km: float | None) -> VendorDiscoveryItem:
-        # Determine rating tier strictly per DEC-013:
-        # If average_rating is None or 0 or rating_count == 0 -> "new_unrated"
+    def _resolve_rating_tier(avg_rating: float | None, rating_count: int) -> str:
+        if avg_rating is None or rating_count == 0:
+            return "new_unrated"
+        if avg_rating >= 4.8 and rating_count >= 15:
+            return "top_rated"
+        if avg_rating >= 4.0:
+            return "highly_rated"
+        return "rated"
+
+    @classmethod
+    def _profile_to_item(cls, profile: VendorProfile, distance_km: float | None) -> VendorDiscoveryItem:
         avg_rating = float(profile.average_rating) if profile.average_rating is not None else None
         rating_count = profile.rating_count or 0
-
-        if avg_rating is None or rating_count == 0:
-            rating_tier = "new_unrated"
-        elif avg_rating >= 4.8 and rating_count >= 15:
-            rating_tier = "top_rated"
-        elif avg_rating >= 4.0:
-            rating_tier = "highly_rated"
-        else:
-            rating_tier = "rated"
+        rating_tier = cls._resolve_rating_tier(avg_rating, rating_count)
 
         cost_est = CostEstimateResponse(
             is_estimate=True, limited_data=True, estimated_cost_display="Limited data"
