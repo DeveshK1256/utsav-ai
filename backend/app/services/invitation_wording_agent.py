@@ -9,6 +9,7 @@ import json
 import logging
 import os
 
+import httpx
 from pydantic import BaseModel, Field
 
 logger = logging.getLogger(__name__)
@@ -65,7 +66,7 @@ class InvitationWordingAgent:
                     ceremony_names=ceremony_names,
                     design_brief=design_brief
                 )
-            except Exception as exc:
+            except (httpx.HTTPError, ValueError, KeyError, json.JSONDecodeError, RuntimeError, TypeError, OSError) as exc:
                 logger.warning("Gemini invitation wording generation failed, invoking deterministic stub: %s", exc)
                 stub_resp = cls._deterministic_fallback(
                     event_name=event_name,

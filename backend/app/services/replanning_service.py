@@ -628,7 +628,7 @@ class ReplanningService:
             try:
                 to_d = date.fromisoformat(str(to_d_raw))
                 from_d = date.fromisoformat(str(from_d_raw))
-            except Exception as e:
+            except (ValueError, TypeError) as e:
                 return f"Invalid date format (must be YYYY-MM-DD): {e}"
 
             if to_d < date.today():
@@ -642,7 +642,7 @@ class ReplanningService:
                 return "Target budget 'to_budget' is required."
             try:
                 to_b = float(to_b_raw)
-            except Exception:
+            except (ValueError, TypeError):
                 return f"Invalid target budget amount: {to_b_raw}"
 
             from_b = float(payload.get("from_budget", float(event.total_budget)))

@@ -347,7 +347,7 @@ def get_quote_extraction_provider() -> BaseQuoteExtractionProvider:
                 GeminiQuoteExtractionProvider,
             )
             return GeminiQuoteExtractionProvider(api_key=gemini_key)
-        except Exception as exc:
+        except (ImportError, AttributeError, TypeError, ValueError, RuntimeError, KeyError) as exc:
             logger.debug("GeminiQuoteExtractionProvider initialization failed, falling back: %s", exc)
 
     openai_key = os.getenv("OPENAI_API_KEY")
@@ -357,7 +357,7 @@ def get_quote_extraction_provider() -> BaseQuoteExtractionProvider:
                 OpenAIQuoteExtractionProvider,
             )
             return cast(BaseQuoteExtractionProvider, OpenAIQuoteExtractionProvider(api_key=openai_key))
-        except Exception as exc:
+        except (ImportError, AttributeError, TypeError, ValueError, RuntimeError, KeyError) as exc:
             logger.debug("OpenAIQuoteExtractionProvider initialization failed, falling back: %s", exc)
 
     return DeterministicStubQuoteExtractionProvider()
@@ -374,7 +374,7 @@ def get_negotiation_draft_provider() -> BaseNegotiationDraftProvider:
                 GeminiNegotiationDraftProvider,
             )
             return GeminiNegotiationDraftProvider(api_key=gemini_key)
-        except Exception as exc:
+        except (ImportError, AttributeError, TypeError, ValueError, RuntimeError, KeyError) as exc:
             logger.debug("GeminiNegotiationDraftProvider initialization failed, falling back: %s", exc)
 
     return DeterministicStubNegotiationDraftProvider()
@@ -472,7 +472,7 @@ def get_replanning_explanation_provider() -> BaseReplanningExplanationProvider:
                 GeminiReplanningExplanationProvider,
             )
             return GeminiReplanningExplanationProvider(api_key=gemini_key)
-        except Exception as exc:
+        except (ImportError, AttributeError, TypeError, ValueError, RuntimeError, KeyError) as exc:
             logger.debug("GeminiReplanningExplanationProvider initialization failed, falling back: %s", exc)
 
     return DeterministicStubReplanningExplanationProvider()
@@ -635,7 +635,7 @@ def get_vibe_extraction_provider() -> BaseVibeExtractionProvider:
                 GeminiVibeProvider,
             )
             return GeminiVibeProvider(api_key=gemini_key)
-        except Exception as exc:
+        except (ImportError, AttributeError, TypeError, ValueError, RuntimeError, KeyError) as exc:
             logger.debug("GeminiVibeProvider initialization failed, falling back: %s", exc)
 
     return DeterministicStubVibeProvider()
@@ -652,7 +652,7 @@ def get_theme_generation_provider() -> BaseThemeGenerationProvider:
                 GeminiVibeProvider,
             )
             return GeminiVibeProvider(api_key=gemini_key)
-        except Exception as exc:
+        except (ImportError, AttributeError, TypeError, ValueError, RuntimeError, KeyError) as exc:
             logger.debug("GeminiVibeProvider (theme) initialization failed, falling back: %s", exc)
 
     return DeterministicStubVibeProvider()

@@ -8,6 +8,7 @@ import urllib.parse
 import urllib.request
 import uuid
 
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from backend.app.models.models import VendorProfile
@@ -226,7 +227,7 @@ class VendorDiscoveryService:
                 if data and len(data) > 0:
                     first = data[0]
                     return (float(first["lat"]), float(first["lon"]), first.get("display_name", query_text))
-        except Exception as e:
+        except (urllib.error.URLError, TimeoutError, json.JSONDecodeError, KeyError, IndexError, ValueError, OSError) as e:
             logger.warning("Nominatim geocode failed for '%s': %s", query_text, e)
         return None
 
@@ -464,7 +465,7 @@ out center 15;"""
                         })
                     if osm_venues:
                         break
-            except Exception as e:
+            except (urllib.error.URLError, TimeoutError, json.JSONDecodeError, KeyError, ValueError, OSError) as e:
                 logger.debug("Overpass query failed on %s: %s", srv, e)
                 continue
 
@@ -483,7 +484,7 @@ out center 15;"""
                         rev_data = json.loads(rev_resp.read().decode("utf-8"))
                         addr = rev_data.get("address", {})
                         target_city = addr.get("city") or addr.get("town") or addr.get("state_district")
-                except Exception as exc:
+                except (urllib.error.URLError, TimeoutError, json.JSONDecodeError, KeyError, ValueError, OSError) as exc:
                     logger.debug("Failed reverse geocoding city lookup: %s", exc)
 
             for term in search_terms:
@@ -516,7 +517,7 @@ out center 15;"""
                                 })
                         if len(osm_venues) >= 6:
                             break
-                except Exception as e:
+                except (urllib.error.URLError, TimeoutError, json.JSONDecodeError, KeyError, ValueError, OSError) as e:
                     logger.debug("Nominatim search failed for '%s': %s", query_str, e)
                     continue
 
@@ -551,7 +552,7 @@ out center 15;"""
             try:
                 db.commit()
                 logger.info("Persisted %d new OpenStreetMap venues into vendor_profiles", new_profiles_count)
-            except Exception as e:
+            except SQLAlchemyError as e:
                 db.rollback()
                 logger.warning("Failed to commit OSM venues: %s", e)
 

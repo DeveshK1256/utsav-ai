@@ -5,6 +5,7 @@ import os
 import time
 from typing import Any
 
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from backend.app.core.config import settings
@@ -216,7 +217,7 @@ class WhatsAppWebhookService:
                                 provider=provider
                             )
                             results["faq_replies_sent"] += 1
-                        except Exception as e:
+                        except (SQLAlchemyError, ValueError, RuntimeError, TypeError, KeyError) as e:
                             logger.error(f"Failed to transmit FAQ response: {e}")
 
         return results

@@ -33,18 +33,18 @@ def get_font(path: str, size: int) -> Any:
     try:
         if path and os.path.exists(path):
             return ImageFont.truetype(path, size)
-    except Exception as exc:
+    except (OSError, RuntimeError) as exc:
         logger.debug("Failed loading primary font %s: %s", path, exc)
     # Prefer bundled NotoSansDevanagari-Regular.ttf before any unbundled system font!
     try:
         if os.path.exists(FONT_REGULAR_PATH):
             return ImageFont.truetype(FONT_REGULAR_PATH, size)
-    except Exception as exc:
+    except (OSError, RuntimeError) as exc:
         logger.debug("Failed loading bundled regular font: %s", exc)
     # System fallback or default
     try:
         return ImageFont.truetype("arial.ttf", size)
-    except Exception as exc:
+    except (OSError, RuntimeError) as exc:
         logger.debug("Failed loading system fallback font: %s", exc)
         return ImageFont.load_default()
 

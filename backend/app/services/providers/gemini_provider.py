@@ -219,7 +219,7 @@ class GeminiNegotiationDraftProvider(BaseNegotiationDraftProvider):
                     parsed = json.loads(text.strip())
                     if "polite" in parsed and "firm" in parsed and "bundle_ask" in parsed:
                         return cast(dict[str, dict[str, str]], parsed)
-            except Exception as e:
+            except (httpx.HTTPError, KeyError, IndexError, json.JSONDecodeError, ValidationError, TypeError, ValueError) as e:
                 logger.warning(f"Gemini negotiation draft attempt {attempts} failed: {e}")
                 if attempts < 3:
                     time.sleep(2.0 * attempts)
@@ -315,7 +315,7 @@ class GeminiReplanningExplanationProvider(BaseReplanningExplanationProvider):
                                 "overage_amount": over_amount
                             }
                         }
-            except Exception as e:
+            except (httpx.HTTPError, KeyError, IndexError, json.JSONDecodeError, ValidationError, TypeError, ValueError) as e:
                 last_err = e
                 is_429 = "429" in str(e) or (hasattr(e, "response") and getattr(e.response, "status_code", None) == 429)
                 logger.error(
@@ -431,7 +431,7 @@ class GeminiVibeProvider(BaseVibeExtractionProvider, BaseThemeGenerationProvider
                     self.last_provider_used = "gemini-3-flash-preview"
                     self.last_fallback_warning = None
                     return validated
-            except Exception as e:
+            except (httpx.HTTPError, KeyError, IndexError, json.JSONDecodeError, ValidationError, TypeError, ValueError) as e:
                 last_err = e
                 is_429 = "429" in str(e) or (hasattr(e, "response") and getattr(e.response, "status_code", None) == 429)
                 logger.error(
@@ -543,7 +543,7 @@ class GeminiVibeProvider(BaseVibeExtractionProvider, BaseThemeGenerationProvider
                         return validated
                     else:
                         logger.warning(f"Gemini returned only {len(validated.decor_items)} decor items (< 10). Retrying...")
-            except Exception as e:
+            except (httpx.HTTPError, KeyError, IndexError, json.JSONDecodeError, ValidationError, TypeError, ValueError) as e:
                 last_err = e
                 is_429 = "429" in str(e) or (hasattr(e, "response") and getattr(e.response, "status_code", None) == 429)
                 logger.error(

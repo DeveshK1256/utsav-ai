@@ -2,6 +2,7 @@ import logging
 import time
 
 from pydantic import BaseModel
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from backend.app.models.models import Event, Guest, MessageLog, OptOut
@@ -186,7 +187,7 @@ class WhatsAppSendService:
             except OptOutBlockedError as e:
                 blocked += 1
                 errors.append({"phone": guest.phone, "error": str(e)})
-            except Exception as e:
+            except (SQLAlchemyError, ValueError, RuntimeError, TypeError, KeyError) as e:
                 failed += 1
                 errors.append({"phone": guest.phone, "error": str(e)})
 

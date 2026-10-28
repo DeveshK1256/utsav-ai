@@ -1,3 +1,4 @@
+import json
 import logging
 import os
 import uuid
@@ -200,7 +201,7 @@ class MetaCloudWhatsAppProvider(WhatsAppProvider):
                     provider_used="meta_cloud_api",
                     error=err_msg
                 )
-        except Exception as e:
+        except (httpx.HTTPError, RuntimeError, OSError, json.JSONDecodeError, KeyError, IndexError, ValueError, TypeError) as e:
             return WhatsAppSendResult(
                 success=False,
                 message_id="",
@@ -241,7 +242,7 @@ class MetaCloudWhatsAppProvider(WhatsAppProvider):
                     provider_used="meta_cloud_api",
                     error=err_msg
                 )
-        except Exception as e:
+        except (httpx.HTTPError, RuntimeError, OSError, json.JSONDecodeError, KeyError, IndexError, ValueError, TypeError) as e:
             return WhatsAppSendResult(
                 success=False,
                 message_id="",
@@ -297,7 +298,7 @@ class MetaCloudWhatsAppProvider(WhatsAppProvider):
                     provider_used="meta_cloud_api",
                     error=err_msg
                 )
-        except Exception as e:
+        except (httpx.HTTPError, RuntimeError, OSError, json.JSONDecodeError, KeyError, IndexError, ValueError, TypeError) as e:
             return WhatsAppSendResult(
                 success=False,
                 message_id="",

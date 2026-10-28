@@ -13,7 +13,7 @@ from abc import ABC, abstractmethod
 from datetime import date
 from typing import Any
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ValidationError
 from sqlalchemy.orm import Session
 
 from backend.app.models.models import RitualItem, Tradition
@@ -347,7 +347,7 @@ JSON SCHEMA:
                     "Muhurat dates and ritual sequences must always be confirmed with your family's trusted priest, pandit, or religious officiant."
                 )
             return MergedRunOfShowSchema(**parsed)
-        except Exception as e:
+        except (ValueError, KeyError, json.JSONDecodeError, TypeError, ValidationError, RuntimeError, OSError, AttributeError) as e:
             logger.warning("Gemini multi-tradition merge agent failed, using deterministic stub fallback: %s", e)
             return self.stub_fallback.generate_merged_run_of_show(primary, secondary, start_date, notes)
 

@@ -113,7 +113,7 @@ class MoodboardCollageGenerator:
                     img_resized = img_cropped.resize((tile_w, tile_h), Image.Resampling.LANCZOS)
                     collage.paste(img_resized, (tx, ty))
                     draw.rectangle([(tx, ty), (tx + tile_w, ty + tile_h)], outline=(220, 215, 205), width=2)
-                except Exception:
+                except (OSError, ValueError, TypeError, RuntimeError):
                     # In case of decode error, draw neutral swatch
                     draw.rectangle([(tx, ty), (tx + tile_w, ty + tile_h)], fill=(230, 225, 215), outline=(200, 195, 185))
 
