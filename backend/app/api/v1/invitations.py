@@ -2,6 +2,7 @@ import logging
 from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from backend.app.core.limiter import limiter
@@ -53,7 +54,7 @@ STANDARD_LAYOUTS = [
 DEFAULT_PALETTE = ["#B45309", "#991B1B", "#FEF3C7", "#1E3A8A", "#D97706"]
 
 
-def _resolve_event_logistics(event: Event, db: Session):
+def _resolve_event_logistics(event: Event, db: Session) -> tuple[str | None, str, str, str | None, list[str]]:
     """Helper to extract confirmed event details and avoid invented facts."""
     # 1. Host Name
     host_name = None
@@ -115,7 +116,7 @@ def get_invitation_studio_options(
     event_id: str,
     theme_proposal_id: str | None = Query(None),
     db: Session = Depends(get_db)
-):
+) -> InvitationStudioOptionsResponse:
     """
     Returns layout options, theme palette, event logistics, and AI/stub wording variants
     ready for user preview and selection in the Invitation Card Studio.
@@ -183,7 +184,7 @@ def generate_invitation_cards(
     payload: InvitationGenerateRequest,
     event: Event = Depends(verify_event_owner_token),
     db: Session = Depends(get_db)
-):
+) -> InvitationBatchResponse:
     """
     Generates personalized invitation cards for all guests (or one generic card if no guests).
     Uses server-side Pillow rendering (DEC-028), per-guest personalization (DEC-029),
@@ -262,7 +263,7 @@ def generate_invitation_cards(
                 )
                 db.add(card)
                 created_cards.append(card)
-            except Exception as err:
+            except (ValueError, RuntimeError, OSError, KeyError) as err:
                 logger.error("Failed to render card for guest %s (%s): %s", g.id, g.name, err)
                 failed_guests.append(
                     FailedGuestSummary(
@@ -300,9 +301,9 @@ def generate_invitation_cards(
             )
             db.add(card)
             created_cards.append(card)
-        except Exception as err:
+        except (ValueError, RuntimeError, OSError, KeyError, SQLAlchemyError) as err:
             logger.error("Failed to render generic card: %s", err)
-            raise HTTPException(status_code=500, detail=f"Card composition failed: {err}")
+            raise HTTPException(status_code=500, detail=f"Card composition failed: {err}") from err
 
     db.commit()
     for c in created_cards:
@@ -339,7 +340,7 @@ def generate_invitation_cards(
 
 
 @router.get("", response_model=list[InvitationCardSummary])
-def list_invitation_cards(event_id: str, db: Session = Depends(get_db)):
+def list_invitation_cards(event_id: str, db: Session = Depends(get_db)) -> list[InvitationCardSummary]:
     """Lists all previously generated invitation cards for this event."""
     cards = db.query(InvitationCard).filter(
         InvitationCard.event_id == event_id
@@ -370,7 +371,7 @@ def download_invitation_card(
     card_id: str,
     format: str = Query("png", description="png or pdf"),
     db: Session = Depends(get_db)
-):
+) -> Response:
     """
     Streams the binary rendered card file in requested format (PNG or PDF).
     """
