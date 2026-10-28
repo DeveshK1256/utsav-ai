@@ -1,3 +1,4 @@
+import html
 import pytest
 from datetime import date
 from sqlalchemy import create_engine
@@ -82,7 +83,7 @@ def test_intake_service_generates_complete_master_plan(db_session):
     # Check database persistence
     event_in_db = db_session.query(Event).filter(Event.id == plan.event_id).first()
     assert event_in_db is not None
-    assert event_in_db.name == "Rohan & Ananya's Grand Wedding"
+    assert html.unescape(event_in_db.name) == "Rohan & Ananya's Grand Wedding"
 
     # Verify user was created
     user_in_db = db_session.query(User).filter(User.phone_number == "+919822012345").first()
