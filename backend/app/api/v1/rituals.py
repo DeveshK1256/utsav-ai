@@ -1,4 +1,5 @@
 from typing import Any
+
 """
 Ritual & Cultural Intelligence API Endpoints (M5 - F2).
 Exposes astronomical panchang calculations (DEC-027), curated tradition samagri,
