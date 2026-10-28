@@ -1,6 +1,6 @@
 import json
 import os
-from typing import Any
+from typing import Any, ClassVar
 
 from pydantic import BaseModel
 
@@ -30,7 +30,7 @@ class BudgetRescalingResult(BaseModel):
 
 
 class BudgetRescalingEngine:
-    _tiers_cache: dict[str, Any] = {}
+    _tiers_cache: ClassVar[dict[str, Any]] = {}
 
     @classmethod
     def load_tier_config(cls) -> dict[str, Any]:

@@ -7,7 +7,7 @@ Zero LLM mathematical approximation.
 import math
 from abc import ABC, abstractmethod
 from datetime import UTC, date, datetime, time, timedelta, timezone
-from typing import Any
+from typing import Any, ClassVar
 
 import ephem
 
@@ -36,7 +36,7 @@ class EphemPanchangProvider(PanchangProvider):
     and Chitrapaksha (Lahiri) Ayanamsha for sidereal Vedic lunar positions.
     """
 
-    TITHI_NAMES = [
+    TITHI_NAMES: ClassVar[list[str]] = [
         "Shukla Pratipada", "Shukla Dwitiya", "Shukla Tritiya", "Shukla Chaturthi",
         "Shukla Panchami", "Shukla Shashthi", "Shukla Saptami", "Shukla Ashtami",
         "Shukla Navami", "Shukla Dashami", "Shukla Ekadashi", "Shukla Dwadashi",
@@ -47,7 +47,7 @@ class EphemPanchangProvider(PanchangProvider):
         "Krishna Trayodashi", "Krishna Chaturdashi", "Amavasya"
     ]
 
-    NAKSHATRA_NAMES = [
+    NAKSHATRA_NAMES: ClassVar[list[str]] = [
         "Ashwini", "Bharani", "Krittika", "Rohini", "Mrigashirsha", "Ardra",
         "Punarvasu", "Pushya", "Ashlesha", "Magha", "Purva Phalguni", "Uttara Phalguni",
         "Hasta", "Chitra", "Swati", "Vishakha", "Anuradha", "Jyeshtha",
@@ -57,7 +57,7 @@ class EphemPanchangProvider(PanchangProvider):
 
     # Traditional 1-based octile mapping for Rahu Kaalam
     # Monday: 2nd, Tuesday: 7th, Wednesday: 5th, Thursday: 6th, Friday: 4th, Saturday: 3rd, Sunday: 8th
-    RAHU_OCTILES = {
+    RAHU_OCTILES: ClassVar[dict[int, int]] = {
         0: 2,  # Monday
         1: 7,  # Tuesday
         2: 5,  # Wednesday

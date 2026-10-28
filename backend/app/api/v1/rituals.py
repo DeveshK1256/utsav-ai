@@ -1,5 +1,3 @@
-from typing import Any
-
 """
 Ritual & Cultural Intelligence API Endpoints (M5 - F2).
 Exposes astronomical panchang calculations (DEC-027), curated tradition samagri,
@@ -7,6 +5,7 @@ cross-tradition fusion merging, and priest/guruji export formats.
 """
 
 from datetime import date
+from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel, Field

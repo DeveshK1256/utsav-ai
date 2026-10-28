@@ -3,18 +3,14 @@ import os
 from abc import ABC, abstractmethod
 from typing import Any, cast
 
-logger = logging.getLogger(__name__)
-
-from backend.app.schemas.quotes import (
-    ExtractedLineItemSchema,
-    QuoteExtractionPayloadSchema,
-)
 from backend.app.schemas.vibe import (
     DecorItemProposalSchema,
     SingleImageVibeSchema,
     ThemeGenerationPayloadSchema,
     VibeExtractionPayloadSchema,
 )
+
+logger = logging.getLogger(__name__)
 
 
 class ExtractionValidationError(Exception):

@@ -1,7 +1,7 @@
 import json
 from decimal import ROUND_HALF_UP, Decimal
 from pathlib import Path
-from typing import Any, cast
+from typing import Any, ClassVar, cast
 
 CONFIG_PATH = Path(__file__).resolve().parent.parent / "config" / "city_tiers.json"
 
@@ -26,7 +26,7 @@ class BudgetScalingEngine:
     - Loads calibrated city-tier cost multipliers from config/city_tiers.json at runtime, not hardcoded literals.
     """
 
-    ALLOCATION_MODELS: dict[str, dict[str, Decimal]] = {
+    ALLOCATION_MODELS: ClassVar[dict[str, dict[str, Decimal]]] = {
         "wedding": {
             "venue": Decimal("0.22"),
             "catering": Decimal("0.28"),

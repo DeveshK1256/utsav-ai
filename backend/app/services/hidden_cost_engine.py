@@ -1,6 +1,6 @@
 import json
 import os
-from typing import Any
+from typing import Any, ClassVar
 
 from backend.app.schemas.quotes import ExtractedLineItemSchema, HiddenCostAlertSchema
 
@@ -8,7 +8,7 @@ CONFIG_PATH = os.path.join(os.path.dirname(__file__), "..", "config", "hidden_co
 
 
 class HiddenCostDetector:
-    _checklist_cache: dict[str, list[dict[str, Any]]] = {}
+    _checklist_cache: ClassVar[dict[str, list[dict[str, Any]]]] = {}
 
     @classmethod
     def load_checklist(cls) -> dict[str, list[dict[str, Any]]]:

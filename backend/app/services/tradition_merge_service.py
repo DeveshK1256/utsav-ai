@@ -11,7 +11,7 @@ import logging
 import os
 from abc import ABC, abstractmethod
 from datetime import date
-from typing import Any
+from typing import Any, ClassVar
 
 from pydantic import BaseModel, Field, ValidationError
 from sqlalchemy.orm import Session
@@ -365,7 +365,7 @@ class TraditionMergeService:
     Enforces deterministic deduplication and source attribution.
     """
 
-    SHARED_KEYWORDS = {
+    SHARED_KEYWORDS: ClassVar[dict[str, tuple[str, str, str]]] = {
         "ghee": ("Pure Cow Ghee", "puja_samagri", "Oblations into sacred Agni for Vivah Homam"),
         "akshata": ("Sacred Akshata Rice", "puja_samagri", "Elder blessings showered over couple during vows"),
         "rice": ("Sacred Akshata Rice", "puja_samagri", "Elder blessings showered over couple during vows"),

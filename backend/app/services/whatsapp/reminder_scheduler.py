@@ -1,4 +1,5 @@
 from datetime import datetime, time, timedelta
+from typing import ClassVar
 
 from pydantic import BaseModel
 
@@ -20,7 +21,7 @@ class ReminderScheduler:
     Computes exact trigger timestamps without LLM math per DEC-002.
     """
 
-    SUPPORTED_OFFSETS = ["7_days_before", "1_day_before", "morning_of"]
+    SUPPORTED_OFFSETS: ClassVar[list[str]] = ["7_days_before", "1_day_before", "morning_of"]
 
     @classmethod
     def calculate_reminder_send_time(cls, sub_event_start: datetime, offset_type: str) -> datetime:
@@ -47,22 +48,21 @@ class ReminderScheduler:
         start_str = sub_event.start_time.strftime("%I:%M %p")
         date_str = sub_event.start_time.strftime("%A, %d %B")
 
-        if offset_type == "7_days_before":
-            return (
+        templates = {
+            "7_days_before": (
                 f"Reminder: {event.name}'s '{sub_name}' is 1 week away on {date_str} at {start_str}! "
                 f"We look forward to celebrating together. Let us know if your travel plans change."
-            )
-        elif offset_type == "1_day_before":
-            return (
+            ),
+            "1_day_before": (
                 f"Tomorrow is the day! '{sub_name}' begins tomorrow ({date_str}) at {start_str}. "
                 f"Location directions & schedule details are available on your invite link."
-            )
-        elif offset_type == "morning_of":
-            return (
+            ),
+            "morning_of": (
                 f"Good morning! '{sub_name}' kicks off today at {start_str}. "
                 f"Please arrive 15 minutes early for seating and welcome refreshments. See you soon!"
-            )
-        return f"Upcoming: '{sub_name}' on {date_str} at {start_str}."
+            ),
+        }
+        return templates.get(offset_type, f"Upcoming: '{sub_name}' on {date_str} at {start_str}.")
 
     @classmethod
     def generate_event_reminder_plans(

@@ -1,5 +1,5 @@
 from datetime import UTC, date, datetime, time, timedelta
-from typing import Any
+from typing import Any, ClassVar
 
 
 class TaskNode:
@@ -30,7 +30,7 @@ class DAGScheduler:
     - Maps milestones accurately relative to start_date.
     """
 
-    SUB_EVENT_TEMPLATES = {
+    SUB_EVENT_TEMPLATES: ClassVar[dict[str, list[dict[str, Any]]]] = {
         "maharashtrian_vedic": [
             {
                 "key": "haldi_mehndi",
@@ -701,7 +701,7 @@ class DAGScheduler:
         ]
     }
 
-    FOUNDATION_TASKS = [
+    FOUNDATION_TASKS: ClassVar[list[TaskNode]] = [
         TaskNode("venue_lock", "Contract and Lock Primary Venue", 120, -60, "Host", dependencies=[]),
         TaskNode("caterer_menu", "Finalize Catering Menu & Per-Plate Contract", 90, -45, "Food & Beverage Lead", dependencies=["venue_lock"]),
         TaskNode("mandap_rigging", "Review Mandap Rigging & Floral Decor Specs", 180, -30, "Decor Lead", dependencies=["venue_lock"]),
@@ -712,7 +712,7 @@ class DAGScheduler:
         TaskNode("vendor_call_sheet", "Issue Day-of Vendor Run-of-Show Call Sheet", 60, -2, "Day-of Director", dependencies=["mandap_rigging", "caterer_menu", "sound_permits"])
     ]
 
-    BIRTHDAY_TASKS = [
+    BIRTHDAY_TASKS: ClassVar[list[TaskNode]] = [
         TaskNode("bday_venue", "Reserve Birthday Party Hall / Clubhouse / Play Zone", 90, -30, "Host", dependencies=[]),
         TaskNode("bday_theme_decor", "Finalize Birthday Theme, Balloon Arches & Backdrop Specs", 120, -21, "Decor Lead", dependencies=["bday_venue"]),
         TaskNode("bday_cake", "Order Custom Themed Birthday Cake & Dessert Spread", 60, -14, "Host", dependencies=["bday_theme_decor"]),
@@ -723,7 +723,7 @@ class DAGScheduler:
         TaskNode("bday_run_of_show", "Assemble Day-of Party Timeline & Music Playlist", 45, -2, "Host", dependencies=["bday_cake", "bday_entertainer"])
     ]
 
-    COMMUNITY_TASKS = [
+    COMMUNITY_TASKS: ClassVar[list[TaskNode]] = [
         TaskNode("comm_permits_noc", "Obtain Municipal Ward Pandal Permission, Police & Traffic NOC", 120, -45, "Permits Liaison", dependencies=[]),
         TaskNode("comm_pandal_stage", "Contract Pandal Fabricator, Stage & German Hangar Tent", 180, -30, "Logistics Lead", dependencies=["comm_permits_noc"]),
         TaskNode("comm_sound_generator", "Contract Line-Array Sound, Diesel Genset & Fire Safety Gear", 90, -21, "Technical Lead", dependencies=["comm_permits_noc"]),

@@ -1,5 +1,3 @@
-from sqlalchemy.orm import Session
-
 """
 Seed data for M5 Cultural Intelligence: Curated traditions and ritual items.
 Fulfills the 8 traditions per UTSAV spec:
@@ -13,6 +11,8 @@ Content represents unverified algorithmic draft baselines requiring mandatory hu
 """
 
 from typing import Any
+
+from sqlalchemy.orm import Session
 
 from backend.app.db.session import SessionLocal
 from backend.app.models.models import RitualItem, Tradition

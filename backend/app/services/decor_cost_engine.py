@@ -2,6 +2,7 @@ import json
 import math
 import re
 from pathlib import Path
+from typing import ClassVar
 
 CONFIG_PATH = Path(__file__).resolve().parent.parent / "config" / "city_tiers.json"
 
@@ -23,11 +24,11 @@ class DecorCostEngine:
     Zero LLM math. All monetary calculations are performed in code.
     """
 
-    STRUCTURAL_CATEGORIES = {"mandap", "stage_backdrop", "entrance_arch", "photobooth", "ceiling_drapes"}
-    SERVICE_CATEGORIES = {"cultural_performance"}
-    DISTRIBUTED_CATEGORIES = {"lighting", "seating_lounges", "table_centerpiece", "default"}
+    STRUCTURAL_CATEGORIES: ClassVar[set[str]] = {"mandap", "stage_backdrop", "entrance_arch", "photobooth", "ceiling_drapes"}
+    SERVICE_CATEGORIES: ClassVar[set[str]] = {"cultural_performance"}
+    DISTRIBUTED_CATEGORIES: ClassVar[set[str]] = {"lighting", "seating_lounges", "table_centerpiece", "default"}
 
-    BASE_UNIT_COSTS: dict[str, dict[str, tuple[float, float]]] = {
+    BASE_UNIT_COSTS: ClassVar[dict[str, dict[str, tuple[float, float]]]] = {
         # Structural Installations (typically 1-2 fixed units per celebration)
         "mandap": {
             "low": (25000.0, 45000.0),
@@ -87,20 +88,20 @@ class DecorCostEngine:
 
     # Rates for standalone fixed accent/display items when categorized under 'default'
     # Prevents 1-off focal pieces (e.g. welcome easel, brass display) from resolving to 1x distributed trinket rates
-    STANDALONE_DEFAULT_COSTS: dict[str, tuple[float, float]] = {
+    STANDALONE_DEFAULT_COSTS: ClassVar[dict[str, tuple[float, float]]] = {
         "low": (1800.0, 3200.0),
         "medium": (3500.0, 6500.0),
         "high": (7500.0, 14000.0),
     }
 
     # Defensive absolute floors for any standalone/fixed line item before city multiplier
-    MIN_STANDALONE_FLOOR: dict[str, tuple[float, float]] = {
+    MIN_STANDALONE_FLOOR: ClassVar[dict[str, tuple[float, float]]] = {
         "low": (1200.0, 2200.0),
         "medium": (2400.0, 4200.0),
         "high": (4800.0, 8500.0),
     }
 
-    LIGHTING_PACKAGE_COSTS: dict[str, tuple[float, float]] = {
+    LIGHTING_PACKAGE_COSTS: ClassVar[dict[str, tuple[float, float]]] = {
         "low": (12000.0, 20000.0),
         "medium": (22000.0, 38000.0),
         "high": (45000.0, 75000.0),

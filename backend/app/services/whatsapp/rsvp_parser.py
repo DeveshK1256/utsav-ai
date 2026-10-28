@@ -1,4 +1,5 @@
 import re
+from typing import ClassVar
 
 from pydantic import BaseModel
 
@@ -20,18 +21,18 @@ class RSVPParser:
     Confidence is NEVER self-reported by an LLM, but computed from token clarity and bounds.
     """
 
-    ATTENDING_TOKENS = {
+    ATTENDING_TOKENS: ClassVar[set[str]] = {
         "yes", "attending", "attend", "coming", "haan", "ha", "aayenge", "ayenge",
         "pakka", "confirmed", "confirm", "joining", "be there", "looking forward",
         "definitely", "present", "zaroor"
     }
 
-    DECLINED_TOKENS = {
+    DECLINED_TOKENS: ClassVar[set[str]] = {
         "no", "declined", "decline", "sorry", "cannot", "cant", "can't", "unable",
         "nahi", "na", "miss", "wont", "won't", "not able", "regret"
     }
 
-    MAYBE_TOKENS = {
+    MAYBE_TOKENS: ClassVar[set[str]] = {
         "maybe", "tentative", "not sure", "try", "trying", "koshish", "shayad",
         "shyd", "let you know", "will update"
     }

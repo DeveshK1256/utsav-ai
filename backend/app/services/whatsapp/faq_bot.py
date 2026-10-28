@@ -1,4 +1,5 @@
 import logging
+from typing import ClassVar
 
 from pydantic import BaseModel
 
@@ -26,7 +27,7 @@ class FAQBotService:
     HARD_FALLBACK_REFUSAL and sets notified_host = True.
     """
 
-    KEYWORD_MAPPINGS = {
+    KEYWORD_MAPPINGS: ClassVar[dict[str, list[str]]] = {
         "venue_address": ["where", "address", "venue", "location", "hall", "reach", "how to get", "place"],
         "map_link": ["map", "google map", "gps", "directions", "link"],
         "parking_info": ["parking", "park", "valet", "car", "vehicle"],
