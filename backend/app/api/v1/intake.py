@@ -26,8 +26,7 @@ router = APIRouter(prefix="/intake", tags=["Intake"])
 @router.post("/calculate-budget", response_model=BudgetCalculationResponseSchema)
 @limiter.limit("60/minute")
 def calculate_budget(
-    request: Request,
-    payload: BudgetCalculationRequestSchema
+    request: Request, payload: BudgetCalculationRequestSchema
 ) -> BudgetCalculationResponseSchema:
     """
     Computes deterministic city-tier scaled budget allocation.
@@ -41,7 +40,7 @@ def calculate_budget(
             total_envelope=payload.total_budget,
             event_type=payload.event_type,
             city=payload.city,
-            guest_count=payload.guest_count
+            guest_count=payload.guest_count,
         )
         return BudgetCalculationResponseSchema(
             city=payload.city,
@@ -56,10 +55,10 @@ def calculate_budget(
                     planned_amount=item["planned_amount"],
                     city_tier=item["city_tier"],
                     city_tier_multiplier=item["city_tier_multiplier"],
-                    reasoning_spec=item["reasoning_spec"]
+                    reasoning_spec=item["reasoning_spec"],
                 )
                 for item in allocations
-            ]
+            ],
         )
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
@@ -67,16 +66,16 @@ def calculate_budget(
         logger.error("Budget calculation failed: %s", e)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Budget calculation failed: {e!s}"
+            detail=f"Budget calculation failed: {e!s}",
         ) from e
 
 
-@router.post("/generate", response_model=MasterPlanResponseSchema, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/generate", response_model=MasterPlanResponseSchema, status_code=status.HTTP_201_CREATED
+)
 @limiter.limit("20/minute")
 def generate_plan(
-    request: Request,
-    payload: IntakeRequestSchema,
-    db: Session = Depends(get_db)
+    request: Request, payload: IntakeRequestSchema, db: Session = Depends(get_db)
 ) -> MasterPlanResponseSchema:
     """
     Submits conversational intake questionnaire and deterministically generates
@@ -90,7 +89,7 @@ def generate_plan(
         logger.error("Plan generation failed: %s", e)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Plan generation failed: {e!s}"
+            detail=f"Plan generation failed: {e!s}",
         ) from e
 
 
@@ -102,10 +101,6 @@ def list_traditions(db: Session = Depends(get_db)) -> list[TraditionOptionSchema
     IntakeService.ensure_default_traditions(db)
     traditions = db.query(Tradition).all()
     return [
-        TraditionOptionSchema(
-            code=t.code,
-            name=t.regional_name,
-            description=t.description
-        )
+        TraditionOptionSchema(code=t.code, name=t.regional_name, description=t.description)
         for t in traditions
     ]

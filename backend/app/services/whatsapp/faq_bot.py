@@ -28,20 +28,44 @@ class FAQBotService:
     """
 
     KEYWORD_MAPPINGS: ClassVar[dict[str, list[str]]] = {
-        "venue_address": ["where", "address", "venue", "location", "hall", "reach", "how to get", "place"],
+        "venue_address": [
+            "where",
+            "address",
+            "venue",
+            "location",
+            "hall",
+            "reach",
+            "how to get",
+            "place",
+        ],
         "map_link": ["map", "google map", "gps", "directions", "link"],
         "parking_info": ["parking", "park", "valet", "car", "vehicle"],
-        "dress_code": ["dress", "wear", "attire", "outfit", "clothes", "code", "color code", "traditional"],
-        "timing_notes": ["time", "timing", "when", "schedule", "start", "end", "entry", "muhurat", "hours"]
+        "dress_code": [
+            "dress",
+            "wear",
+            "attire",
+            "outfit",
+            "clothes",
+            "code",
+            "color code",
+            "traditional",
+        ],
+        "timing_notes": [
+            "time",
+            "timing",
+            "when",
+            "schedule",
+            "start",
+            "end",
+            "entry",
+            "muhurat",
+            "hours",
+        ],
     }
 
     @classmethod
     def answer_question(
-        cls,
-        event: Event,
-        fact_sheet: EventFactSheet | None,
-        question: str,
-        use_llm: bool = False
+        cls, event: Event, fact_sheet: EventFactSheet | None, question: str, use_llm: bool = False
     ) -> FAQResponse:
         """
         Determines if the question can be answered from the fact sheet.
@@ -53,7 +77,7 @@ class FAQBotService:
                 answer="Could you please tell me how I can help you with the celebration details?",
                 is_in_scope=True,
                 notified_host=False,
-                source_field="greeting"
+                source_field="greeting",
             )
 
         if not fact_sheet:
@@ -63,7 +87,7 @@ class FAQBotService:
                 is_in_scope=False,
                 notified_host=True,
                 source_field=None,
-                fallback_warning="Fact sheet empty for this event"
+                fallback_warning="Fact sheet empty for this event",
             )
 
         # 1. Check Standard Structured Fields
@@ -75,27 +99,51 @@ class FAQBotService:
                         ans = f"The celebration is at: {val}."
                         if fact_sheet.map_link:
                             ans += f" Google Maps: {fact_sheet.map_link}"
-                        return FAQResponse(answer=ans, is_in_scope=True, notified_host=False, source_field=field)
+                        return FAQResponse(
+                            answer=ans, is_in_scope=True, notified_host=False, source_field=field
+                        )
                     elif field == "parking_info":
-                        return FAQResponse(answer=f"Parking Information: {val}", is_in_scope=True, notified_host=False, source_field=field)
+                        return FAQResponse(
+                            answer=f"Parking Information: {val}",
+                            is_in_scope=True,
+                            notified_host=False,
+                            source_field=field,
+                        )
                     elif field == "dress_code":
-                        return FAQResponse(answer=f"Dress Code & Attire: {val}", is_in_scope=True, notified_host=False, source_field=field)
+                        return FAQResponse(
+                            answer=f"Dress Code & Attire: {val}",
+                            is_in_scope=True,
+                            notified_host=False,
+                            source_field=field,
+                        )
                     elif field == "timing_notes":
-                        return FAQResponse(answer=f"Schedule & Timings: {val}", is_in_scope=True, notified_host=False, source_field=field)
+                        return FAQResponse(
+                            answer=f"Schedule & Timings: {val}",
+                            is_in_scope=True,
+                            notified_host=False,
+                            source_field=field,
+                        )
                     elif field == "map_link":
-                        return FAQResponse(answer=f"Location directions link: {val}", is_in_scope=True, notified_host=False, source_field=field)
+                        return FAQResponse(
+                            answer=f"Location directions link: {val}",
+                            is_in_scope=True,
+                            notified_host=False,
+                            source_field=field,
+                        )
 
         # 2. Check Custom Key-Value other_facts
         other_facts = fact_sheet.other_facts or {}
         for fact_key, fact_val in other_facts.items():
             clean_key = str(fact_key).lower().replace("_", " ")
-            if (clean_key in q_clean or any(word in q_clean for word in clean_key.split())) and (fact_val and str(fact_val).strip()):
+            if (clean_key in q_clean or any(word in q_clean for word in clean_key.split())) and (
+                fact_val and str(fact_val).strip()
+            ):
                 return FAQResponse(
-                        answer=f"{str(fact_key).replace('_', ' ').title()}: {fact_val}",
-                        is_in_scope=True,
-                        notified_host=False,
-                        source_field=f"other_facts.{fact_key}"
-                    )
+                    answer=f"{str(fact_key).replace('_', ' ').title()}: {fact_val}",
+                    is_in_scope=True,
+                    notified_host=False,
+                    source_field=f"other_facts.{fact_key}",
+                )
 
         # 3. Check General Event Attributes (Name, Date, City)
         if any(w in q_clean for w in ["date", "day", "which day"]):
@@ -103,7 +151,7 @@ class FAQBotService:
                 answer=f"{event.name} will be celebrated on {event.start_date.strftime('%A, %d %B %Y')} in {event.city}.",
                 is_in_scope=True,
                 notified_host=False,
-                source_field="event.start_date"
+                source_field="event.start_date",
             )
 
         # 4. Strict Boundary Enforcement: If answer is NOT in the fact sheet, refuse!
@@ -113,5 +161,5 @@ class FAQBotService:
             notified_host=True,
             source_field=None,
             provider_used="deterministic_retriever",
-            fallback_warning="Question query exceeded verified fact sheet scope; host notified."
+            fallback_warning="Question query exceeded verified fact sheet scope; host notified.",
         )

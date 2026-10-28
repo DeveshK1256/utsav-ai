@@ -38,7 +38,9 @@ MAX_REQUEST_BODY_BYTES = 10 * 1024 * 1024  # 10 MB strict limit for API payloads
 
 
 @app.middleware("http")
-async def enforce_request_size_limit(request: Request, call_next: Callable[[Request], Any]) -> Response:
+async def enforce_request_size_limit(
+    request: Request, call_next: Callable[[Request], Any]
+) -> Response:
     content_length = request.headers.get("content-length")
     if content_length:
         try:
@@ -120,18 +122,45 @@ def _background_db_backfill() -> None:
         # 2. Schema migrations & scaling rules
         with engine.begin() as conn:
             if engine.dialect.name == "postgresql":
-                conn.execute(text("ALTER TABLE traditions ADD COLUMN IF NOT EXISTS is_verified BOOLEAN DEFAULT FALSE;"))
-                conn.execute(text("ALTER TABLE traditions ADD COLUMN IF NOT EXISTS verification_source VARCHAR(255);"))
-                conn.execute(text("ALTER TABLE ritual_items ADD COLUMN IF NOT EXISTS ritual_name VARCHAR(100);"))
-                conn.execute(text("ALTER TABLE ritual_items ADD COLUMN IF NOT EXISTS category VARCHAR(50) DEFAULT 'puja_samagri';"))
-                conn.execute(text("ALTER TABLE ritual_items ADD COLUMN IF NOT EXISTS is_verified BOOLEAN DEFAULT FALSE;"))
-                conn.execute(text("ALTER TABLE events ADD COLUMN IF NOT EXISTS secondary_tradition_code VARCHAR(50);"))
-                conn.execute(text("ALTER TABLE events ADD COLUMN IF NOT EXISTS owner_token VARCHAR(64);"))
+                conn.execute(
+                    text(
+                        "ALTER TABLE traditions ADD COLUMN IF NOT EXISTS is_verified BOOLEAN DEFAULT FALSE;"
+                    )
+                )
+                conn.execute(
+                    text(
+                        "ALTER TABLE traditions ADD COLUMN IF NOT EXISTS verification_source VARCHAR(255);"
+                    )
+                )
+                conn.execute(
+                    text(
+                        "ALTER TABLE ritual_items ADD COLUMN IF NOT EXISTS ritual_name VARCHAR(100);"
+                    )
+                )
+                conn.execute(
+                    text(
+                        "ALTER TABLE ritual_items ADD COLUMN IF NOT EXISTS category VARCHAR(50) DEFAULT 'puja_samagri';"
+                    )
+                )
+                conn.execute(
+                    text(
+                        "ALTER TABLE ritual_items ADD COLUMN IF NOT EXISTS is_verified BOOLEAN DEFAULT FALSE;"
+                    )
+                )
+                conn.execute(
+                    text(
+                        "ALTER TABLE events ADD COLUMN IF NOT EXISTS secondary_tradition_code VARCHAR(50);"
+                    )
+                )
+                conn.execute(
+                    text("ALTER TABLE events ADD COLUMN IF NOT EXISTS owner_token VARCHAR(64);")
+                )
             elif engine.dialect.name == "sqlite":
                 with contextlib.suppress(SQLAlchemyError, OperationalError):
                     conn.execute(text("ALTER TABLE events ADD COLUMN owner_token VARCHAR(64);"))
 
-            conn.execute(text("""
+            conn.execute(
+                text("""
                 UPDATE budget_items
                 SET scaling_rule = CASE
                     WHEN lower(category) IN ('venue', 'photography', 'entertainment', 'rituals', 'ritual_priest') THEN 'fixed'
@@ -142,25 +171,39 @@ def _background_db_backfill() -> None:
                 WHERE scaling_rule IS NULL
                    OR (scaling_rule = 'per_guest' AND lower(category) IN ('venue', 'photography', 'entertainment', 'rituals', 'ritual_priest', 'decor', 'sound_light', 'sound_and_lighting'))
                    OR (scaling_rule = 'fixed' AND lower(category) IN ('decor', 'sound_light', 'sound_and_lighting', 'catering', 'rentals', 'wardrobe', 'gifts_favors', 'invitations', 'logistics', 'contingency'));
-            """))
+            """)
+            )
 
-            conn.execute(text("UPDATE traditions SET is_verified = FALSE, verification_source = 'AI-drafted baseline, pending community/priest review' WHERE is_verified IS NULL OR is_verified = TRUE;"))
-            conn.execute(text("UPDATE ritual_items SET is_verified = FALSE WHERE is_verified IS NULL OR is_verified = TRUE;"))
+            conn.execute(
+                text(
+                    "UPDATE traditions SET is_verified = FALSE, verification_source = 'AI-drafted baseline, pending community/priest review' WHERE is_verified IS NULL OR is_verified = TRUE;"
+                )
+            )
+            conn.execute(
+                text(
+                    "UPDATE ritual_items SET is_verified = FALSE WHERE is_verified IS NULL OR is_verified = TRUE;"
+                )
+            )
 
         # 3. Seed traditions and baseline venues idempotently
         db = SessionLocal()
         try:
             from backend.app.db.seed_traditions import seed_cultural_traditions
+
             seed_cultural_traditions(db=db)
 
             from scripts.seed_vendor_discovery import seed_vendor_profiles
+
             seed_vendor_profiles()
         finally:
             db.close()
 
         logger.info("Background DB schema check and backfill completed successfully.")
     except (SQLAlchemyError, OperationalError, OSError, ValueError) as exc:
-        logger.warning("Background DB backfill encountered an issue (non-fatal, server remains healthy): %s", exc)
+        logger.warning(
+            "Background DB backfill encountered an issue (non-fatal, server remains healthy): %s",
+            exc,
+        )
 
 
 @app.on_event("startup")
@@ -170,7 +213,9 @@ def run_db_backfill_on_startup() -> None:
     Spawns DB backfill in a detached daemon thread so Uvicorn immediately
     binds to 0.0.0.0:$PORT and answers health checks without delay.
     """
-    thread = threading.Thread(target=_background_db_backfill, daemon=True, name="db-backfill-worker")
+    thread = threading.Thread(
+        target=_background_db_backfill, daemon=True, name="db-backfill-worker"
+    )
     thread.start()
     if "pytest" in sys.modules or os.getenv("TESTING") == "true":
         thread.join(timeout=10.0)

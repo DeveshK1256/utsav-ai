@@ -18,13 +18,15 @@ router = APIRouter(prefix="/webhooks", tags=["WhatsApp Webhooks"])
 def verify_whatsapp_webhook(
     hub_mode: str | None = Query(None, alias="hub.mode"),
     hub_verify_token: str | None = Query(None, alias="hub.verify_token"),
-    hub_challenge: str | None = Query(None, alias="hub.challenge")
+    hub_challenge: str | None = Query(None, alias="hub.challenge"),
 ) -> Response:
     """
     Meta WhatsApp Cloud API Webhook Challenge Verification.
     Responds with hub.challenge if hub.verify_token matches configured secret.
     """
-    configured_token = getattr(settings, "WHATSAPP_WEBHOOK_VERIFY_TOKEN", "utsav_webhook_verify_token_secure")
+    configured_token = getattr(
+        settings, "WHATSAPP_WEBHOOK_VERIFY_TOKEN", "utsav_webhook_verify_token_secure"
+    )
     if hub_mode == "subscribe" and hub_verify_token == configured_token:
         logger.info("Meta WhatsApp webhook challenge successfully verified.")
         return Response(content=hub_challenge or "", media_type="text/plain")
@@ -38,7 +40,7 @@ async def receive_whatsapp_webhook(
     request: Request,
     x_hub_signature_256: str | None = Header(None, alias="X-Hub-Signature-256"),
     x_hub_timestamp: str | None = Header(None, alias="X-Hub-Timestamp"),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ) -> dict[str, Any]:
     """
     Receives real-time inbound events from Meta WhatsApp Cloud API:
@@ -55,12 +57,18 @@ async def receive_whatsapp_webhook(
         try:
             ts_val = float(x_hub_timestamp)
         except ValueError as err:
-            raise HTTPException(status_code=400, detail="Invalid X-Hub-Timestamp header format") from err
+            raise HTTPException(
+                status_code=400, detail="Invalid X-Hub-Timestamp header format"
+            ) from err
 
     # Meta HMAC Signature Verification & Anti-Replay Guardrail
-    is_valid = WhatsAppWebhookService.verify_meta_signature(raw_body, x_hub_signature_256, timestamp=ts_val)
+    is_valid = WhatsAppWebhookService.verify_meta_signature(
+        raw_body, x_hub_signature_256, timestamp=ts_val
+    )
     if not is_valid:
-        logger.error("Rejected unauthorized WhatsApp webhook request: invalid HMAC signature or replayed timestamp")
+        logger.error(
+            "Rejected unauthorized WhatsApp webhook request: invalid HMAC signature or replayed timestamp"
+        )
         raise HTTPException(status_code=403, detail="Invalid HMAC signature or replayed timestamp")
 
     try:

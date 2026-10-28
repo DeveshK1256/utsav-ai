@@ -18,7 +18,7 @@ def verify_event_owner_token(
     request: Request,
     x_event_owner_token: str | None = Header(None, alias="X-Event-Owner-Token"),
     authorization: str | None = Header(None),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ) -> Event:
     """
     Guards mutating event operations (POST, PATCH, DELETE) and private reads (GET).
@@ -34,15 +34,13 @@ def verify_event_owner_token(
 
     if not event_id:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Missing event_id in request"
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Missing event_id in request"
         )
 
     event = db.query(Event).filter(Event.id == event_id).first()
     if not event:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Event with id '{event_id}' not found"
+            status_code=status.HTTP_404_NOT_FOUND, detail=f"Event with id '{event_id}' not found"
         )
 
     provided = x_event_owner_token
@@ -71,7 +69,7 @@ def verify_event_owner_token(
     if not provided or not hmac.compare_digest(provided, expected):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Forbidden: Invalid or missing X-Event-Owner-Token. Unauthorized access attempt."
+            detail="Forbidden: Invalid or missing X-Event-Owner-Token. Unauthorized access attempt.",
         )
 
     return event

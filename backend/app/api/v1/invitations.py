@@ -35,26 +35,28 @@ STANDARD_LAYOUTS = [
         id="classic_royal",
         name="Classic Royal (पारंपरिक राजेशाही)",
         description="Symmetrical royal framing with auspicious shubh-muhurat emblem and intricate gold accents.",
-        recommended_for="Traditional weddings, Vivah, and auspicious milestone ceremonies"
+        recommended_for="Traditional weddings, Vivah, and auspicious milestone ceremonies",
     ),
     LayoutOption(
         id="modern_minimal",
         name="Modern Contemporary (आधुनिक)",
         description="Clean vertical accent bar, airy typography, modern spacing, and minimalist geometry.",
-        recommended_for="Contemporary celebrations, cocktail parties, and modern receptions"
+        recommended_for="Contemporary celebrations, cocktail parties, and modern receptions",
     ),
     LayoutOption(
         id="floral_festive",
         name="Floral Festive (उत्सव बहार)",
         description="Warm celebratory marigold motifs, centerpiece cartouche, and joyful decorative framing.",
-        recommended_for="Sangeet, Mehendi, Diwali Sneh Milan, and Community Festivals"
+        recommended_for="Sangeet, Mehendi, Diwali Sneh Milan, and Community Festivals",
     ),
 ]
 
 DEFAULT_PALETTE = ["#B45309", "#991B1B", "#FEF3C7", "#1E3A8A", "#D97706"]
 
 
-def _resolve_event_logistics(event: Event, db: Session) -> tuple[str | None, str, str, str | None, list[str]]:
+def _resolve_event_logistics(
+    event: Event, db: Session
+) -> tuple[str | None, str, str, str | None, list[str]]:
     """Helper to extract confirmed event details and avoid invented facts."""
     # 1. Host Name
     host_name = None
@@ -64,13 +66,19 @@ def _resolve_event_logistics(event: Event, db: Session) -> tuple[str | None, str
         host_name = event.owner.full_name
 
     # 2. Date String
-    date_str = event.start_date.strftime("%A, %d %B %Y") if event.start_date else "Date to be confirmed"
+    date_str = (
+        event.start_date.strftime("%A, %d %B %Y") if event.start_date else "Date to be confirmed"
+    )
 
     # 3. Venue String
     venue_str = "Venue to be confirmed"
     if event.fact_sheet and event.fact_sheet.venue_address:
         venue_str = event.fact_sheet.venue_address
-    elif event.metadata_json and isinstance(event.metadata_json, dict) and event.metadata_json.get("venue"):
+    elif (
+        event.metadata_json
+        and isinstance(event.metadata_json, dict)
+        and event.metadata_json.get("venue")
+    ):
         venue_str = str(event.metadata_json.get("venue"))
     elif event.city:
         venue_str = f"{event.city} (Venue to be confirmed)"
@@ -84,14 +92,24 @@ def _resolve_event_logistics(event: Event, db: Session) -> tuple[str | None, str
         muhurat_time = event.metadata_json.get("muhurat_time")
 
     # Fetch sub_events for both muhurat resolution and ceremony listing
-    sub_events = db.query(SubEvent).filter(SubEvent.event_id == event.id).order_by(SubEvent.start_time).all()
+    sub_events = (
+        db.query(SubEvent).filter(SubEvent.event_id == event.id).order_by(SubEvent.start_time).all()
+    )
 
     if not muhurat_time:
         locked_sub_event = next((s for s in sub_events if s.is_muhurat_locked), None)
         if locked_sub_event:
             # Format locked window: e.g. "10:30 AM - 12:00 PM (Vivah Muhurat)" or time range
-            start_fmt = locked_sub_event.start_time.strftime("%I:%M %p").lstrip("0") if locked_sub_event.start_time else None
-            end_fmt = locked_sub_event.end_time.strftime("%I:%M %p").lstrip("0") if locked_sub_event.end_time else None
+            start_fmt = (
+                locked_sub_event.start_time.strftime("%I:%M %p").lstrip("0")
+                if locked_sub_event.start_time
+                else None
+            )
+            end_fmt = (
+                locked_sub_event.end_time.strftime("%I:%M %p").lstrip("0")
+                if locked_sub_event.end_time
+                else None
+            )
             if start_fmt and end_fmt:
                 time_range = f"{start_fmt} - {end_fmt}"
             elif start_fmt:
@@ -113,9 +131,7 @@ def _resolve_event_logistics(event: Event, db: Session) -> tuple[str | None, str
 
 @router.get("/options", response_model=InvitationStudioOptionsResponse)
 def get_invitation_studio_options(
-    event_id: str,
-    theme_proposal_id: str | None = Query(None),
-    db: Session = Depends(get_db)
+    event_id: str, theme_proposal_id: str | None = Query(None), db: Session = Depends(get_db)
 ) -> InvitationStudioOptionsResponse:
     """
     Returns layout options, theme palette, event logistics, and AI/stub wording variants
@@ -133,14 +149,17 @@ def get_invitation_studio_options(
         theme = db.query(ThemeProposal).filter(ThemeProposal.id == theme_proposal_id).first()
     if not theme:
         # Check if there is an accepted theme proposal for this event
-        theme = db.query(ThemeProposal).join(ThemeProposal.style_profile).filter(
-            ThemeProposal.status == "accepted"
-        ).first()
+        theme = (
+            db.query(ThemeProposal)
+            .join(ThemeProposal.style_profile)
+            .filter(ThemeProposal.status == "accepted")
+            .first()
+        )
 
-    palette = (theme.palette if theme and theme.palette else DEFAULT_PALETTE)
-    theme_name = (theme.theme_name if theme else None)
-    resolved_theme_id = (theme.id if theme else None)
-    design_brief = (theme.invitation_design_brief if theme else None)
+    palette = theme.palette if theme and theme.palette else DEFAULT_PALETTE
+    theme_name = theme.theme_name if theme else None
+    resolved_theme_id = theme.id if theme else None
+    design_brief = theme.invitation_design_brief if theme else None
 
     # Guest count
     guest_count = db.query(Guest).filter(Guest.event_id == event_id).count()
@@ -154,7 +173,7 @@ def get_invitation_studio_options(
         venue_str=venue_str,
         muhurat_time=muhurat_time,
         ceremony_names=ceremonies,
-        design_brief=design_brief
+        design_brief=design_brief,
     )
 
     return InvitationStudioOptionsResponse(
@@ -172,18 +191,20 @@ def get_invitation_studio_options(
         wording_options=wording_res.variants,
         provider_used=wording_res.provider_used,
         fallback_warning=wording_res.fallback_warning,
-        content_review_note=wording_res.content_review_note
+        content_review_note=wording_res.content_review_note,
     )
 
 
-@router.post("/generate", response_model=InvitationBatchResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/generate", response_model=InvitationBatchResponse, status_code=status.HTTP_201_CREATED
+)
 @limiter.limit("20/minute")
 def generate_invitation_cards(
     request: Request,
     event_id: str,
     payload: InvitationGenerateRequest,
     event: Event = Depends(verify_event_owner_token),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ) -> InvitationBatchResponse:
     """
     Generates personalized invitation cards for all guests (or one generic card if no guests).
@@ -196,15 +217,20 @@ def generate_invitation_cards(
     # Resolve Theme
     theme = None
     if payload.theme_proposal_id:
-        theme = db.query(ThemeProposal).filter(ThemeProposal.id == payload.theme_proposal_id).first()
+        theme = (
+            db.query(ThemeProposal).filter(ThemeProposal.id == payload.theme_proposal_id).first()
+        )
     if not theme:
-        theme = db.query(ThemeProposal).join(ThemeProposal.style_profile).filter(
-            ThemeProposal.status == "accepted"
-        ).first()
+        theme = (
+            db.query(ThemeProposal)
+            .join(ThemeProposal.style_profile)
+            .filter(ThemeProposal.status == "accepted")
+            .first()
+        )
 
-    palette = (theme.palette if theme and theme.palette else DEFAULT_PALETTE)
-    theme_proposal_id = (theme.id if theme else None)
-    design_brief = (theme.invitation_design_brief if theme else None)
+    palette = theme.palette if theme and theme.palette else DEFAULT_PALETTE
+    theme_proposal_id = theme.id if theme else None
+    design_brief = theme.invitation_design_brief if theme else None
 
     # Resolve Wording Text
     wording_text = payload.wording_text
@@ -217,7 +243,7 @@ def generate_invitation_cards(
             venue_str=venue_str,
             muhurat_time=muhurat_time,
             ceremony_names=ceremonies,
-            design_brief=design_brief
+            design_brief=design_brief,
         )
         idx = payload.wording_variant_index or 0
         if 0 <= idx < len(wording_res.variants):
@@ -248,7 +274,7 @@ def generate_invitation_cards(
                     guest_name=g.name,
                     guest_diet=g.diet,
                     palette=palette,
-                    layout_variant=layout_variant
+                    layout_variant=layout_variant,
                 )
 
                 card = InvitationCard(
@@ -259,18 +285,14 @@ def generate_invitation_cards(
                     guest_id=g.id,
                     rendered_png=png_bytes,
                     rendered_pdf=pdf_bytes,
-                    generated_at=datetime.now(UTC)
+                    generated_at=datetime.now(UTC),
                 )
                 db.add(card)
                 created_cards.append(card)
             except (ValueError, RuntimeError, OSError, KeyError) as err:
                 logger.error("Failed to render card for guest %s (%s): %s", g.id, g.name, err)
                 failed_guests.append(
-                    FailedGuestSummary(
-                        guest_id=g.id,
-                        name=g.name,
-                        reason=str(err)
-                    )
+                    FailedGuestSummary(guest_id=g.id, name=g.name, reason=str(err))
                 )
     else:
         # Single generic card
@@ -286,7 +308,7 @@ def generate_invitation_cards(
                 guest_name=None,
                 guest_diet=None,
                 palette=palette,
-                layout_variant=layout_variant
+                layout_variant=layout_variant,
             )
 
             card = InvitationCard(
@@ -297,7 +319,7 @@ def generate_invitation_cards(
                 guest_id=None,
                 rendered_png=png_bytes,
                 rendered_pdf=pdf_bytes,
-                generated_at=datetime.now(UTC)
+                generated_at=datetime.now(UTC),
             )
             db.add(card)
             created_cards.append(card)
@@ -322,10 +344,12 @@ def generate_invitation_cards(
                 layout_variant=c.layout_variant,
                 guest_id=c.guest_id,
                 guest_name=g_name,
-                wording_preview=(c.wording_text[:120] + "...") if len(c.wording_text) > 120 else c.wording_text,
+                wording_preview=(c.wording_text[:120] + "...")
+                if len(c.wording_text) > 120
+                else c.wording_text,
                 generated_at=c.generated_at,
                 png_download_url=f"/api/v1/events/{event.id}/invitations/{c.id}/download?format=png",
-                pdf_download_url=f"/api/v1/events/{event.id}/invitations/{c.id}/download?format=pdf"
+                pdf_download_url=f"/api/v1/events/{event.id}/invitations/{c.id}/download?format=pdf",
             )
         )
 
@@ -335,16 +359,21 @@ def generate_invitation_cards(
         total_generated=len(card_summaries),
         total_failed=len(failed_guests),
         cards=card_summaries,
-        failed_guests=failed_guests
+        failed_guests=failed_guests,
     )
 
 
 @router.get("", response_model=list[InvitationCardSummary])
-def list_invitation_cards(event_id: str, db: Session = Depends(get_db)) -> list[InvitationCardSummary]:
+def list_invitation_cards(
+    event_id: str, db: Session = Depends(get_db)
+) -> list[InvitationCardSummary]:
     """Lists all previously generated invitation cards for this event."""
-    cards = db.query(InvitationCard).filter(
-        InvitationCard.event_id == event_id
-    ).order_by(InvitationCard.generated_at.desc()).all()
+    cards = (
+        db.query(InvitationCard)
+        .filter(InvitationCard.event_id == event_id)
+        .order_by(InvitationCard.generated_at.desc())
+        .all()
+    )
 
     summaries = []
     for c in cards:
@@ -356,10 +385,12 @@ def list_invitation_cards(event_id: str, db: Session = Depends(get_db)) -> list[
                 layout_variant=c.layout_variant,
                 guest_id=c.guest_id,
                 guest_name=g_name,
-                wording_preview=(c.wording_text[:120] + "...") if len(c.wording_text) > 120 else c.wording_text,
+                wording_preview=(c.wording_text[:120] + "...")
+                if len(c.wording_text) > 120
+                else c.wording_text,
                 generated_at=c.generated_at,
                 png_download_url=f"/api/v1/events/{event_id}/invitations/{c.id}/download?format=png",
-                pdf_download_url=f"/api/v1/events/{event_id}/invitations/{c.id}/download?format=pdf"
+                pdf_download_url=f"/api/v1/events/{event_id}/invitations/{c.id}/download?format=pdf",
             )
         )
     return summaries
@@ -370,15 +401,16 @@ def download_invitation_card(
     event_id: str,
     card_id: str,
     format: str = Query("png", description="png or pdf"),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ) -> Response:
     """
     Streams the binary rendered card file in requested format (PNG or PDF).
     """
-    card = db.query(InvitationCard).filter(
-        InvitationCard.id == card_id,
-        InvitationCard.event_id == event_id
-    ).first()
+    card = (
+        db.query(InvitationCard)
+        .filter(InvitationCard.id == card_id, InvitationCard.event_id == event_id)
+        .first()
+    )
     if not card:
         raise HTTPException(status_code=404, detail="Invitation card not found")
 
@@ -390,7 +422,7 @@ def download_invitation_card(
         return Response(
             content=card.rendered_pdf,
             media_type="application/pdf",
-            headers={"Content-Disposition": f'inline; filename="{filename}"'}
+            headers={"Content-Disposition": f'inline; filename="{filename}"'},
         )
     else:  # PNG default
         if not card.rendered_png:
@@ -399,5 +431,5 @@ def download_invitation_card(
         return Response(
             content=card.rendered_png,
             media_type="image/png",
-            headers={"Content-Disposition": f'inline; filename="{filename}"'}
+            headers={"Content-Disposition": f'inline; filename="{filename}"'},
         )

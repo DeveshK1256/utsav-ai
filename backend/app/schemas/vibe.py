@@ -5,16 +5,32 @@ from pydantic import BaseModel, ConfigDict, Field
 
 
 class SingleImageVibeSchema(BaseModel):
-    palette: list[str] = Field(default_factory=list, description="Extracted dominant hex color codes, e.g. ['#FF9933', '#800020']")
-    style_tags: list[str] = Field(default_factory=list, description="Style descriptors, e.g. ['royal_rajasthani', 'rustic_floral']")
-    materials: list[str] = Field(default_factory=list, description="Physical decor materials, e.g. ['brass', 'raw_silk', 'marigold']")
-    lighting_mood: str | None = Field(default="warm_ambient", description="Lighting atmosphere descriptor")
-    flower_types: list[str] = Field(default_factory=list, description="Identified flowers, e.g. ['marigold', 'rajnigandha', 'rose']")
+    palette: list[str] = Field(
+        default_factory=list,
+        description="Extracted dominant hex color codes, e.g. ['#FF9933', '#800020']",
+    )
+    style_tags: list[str] = Field(
+        default_factory=list,
+        description="Style descriptors, e.g. ['royal_rajasthani', 'rustic_floral']",
+    )
+    materials: list[str] = Field(
+        default_factory=list,
+        description="Physical decor materials, e.g. ['brass', 'raw_silk', 'marigold']",
+    )
+    lighting_mood: str | None = Field(
+        default="warm_ambient", description="Lighting atmosphere descriptor"
+    )
+    flower_types: list[str] = Field(
+        default_factory=list,
+        description="Identified flowers, e.g. ['marigold', 'rajnigandha', 'rose']",
+    )
 
 
 class VibeExtractionPayloadSchema(BaseModel):
     images: list[SingleImageVibeSchema] = Field(default_factory=list)
-    overall_mood_words: list[str] = Field(default_factory=list, description="High-level mood keywords across the collage")
+    overall_mood_words: list[str] = Field(
+        default_factory=list, description="High-level mood keywords across the collage"
+    )
 
 
 class AggregatedStyleProfileSchema(BaseModel):

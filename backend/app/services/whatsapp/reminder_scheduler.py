@@ -39,7 +39,9 @@ class ReminderScheduler:
                 return sub_event_start - timedelta(hours=2)
             return morning_eight
         else:
-            raise ValueError(f"Unsupported offset_type: {offset_type}. Choose from {cls.SUPPORTED_OFFSETS}")
+            raise ValueError(
+                f"Unsupported offset_type: {offset_type}. Choose from {cls.SUPPORTED_OFFSETS}"
+            )
 
     @classmethod
     def draft_reminder_text(cls, event: Event, sub_event: SubEvent, offset_type: str) -> str:
@@ -66,10 +68,7 @@ class ReminderScheduler:
 
     @classmethod
     def generate_event_reminder_plans(
-        cls,
-        event: Event,
-        sub_events: list[SubEvent],
-        offsets: list[str] | None = None
+        cls, event: Event, sub_events: list[SubEvent], offsets: list[str] | None = None
     ) -> list[ScheduledReminderPlan]:
         """
         Generates full deterministic reminder schedule for all active sub-events in an event.
@@ -81,14 +80,16 @@ class ReminderScheduler:
             for offset in target_offsets:
                 send_time = cls.calculate_reminder_send_time(sub.start_time, offset)
                 draft = cls.draft_reminder_text(event, sub, offset)
-                plans.append(ScheduledReminderPlan(
-                    sub_event_id=sub.id,
-                    sub_event_name=sub.name,
-                    sub_event_start_time=sub.start_time.isoformat(),
-                    offset_type=offset,
-                    scheduled_send_time=send_time.isoformat(),
-                    message_draft=draft
-                ))
+                plans.append(
+                    ScheduledReminderPlan(
+                        sub_event_id=sub.id,
+                        sub_event_name=sub.name,
+                        sub_event_start_time=sub.start_time.isoformat(),
+                        offset_type=offset,
+                        scheduled_send_time=send_time.isoformat(),
+                        message_draft=draft,
+                    )
+                )
 
         # Sort chronologically by scheduled_send_time
         plans.sort(key=lambda p: p.scheduled_send_time)

@@ -8,12 +8,12 @@ CONFIG_PATH = Path(__file__).resolve().parent.parent / "config" / "city_tiers.js
 
 def load_city_tiers_config() -> dict[str, Any]:
     if CONFIG_PATH.exists():
-        with open(CONFIG_PATH, encoding="utf-8") as f:
+        with CONFIG_PATH.open(encoding="utf-8") as f:
             return cast(dict[str, Any], json.load(f))
     # Default fallback
     return {
         "multipliers": {"tier_1": 1.0, "tier_2": 0.68, "tier_3": 0.45},
-        "city_to_tier": {"default": "tier_2"}
+        "city_to_tier": {"default": "tier_2"},
     }
 
 
@@ -36,7 +36,7 @@ class BudgetScalingEngine:
             "rituals": Decimal("0.04"),
             "wardrobe": Decimal("0.06"),
             "logistics": Decimal("0.04"),
-            "contingency": Decimal("0.04")
+            "contingency": Decimal("0.04"),
         },
         "puja": {
             "rituals": Decimal("0.32"),
@@ -44,7 +44,7 @@ class BudgetScalingEngine:
             "venue": Decimal("0.15"),
             "decor": Decimal("0.12"),
             "logistics": Decimal("0.05"),
-            "contingency": Decimal("0.06")
+            "contingency": Decimal("0.06"),
         },
         "community_festival": {
             "pandal_and_stage": Decimal("0.30"),
@@ -52,7 +52,7 @@ class BudgetScalingEngine:
             "sound_and_lighting": Decimal("0.18"),
             "security_and_permits": Decimal("0.10"),
             "decor": Decimal("0.10"),
-            "contingency": Decimal("0.08")
+            "contingency": Decimal("0.08"),
         },
         "birthday": {
             "venue": Decimal("0.20"),
@@ -61,7 +61,7 @@ class BudgetScalingEngine:
             "entertainment": Decimal("0.12"),
             "cake_and_desserts": Decimal("0.08"),
             "photography": Decimal("0.06"),
-            "contingency": Decimal("0.06")
+            "contingency": Decimal("0.06"),
         },
         "milestone_anniversary": {
             "venue": Decimal("0.25"),
@@ -69,8 +69,8 @@ class BudgetScalingEngine:
             "decor": Decimal("0.15"),
             "entertainment": Decimal("0.12"),
             "photography": Decimal("0.08"),
-            "contingency": Decimal("0.05")
-        }
+            "contingency": Decimal("0.05"),
+        },
     }
 
     @classmethod
@@ -101,7 +101,7 @@ class BudgetScalingEngine:
         total_envelope: float,
         event_type: str = "wedding",
         city: str = "Pune",
-        guest_count: int = 350
+        guest_count: int = 350,
     ) -> list[dict[str, Any]]:
         if total_envelope <= 0:
             raise ValueError("Total budget envelope must be strictly greater than 0")
@@ -116,7 +116,9 @@ class BudgetScalingEngine:
             model_key = raw_key
         elif "birthday" in raw_key:
             model_key = "birthday"
-        elif any(k in raw_key for k in ("community", "festival", "mela", "society", "ganesh", "navratri")):
+        elif any(
+            k in raw_key for k in ("community", "festival", "mela", "society", "ganesh", "navratri")
+        ):
             model_key = "community_festival"
         elif "anniversary" in raw_key:
             model_key = "milestone_anniversary"
@@ -128,7 +130,9 @@ class BudgetScalingEngine:
         allocation_spec = cls.ALLOCATION_MODELS[model_key]
 
         envelope_dec = Decimal(str(total_envelope))
-        scaled_envelope = (envelope_dec * multiplier).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+        scaled_envelope = (envelope_dec * multiplier).quantize(
+            Decimal("0.01"), rounding=ROUND_HALF_UP
+        )
 
         items = []
         running_total = Decimal("0.00")
@@ -137,38 +141,44 @@ class BudgetScalingEngine:
         # Allocate each category except the last (contingency), which absorbs any cent remainder
         for cat in categories[:-1]:
             percentage = allocation_spec[cat]
-            amount = (scaled_envelope * percentage).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+            amount = (scaled_envelope * percentage).quantize(
+                Decimal("0.01"), rounding=ROUND_HALF_UP
+            )
             running_total += amount
-            items.append({
-                "category": cat,
-                "percentage": float(percentage * 100),
-                "planned_amount": float(amount),
-                "city_tier": tier,
-                "city_tier_multiplier": float(multiplier),
-                "reasoning_spec": {
-                    "formula": f"{float(scaled_envelope)} * {float(percentage)}",
+            items.append(
+                {
+                    "category": cat,
+                    "percentage": float(percentage * 100),
+                    "planned_amount": float(amount),
                     "city_tier": tier,
-                    "guest_count": guest_count,
-                    "benchmark_basis": f"Standard Indian {model_key} allocation benchmark model"
+                    "city_tier_multiplier": float(multiplier),
+                    "reasoning_spec": {
+                        "formula": f"{float(scaled_envelope)} * {float(percentage)}",
+                        "city_tier": tier,
+                        "guest_count": guest_count,
+                        "benchmark_basis": f"Standard Indian {model_key} allocation benchmark model",
+                    },
                 }
-            })
+            )
 
         # Final category absorbs residual difference
         last_cat = categories[-1]
         last_percentage = allocation_spec[last_cat]
         remainder_amount = scaled_envelope - running_total
-        items.append({
-            "category": last_cat,
-            "percentage": float(last_percentage * 100),
-            "planned_amount": float(remainder_amount),
-            "city_tier": tier,
-            "city_tier_multiplier": float(multiplier),
-            "reasoning_spec": {
-                "formula": f"Residual balance of {float(scaled_envelope)}",
+        items.append(
+            {
+                "category": last_cat,
+                "percentage": float(last_percentage * 100),
+                "planned_amount": float(remainder_amount),
                 "city_tier": tier,
-                "guest_count": guest_count,
-                "benchmark_basis": "Contingency buffer calibrated for unexpected vendor overtime/generator fuel"
+                "city_tier_multiplier": float(multiplier),
+                "reasoning_spec": {
+                    "formula": f"Residual balance of {float(scaled_envelope)}",
+                    "city_tier": tier,
+                    "guest_count": guest_count,
+                    "benchmark_basis": "Contingency buffer calibrated for unexpected vendor overtime/generator fuel",
+                },
             }
-        })
+        )
 
         return items

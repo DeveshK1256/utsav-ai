@@ -11,7 +11,7 @@ class TaskNode:
         offset_days: int,
         assigned_role: str,
         sub_event_key: str | None = None,
-        dependencies: list[str] | None = None
+        dependencies: list[str] | None = None,
     ):
         self.task_id = task_id
         self.title = title
@@ -40,7 +40,7 @@ class DAGScheduler:
                 "duration_hours": 4,
                 "is_outdoor": True,
                 "is_muhurat_locked": False,
-                "venue_type": "Courtyard / Lawn"
+                "venue_type": "Courtyard / Lawn",
             },
             {
                 "key": "sangeet",
@@ -50,7 +50,7 @@ class DAGScheduler:
                 "duration_hours": 4,
                 "is_outdoor": False,
                 "is_muhurat_locked": False,
-                "venue_type": "Grand Ballroom"
+                "venue_type": "Grand Ballroom",
             },
             {
                 "key": "lagna_muhurat",
@@ -61,7 +61,7 @@ class DAGScheduler:
                 "is_outdoor": False,
                 "is_muhurat_locked": True,
                 "muhurat_notes": "Auspicious window based on astronomical ephemeris (10:30 AM - 12:15 PM)",
-                "venue_type": "Sacred Mandap Hall"
+                "venue_type": "Sacred Mandap Hall",
             },
             {
                 "key": "reception",
@@ -71,8 +71,8 @@ class DAGScheduler:
                 "duration_hours": 4,
                 "is_outdoor": True,
                 "is_muhurat_locked": False,
-                "venue_type": "Royal Palace Lawn"
-            }
+                "venue_type": "Royal Palace Lawn",
+            },
         ],
         "punjabi_traditional": [
             {
@@ -83,7 +83,7 @@ class DAGScheduler:
                 "duration_hours": 3,
                 "is_outdoor": True,
                 "is_muhurat_locked": False,
-                "venue_type": "Courtyard / Terrace"
+                "venue_type": "Courtyard / Terrace",
             },
             {
                 "key": "jaggo_sangeet",
@@ -93,7 +93,7 @@ class DAGScheduler:
                 "duration_hours": 5,
                 "is_outdoor": False,
                 "is_muhurat_locked": False,
-                "venue_type": "Grand Ballroom"
+                "venue_type": "Grand Ballroom",
             },
             {
                 "key": "chooda_milni",
@@ -103,7 +103,7 @@ class DAGScheduler:
                 "duration_hours": 2,
                 "is_outdoor": True,
                 "is_muhurat_locked": False,
-                "venue_type": "Entrance Promenade"
+                "venue_type": "Entrance Promenade",
             },
             {
                 "key": "anand_karaj_laavan",
@@ -114,7 +114,7 @@ class DAGScheduler:
                 "is_outdoor": False,
                 "is_muhurat_locked": True,
                 "muhurat_notes": "Holy Anand Karaj recitation in Gurdwara / Darbar hall",
-                "venue_type": "Gurdwara / Sacred Darbar Hall"
+                "venue_type": "Gurdwara / Sacred Darbar Hall",
             },
             {
                 "key": "doli_reception",
@@ -124,8 +124,8 @@ class DAGScheduler:
                 "duration_hours": 5,
                 "is_outdoor": False,
                 "is_muhurat_locked": False,
-                "venue_type": "Imperial Lawn Banquet"
-            }
+                "venue_type": "Imperial Lawn Banquet",
+            },
         ],
         "bengali_vedic": [
             {
@@ -136,7 +136,7 @@ class DAGScheduler:
                 "duration_hours": 4,
                 "is_outdoor": True,
                 "is_muhurat_locked": False,
-                "venue_type": "Courtyard Pavilion"
+                "venue_type": "Courtyard Pavilion",
             },
             {
                 "key": "bor_jatri_boron",
@@ -146,7 +146,7 @@ class DAGScheduler:
                 "duration_hours": 2,
                 "is_outdoor": True,
                 "is_muhurat_locked": False,
-                "venue_type": "Floral Entrance Arch"
+                "venue_type": "Floral Entrance Arch",
             },
             {
                 "key": "saat_paake_ghomar",
@@ -157,7 +157,7 @@ class DAGScheduler:
                 "is_outdoor": False,
                 "is_muhurat_locked": True,
                 "muhurat_notes": "Auspicious dusk Lagna muhurat window for Shubho Drishti",
-                "venue_type": "Traditional Chhandnatala Mandap"
+                "venue_type": "Traditional Chhandnatala Mandap",
             },
             {
                 "key": "sampradan_saptapadi",
@@ -168,7 +168,7 @@ class DAGScheduler:
                 "is_outdoor": False,
                 "is_muhurat_locked": True,
                 "muhurat_notes": "Sacred fire Kusumdinge oblations and Sindoor Daan",
-                "venue_type": "Vedic Vivaha Mandap"
+                "venue_type": "Vedic Vivaha Mandap",
             },
             {
                 "key": "bou_bhat_reception",
@@ -178,8 +178,8 @@ class DAGScheduler:
                 "duration_hours": 4,
                 "is_outdoor": False,
                 "is_muhurat_locked": False,
-                "venue_type": "Grand Banquet Hall"
-            }
+                "venue_type": "Grand Banquet Hall",
+            },
         ],
         "tamil_brahmin_hindu": [
             {
@@ -191,7 +191,7 @@ class DAGScheduler:
                 "is_outdoor": False,
                 "is_muhurat_locked": True,
                 "muhurat_notes": "Morning Vratham vow rites with sacred Darbha grass",
-                "venue_type": "Kalyana Mandapam Shrine"
+                "venue_type": "Kalyana Mandapam Shrine",
             },
             {
                 "key": "jaanavasam_oonjal",
@@ -201,7 +201,7 @@ class DAGScheduler:
                 "duration_hours": 4,
                 "is_outdoor": True,
                 "is_muhurat_locked": False,
-                "venue_type": "Oonjal Swing Courtyard"
+                "venue_type": "Oonjal Swing Courtyard",
             },
             {
                 "key": "mangalya_dharanam",
@@ -212,7 +212,7 @@ class DAGScheduler:
                 "is_outdoor": False,
                 "is_muhurat_locked": True,
                 "muhurat_notes": "Sacred Muhurtam for tying 3 knots of Thali / Mangalyam",
-                "venue_type": "Main Vivaha Mandapam"
+                "venue_type": "Main Vivaha Mandapam",
             },
             {
                 "key": "saptapadi_nalangu",
@@ -222,7 +222,7 @@ class DAGScheduler:
                 "duration_hours": 3,
                 "is_outdoor": False,
                 "is_muhurat_locked": False,
-                "venue_type": "Mandapam Stage"
+                "venue_type": "Mandapam Stage",
             },
             {
                 "key": "traditional_reception",
@@ -232,8 +232,8 @@ class DAGScheduler:
                 "duration_hours": 4,
                 "is_outdoor": False,
                 "is_muhurat_locked": False,
-                "venue_type": "Royal Kalyana Hall"
-            }
+                "venue_type": "Royal Kalyana Hall",
+            },
         ],
         "gujarati_hindu": [
             {
@@ -245,7 +245,7 @@ class DAGScheduler:
                 "is_outdoor": False,
                 "is_muhurat_locked": True,
                 "muhurat_notes": "Grah Shanti planetary invocation with Samidha wood",
-                "venue_type": "Puja Mandap"
+                "venue_type": "Puja Mandap",
             },
             {
                 "key": "pithi_mameru",
@@ -255,7 +255,7 @@ class DAGScheduler:
                 "duration_hours": 3,
                 "is_outdoor": True,
                 "is_muhurat_locked": False,
-                "venue_type": "Courtyard Pavilion"
+                "venue_type": "Courtyard Pavilion",
             },
             {
                 "key": "sangeet_garba",
@@ -265,7 +265,7 @@ class DAGScheduler:
                 "duration_hours": 5,
                 "is_outdoor": True,
                 "is_muhurat_locked": False,
-                "venue_type": "Central Illuminated Garba Lawn"
+                "venue_type": "Central Illuminated Garba Lawn",
             },
             {
                 "key": "pokhana_jaimala",
@@ -275,7 +275,7 @@ class DAGScheduler:
                 "duration_hours": 2,
                 "is_outdoor": True,
                 "is_muhurat_locked": False,
-                "venue_type": "Mandap Gateway"
+                "venue_type": "Mandap Gateway",
             },
             {
                 "key": "mangal_pheras",
@@ -286,7 +286,7 @@ class DAGScheduler:
                 "is_outdoor": False,
                 "is_muhurat_locked": True,
                 "muhurat_notes": "4 Pheras representing Dharma, Artha, Kama, Moksha",
-                "venue_type": "Central Vivah Mandap"
+                "venue_type": "Central Vivah Mandap",
             },
             {
                 "key": "gujarati_reception",
@@ -296,8 +296,8 @@ class DAGScheduler:
                 "duration_hours": 4,
                 "is_outdoor": True,
                 "is_muhurat_locked": False,
-                "venue_type": "Lawn Ballroom"
-            }
+                "venue_type": "Lawn Ballroom",
+            },
         ],
         "muslim_nikah": [
             {
@@ -308,7 +308,7 @@ class DAGScheduler:
                 "duration_hours": 4,
                 "is_outdoor": True,
                 "is_muhurat_locked": False,
-                "venue_type": "Mughal Garden Terrace"
+                "venue_type": "Mughal Garden Terrace",
             },
             {
                 "key": "baraat_istiqbal",
@@ -318,7 +318,7 @@ class DAGScheduler:
                 "duration_hours": 2,
                 "is_outdoor": True,
                 "is_muhurat_locked": False,
-                "venue_type": "Grand Portico Gateway"
+                "venue_type": "Grand Portico Gateway",
             },
             {
                 "key": "nikah_ceremony",
@@ -329,7 +329,7 @@ class DAGScheduler:
                 "is_outdoor": False,
                 "is_muhurat_locked": True,
                 "muhurat_notes": "Auspicious evening Waqt for Nikahnama signing and Mehr settlement",
-                "venue_type": "Draped Nikah Diwan Hall"
+                "venue_type": "Draped Nikah Diwan Hall",
             },
             {
                 "key": "arsi_mushaf_rukhsati",
@@ -339,7 +339,7 @@ class DAGScheduler:
                 "duration_hours": 2,
                 "is_outdoor": False,
                 "is_muhurat_locked": False,
-                "venue_type": "Main Stage Diwan"
+                "venue_type": "Main Stage Diwan",
             },
             {
                 "key": "walima_reception",
@@ -349,8 +349,8 @@ class DAGScheduler:
                 "duration_hours": 4,
                 "is_outdoor": False,
                 "is_muhurat_locked": False,
-                "venue_type": "Crystal Ballroom"
-            }
+                "venue_type": "Crystal Ballroom",
+            },
         ],
         "christian_traditional": [
             {
@@ -361,7 +361,7 @@ class DAGScheduler:
                 "duration_hours": 3,
                 "is_outdoor": True,
                 "is_muhurat_locked": False,
-                "venue_type": "Ancestral Villa Lawn"
+                "venue_type": "Ancestral Villa Lawn",
             },
             {
                 "key": "nuptial_mass",
@@ -372,7 +372,7 @@ class DAGScheduler:
                 "is_outdoor": False,
                 "is_muhurat_locked": True,
                 "muhurat_notes": "Solemn Church liturgy with consent of vows, exchange of rings & Minnu",
-                "venue_type": "Parish Church / Cathedral"
+                "venue_type": "Parish Church / Cathedral",
             },
             {
                 "key": "bridal_toast_reception",
@@ -382,8 +382,8 @@ class DAGScheduler:
                 "duration_hours": 6,
                 "is_outdoor": False,
                 "is_muhurat_locked": False,
-                "venue_type": "Grand Country Club Ballroom"
-            }
+                "venue_type": "Grand Country Club Ballroom",
+            },
         ],
         "telugu_hindu": [
             {
@@ -395,7 +395,7 @@ class DAGScheduler:
                 "is_outdoor": False,
                 "is_muhurat_locked": True,
                 "muhurat_notes": "Auspicious morning Mangala Snanam and Snathakam rites",
-                "venue_type": "Courtyard Mandapam"
+                "venue_type": "Courtyard Mandapam",
             },
             {
                 "key": "kasi_yatra_sangeet",
@@ -405,7 +405,7 @@ class DAGScheduler:
                 "duration_hours": 4,
                 "is_outdoor": False,
                 "is_muhurat_locked": False,
-                "venue_type": "Banquet Hall"
+                "venue_type": "Banquet Hall",
             },
             {
                 "key": "jeelakarra_bellam",
@@ -416,7 +416,7 @@ class DAGScheduler:
                 "is_outdoor": False,
                 "is_muhurat_locked": True,
                 "muhurat_notes": "Exact astronomical fraction of a second for Jeelakarra Bellam placement",
-                "venue_type": "Central Kalyana Mandapam"
+                "venue_type": "Central Kalyana Mandapam",
             },
             {
                 "key": "mangalsutra_talambralu",
@@ -426,7 +426,7 @@ class DAGScheduler:
                 "duration_hours": 3,
                 "is_outdoor": False,
                 "is_muhurat_locked": False,
-                "venue_type": "Vivaha Stage"
+                "venue_type": "Vivaha Stage",
             },
             {
                 "key": "telugu_reception",
@@ -436,8 +436,8 @@ class DAGScheduler:
                 "duration_hours": 4,
                 "is_outdoor": True,
                 "is_muhurat_locked": False,
-                "venue_type": "Royal Palace Lawn"
-            }
+                "venue_type": "Royal Palace Lawn",
+            },
         ],
         "birthday_kids_carnival": [
             {
@@ -448,7 +448,7 @@ class DAGScheduler:
                 "duration_hours": 2,
                 "is_outdoor": False,
                 "is_muhurat_locked": False,
-                "venue_type": "Themed Party Hall / Play Zone"
+                "venue_type": "Themed Party Hall / Play Zone",
             },
             {
                 "key": "magic_and_entertainment",
@@ -458,7 +458,7 @@ class DAGScheduler:
                 "duration_hours": 2,
                 "is_outdoor": False,
                 "is_muhurat_locked": False,
-                "venue_type": "Center Stage & Activity Arena"
+                "venue_type": "Center Stage & Activity Arena",
             },
             {
                 "key": "cake_cutting",
@@ -469,7 +469,7 @@ class DAGScheduler:
                 "is_outdoor": False,
                 "is_muhurat_locked": True,
                 "muhurat_notes": "Prime celebration spotlight & photography moment",
-                "venue_type": "Theme Backdrop & Cake Table"
+                "venue_type": "Theme Backdrop & Cake Table",
             },
             {
                 "key": "kids_buffet_and_favors",
@@ -479,8 +479,8 @@ class DAGScheduler:
                 "duration_hours": 2,
                 "is_outdoor": False,
                 "is_muhurat_locked": False,
-                "venue_type": "Dining Lounge & Hospitality Desk"
-            }
+                "venue_type": "Dining Lounge & Hospitality Desk",
+            },
         ],
         "birthday_milestone": [
             {
@@ -492,7 +492,7 @@ class DAGScheduler:
                 "is_outdoor": False,
                 "is_muhurat_locked": True,
                 "muhurat_notes": "Auspicious morning muhurat window for long life & health",
-                "venue_type": "Puja Mandap & Prayer Hall"
+                "venue_type": "Puja Mandap & Prayer Hall",
             },
             {
                 "key": "jubilee_lunch",
@@ -502,7 +502,7 @@ class DAGScheduler:
                 "duration_hours": 3,
                 "is_outdoor": False,
                 "is_muhurat_locked": False,
-                "venue_type": "Banquet Dining Hall"
+                "venue_type": "Banquet Dining Hall",
             },
             {
                 "key": "evening_gala",
@@ -512,8 +512,8 @@ class DAGScheduler:
                 "duration_hours": 4,
                 "is_outdoor": True,
                 "is_muhurat_locked": False,
-                "venue_type": "Rooftop Garden / Grand Terrace"
-            }
+                "venue_type": "Rooftop Garden / Grand Terrace",
+            },
         ],
         "birthday_traditional": [
             {
@@ -525,7 +525,7 @@ class DAGScheduler:
                 "is_outdoor": False,
                 "is_muhurat_locked": True,
                 "muhurat_notes": "Sunrise solar alignment for longevity mantras",
-                "venue_type": "Traditional Mandap"
+                "venue_type": "Traditional Mandap",
             },
             {
                 "key": "elder_blessings",
@@ -535,7 +535,7 @@ class DAGScheduler:
                 "duration_hours": 2,
                 "is_outdoor": False,
                 "is_muhurat_locked": False,
-                "venue_type": "Main Ancestral Hall"
+                "venue_type": "Main Ancestral Hall",
             },
             {
                 "key": "traditional_feast",
@@ -545,8 +545,8 @@ class DAGScheduler:
                 "duration_hours": 3,
                 "is_outdoor": False,
                 "is_muhurat_locked": False,
-                "venue_type": "Dining Hall"
-            }
+                "venue_type": "Dining Hall",
+            },
         ],
         "community_sarvajanik": [
             {
@@ -558,7 +558,7 @@ class DAGScheduler:
                 "is_outdoor": False,
                 "is_muhurat_locked": True,
                 "muhurat_notes": "Auspicious Vedic Prana Pratishtha muhurat window",
-                "venue_type": "Main Sanctum Pandal"
+                "venue_type": "Main Sanctum Pandal",
             },
             {
                 "key": "maha_aarti",
@@ -568,7 +568,7 @@ class DAGScheduler:
                 "duration_hours": 3,
                 "is_outdoor": True,
                 "is_muhurat_locked": False,
-                "venue_type": "Utsav Stage & Courtyard"
+                "venue_type": "Utsav Stage & Courtyard",
             },
             {
                 "key": "cultural_program",
@@ -578,7 +578,7 @@ class DAGScheduler:
                 "duration_hours": 4,
                 "is_outdoor": False,
                 "is_muhurat_locked": False,
-                "venue_type": "Main Stage Amphitheater"
+                "venue_type": "Main Stage Amphitheater",
             },
             {
                 "key": "mahaprasad_bhandara",
@@ -588,7 +588,7 @@ class DAGScheduler:
                 "duration_hours": 4,
                 "is_outdoor": True,
                 "is_muhurat_locked": False,
-                "venue_type": "Prasad Distribution Pavilion"
+                "venue_type": "Prasad Distribution Pavilion",
             },
             {
                 "key": "visarjan_procession",
@@ -598,8 +598,8 @@ class DAGScheduler:
                 "duration_hours": 5,
                 "is_outdoor": True,
                 "is_muhurat_locked": False,
-                "venue_type": "Procession Route & Riverfront"
-            }
+                "venue_type": "Procession Route & Riverfront",
+            },
         ],
         "community_navratri": [
             {
@@ -611,7 +611,7 @@ class DAGScheduler:
                 "is_outdoor": False,
                 "is_muhurat_locked": True,
                 "muhurat_notes": "Navratri Day 1 auspicious twilight puja",
-                "venue_type": "Garba Mandap Temple"
+                "venue_type": "Garba Mandap Temple",
             },
             {
                 "key": "dandiya_raas",
@@ -621,7 +621,7 @@ class DAGScheduler:
                 "duration_hours": 4,
                 "is_outdoor": True,
                 "is_muhurat_locked": False,
-                "venue_type": "Central Illuminated Garba Arena"
+                "venue_type": "Central Illuminated Garba Arena",
             },
             {
                 "key": "awards_and_prasad",
@@ -631,8 +631,8 @@ class DAGScheduler:
                 "duration_hours": 1,
                 "is_outdoor": False,
                 "is_muhurat_locked": False,
-                "venue_type": "Main Stage"
-            }
+                "venue_type": "Main Stage",
+            },
         ],
         "community_society_mela": [
             {
@@ -643,7 +643,7 @@ class DAGScheduler:
                 "duration_hours": 3,
                 "is_outdoor": True,
                 "is_muhurat_locked": False,
-                "venue_type": "Society Clubhouse Grounds"
+                "venue_type": "Society Clubhouse Grounds",
             },
             {
                 "key": "musical_tambola",
@@ -653,7 +653,7 @@ class DAGScheduler:
                 "duration_hours": 3,
                 "is_outdoor": False,
                 "is_muhurat_locked": False,
-                "venue_type": "Clubhouse Auditorium"
+                "venue_type": "Clubhouse Auditorium",
             },
             {
                 "key": "society_dinner",
@@ -663,8 +663,8 @@ class DAGScheduler:
                 "duration_hours": 3,
                 "is_outdoor": True,
                 "is_muhurat_locked": False,
-                "venue_type": "Central Lawn Promenade"
-            }
+                "venue_type": "Central Lawn Promenade",
+            },
         ],
         "default": [
             {
@@ -675,7 +675,7 @@ class DAGScheduler:
                 "duration_hours": 4,
                 "is_outdoor": True,
                 "is_muhurat_locked": False,
-                "venue_type": "Garden Terrace"
+                "venue_type": "Garden Terrace",
             },
             {
                 "key": "main_ceremony",
@@ -686,7 +686,7 @@ class DAGScheduler:
                 "is_outdoor": False,
                 "is_muhurat_locked": True,
                 "muhurat_notes": "Calculated auspicious muhurat window",
-                "venue_type": "Main Banquet Hall"
+                "venue_type": "Main Banquet Hall",
             },
             {
                 "key": "celebratory_reception",
@@ -696,74 +696,252 @@ class DAGScheduler:
                 "duration_hours": 4,
                 "is_outdoor": False,
                 "is_muhurat_locked": False,
-                "venue_type": "Grand Ballroom"
-            }
-        ]
+                "venue_type": "Grand Ballroom",
+            },
+        ],
     }
 
     FOUNDATION_TASKS: ClassVar[list[TaskNode]] = [
-        TaskNode("venue_lock", "Contract and Lock Primary Venue", 120, -60, "Host", dependencies=[]),
-        TaskNode("caterer_menu", "Finalize Catering Menu & Per-Plate Contract", 90, -45, "Food & Beverage Lead", dependencies=["venue_lock"]),
-        TaskNode("mandap_rigging", "Review Mandap Rigging & Floral Decor Specs", 180, -30, "Decor Lead", dependencies=["venue_lock"]),
-        TaskNode("priest_samagri", "Consult Priest and Settle Samagri Shopping List", 60, -21, "Elder Coordinator", dependencies=["venue_lock"]),
-        TaskNode("whatsapp_invites", "Dispatch WhatsApp Interactive Invitations", 45, -21, "Guest Concierge", dependencies=["caterer_menu"]),
-        TaskNode("sound_permits", "Secure Municipal Sound Exemption & Police NOC", 60, -14, "Logistics Lead", dependencies=["venue_lock"]),
-        TaskNode("seating_layout", "Finalize Table Constraints & Seating Matrix", 90, -7, "Host", dependencies=["whatsapp_invites"]),
-        TaskNode("vendor_call_sheet", "Issue Day-of Vendor Run-of-Show Call Sheet", 60, -2, "Day-of Director", dependencies=["mandap_rigging", "caterer_menu", "sound_permits"])
+        TaskNode(
+            "venue_lock", "Contract and Lock Primary Venue", 120, -60, "Host", dependencies=[]
+        ),
+        TaskNode(
+            "caterer_menu",
+            "Finalize Catering Menu & Per-Plate Contract",
+            90,
+            -45,
+            "Food & Beverage Lead",
+            dependencies=["venue_lock"],
+        ),
+        TaskNode(
+            "mandap_rigging",
+            "Review Mandap Rigging & Floral Decor Specs",
+            180,
+            -30,
+            "Decor Lead",
+            dependencies=["venue_lock"],
+        ),
+        TaskNode(
+            "priest_samagri",
+            "Consult Priest and Settle Samagri Shopping List",
+            60,
+            -21,
+            "Elder Coordinator",
+            dependencies=["venue_lock"],
+        ),
+        TaskNode(
+            "whatsapp_invites",
+            "Dispatch WhatsApp Interactive Invitations",
+            45,
+            -21,
+            "Guest Concierge",
+            dependencies=["caterer_menu"],
+        ),
+        TaskNode(
+            "sound_permits",
+            "Secure Municipal Sound Exemption & Police NOC",
+            60,
+            -14,
+            "Logistics Lead",
+            dependencies=["venue_lock"],
+        ),
+        TaskNode(
+            "seating_layout",
+            "Finalize Table Constraints & Seating Matrix",
+            90,
+            -7,
+            "Host",
+            dependencies=["whatsapp_invites"],
+        ),
+        TaskNode(
+            "vendor_call_sheet",
+            "Issue Day-of Vendor Run-of-Show Call Sheet",
+            60,
+            -2,
+            "Day-of Director",
+            dependencies=["mandap_rigging", "caterer_menu", "sound_permits"],
+        ),
     ]
 
     BIRTHDAY_TASKS: ClassVar[list[TaskNode]] = [
-        TaskNode("bday_venue", "Reserve Birthday Party Hall / Clubhouse / Play Zone", 90, -30, "Host", dependencies=[]),
-        TaskNode("bday_theme_decor", "Finalize Birthday Theme, Balloon Arches & Backdrop Specs", 120, -21, "Decor Lead", dependencies=["bday_venue"]),
-        TaskNode("bday_cake", "Order Custom Themed Birthday Cake & Dessert Spread", 60, -14, "Host", dependencies=["bday_theme_decor"]),
-        TaskNode("bday_entertainer", "Book Magician, Game Host/Emcee & Tattoo Artist", 60, -14, "Entertainment Lead", dependencies=["bday_venue"]),
-        TaskNode("bday_catering", "Finalize Kids & Adults Party Finger-Food Buffet Menu", 60, -10, "Food & Beverage Lead", dependencies=["bday_venue"]),
-        TaskNode("bday_gifts", "Procure Personalized Return Gifts & Party Favors", 60, -7, "Host", dependencies=["bday_theme_decor"]),
-        TaskNode("bday_invites", "Send Digital WhatsApp Birthday Invitations & Track RSVPs", 45, -7, "Host", dependencies=["bday_venue"]),
-        TaskNode("bday_run_of_show", "Assemble Day-of Party Timeline & Music Playlist", 45, -2, "Host", dependencies=["bday_cake", "bday_entertainer"])
+        TaskNode(
+            "bday_venue",
+            "Reserve Birthday Party Hall / Clubhouse / Play Zone",
+            90,
+            -30,
+            "Host",
+            dependencies=[],
+        ),
+        TaskNode(
+            "bday_theme_decor",
+            "Finalize Birthday Theme, Balloon Arches & Backdrop Specs",
+            120,
+            -21,
+            "Decor Lead",
+            dependencies=["bday_venue"],
+        ),
+        TaskNode(
+            "bday_cake",
+            "Order Custom Themed Birthday Cake & Dessert Spread",
+            60,
+            -14,
+            "Host",
+            dependencies=["bday_theme_decor"],
+        ),
+        TaskNode(
+            "bday_entertainer",
+            "Book Magician, Game Host/Emcee & Tattoo Artist",
+            60,
+            -14,
+            "Entertainment Lead",
+            dependencies=["bday_venue"],
+        ),
+        TaskNode(
+            "bday_catering",
+            "Finalize Kids & Adults Party Finger-Food Buffet Menu",
+            60,
+            -10,
+            "Food & Beverage Lead",
+            dependencies=["bday_venue"],
+        ),
+        TaskNode(
+            "bday_gifts",
+            "Procure Personalized Return Gifts & Party Favors",
+            60,
+            -7,
+            "Host",
+            dependencies=["bday_theme_decor"],
+        ),
+        TaskNode(
+            "bday_invites",
+            "Send Digital WhatsApp Birthday Invitations & Track RSVPs",
+            45,
+            -7,
+            "Host",
+            dependencies=["bday_venue"],
+        ),
+        TaskNode(
+            "bday_run_of_show",
+            "Assemble Day-of Party Timeline & Music Playlist",
+            45,
+            -2,
+            "Host",
+            dependencies=["bday_cake", "bday_entertainer"],
+        ),
     ]
 
     COMMUNITY_TASKS: ClassVar[list[TaskNode]] = [
-        TaskNode("comm_permits_noc", "Obtain Municipal Ward Pandal Permission, Police & Traffic NOC", 120, -45, "Permits Liaison", dependencies=[]),
-        TaskNode("comm_pandal_stage", "Contract Pandal Fabricator, Stage & German Hangar Tent", 180, -30, "Logistics Lead", dependencies=["comm_permits_noc"]),
-        TaskNode("comm_sound_generator", "Contract Line-Array Sound, Diesel Genset & Fire Safety Gear", 90, -21, "Technical Lead", dependencies=["comm_permits_noc"]),
-        TaskNode("comm_prasad_rations", "Procure Mahaprasad Rations, Cooking Team & Eco-Friendly Plates", 120, -14, "Food & Prasad Lead", dependencies=["comm_pandal_stage"]),
-        TaskNode("comm_volunteer_corps", "Organize Volunteer Rosters for Crowd Control & Queue Management", 90, -10, "Volunteer Captain", dependencies=["comm_permits_noc"]),
-        TaskNode("comm_dignitary_invites", "Issue VIP & Resident Society Cultural Invitations", 60, -7, "Secretary", dependencies=["comm_permits_noc"]),
-        TaskNode("comm_security_cctv", "Install CCTV Surveillance, Metal Detectors & First Aid Booth", 120, -3, "Security Lead", dependencies=["comm_pandal_stage"]),
-        TaskNode("comm_sound_dry_run", "Conduct Pre-Event Dry Run & Sound Level Decibel Check", 60, -1, "Festival Director", dependencies=["comm_sound_generator", "comm_security_cctv"])
+        TaskNode(
+            "comm_permits_noc",
+            "Obtain Municipal Ward Pandal Permission, Police & Traffic NOC",
+            120,
+            -45,
+            "Permits Liaison",
+            dependencies=[],
+        ),
+        TaskNode(
+            "comm_pandal_stage",
+            "Contract Pandal Fabricator, Stage & German Hangar Tent",
+            180,
+            -30,
+            "Logistics Lead",
+            dependencies=["comm_permits_noc"],
+        ),
+        TaskNode(
+            "comm_sound_generator",
+            "Contract Line-Array Sound, Diesel Genset & Fire Safety Gear",
+            90,
+            -21,
+            "Technical Lead",
+            dependencies=["comm_permits_noc"],
+        ),
+        TaskNode(
+            "comm_prasad_rations",
+            "Procure Mahaprasad Rations, Cooking Team & Eco-Friendly Plates",
+            120,
+            -14,
+            "Food & Prasad Lead",
+            dependencies=["comm_pandal_stage"],
+        ),
+        TaskNode(
+            "comm_volunteer_corps",
+            "Organize Volunteer Rosters for Crowd Control & Queue Management",
+            90,
+            -10,
+            "Volunteer Captain",
+            dependencies=["comm_permits_noc"],
+        ),
+        TaskNode(
+            "comm_dignitary_invites",
+            "Issue VIP & Resident Society Cultural Invitations",
+            60,
+            -7,
+            "Secretary",
+            dependencies=["comm_permits_noc"],
+        ),
+        TaskNode(
+            "comm_security_cctv",
+            "Install CCTV Surveillance, Metal Detectors & First Aid Booth",
+            120,
+            -3,
+            "Security Lead",
+            dependencies=["comm_pandal_stage"],
+        ),
+        TaskNode(
+            "comm_sound_dry_run",
+            "Conduct Pre-Event Dry Run & Sound Level Decibel Check",
+            60,
+            -1,
+            "Festival Director",
+            dependencies=["comm_sound_generator", "comm_security_cctv"],
+        ),
     ]
 
     @classmethod
-    def get_sub_events_for_tradition(cls, tradition_code: str, start_date_val: date, event_type: str = "wedding") -> list[dict[str, Any]]:
+    def get_sub_events_for_tradition(
+        cls, tradition_code: str, start_date_val: date, event_type: str = "wedding"
+    ) -> list[dict[str, Any]]:
         t_key = (tradition_code or "").lower()
         e_key = (event_type or "").lower()
 
         if t_key in cls.SUB_EVENT_TEMPLATES:
             template = cls.SUB_EVENT_TEMPLATES[t_key]
         elif "birthday" in e_key or "birthday" in t_key:
-            template = cls.SUB_EVENT_TEMPLATES.get("birthday_kids_carnival") or cls.SUB_EVENT_TEMPLATES["default"]
-        elif any(k in e_key or k in t_key for k in ("community", "festival", "mela", "society", "ganesh", "navratri")):
-            template = cls.SUB_EVENT_TEMPLATES.get("community_sarvajanik") or cls.SUB_EVENT_TEMPLATES["default"]
+            template = (
+                cls.SUB_EVENT_TEMPLATES.get("birthday_kids_carnival")
+                or cls.SUB_EVENT_TEMPLATES["default"]
+            )
+        elif any(
+            k in e_key or k in t_key
+            for k in ("community", "festival", "mela", "society", "ganesh", "navratri")
+        ):
+            template = (
+                cls.SUB_EVENT_TEMPLATES.get("community_sarvajanik")
+                or cls.SUB_EVENT_TEMPLATES["default"]
+            )
         else:
             template = cls.SUB_EVENT_TEMPLATES.get(e_key, cls.SUB_EVENT_TEMPLATES["default"])
 
         result = []
         for idx, item in enumerate(template):
             sub_date = start_date_val + timedelta(days=int(str(item["day_offset"])))
-            start_dt = datetime.combine(sub_date, time(int(str(item["start_time_hour"])), 0), tzinfo=UTC)
+            start_dt = datetime.combine(
+                sub_date, time(int(str(item["start_time_hour"])), 0), tzinfo=UTC
+            )
             end_dt = start_dt + timedelta(hours=float(str(item["duration_hours"])))
-            result.append({
-                "name": item["name"],
-                "start_time": start_dt,
-                "end_time": end_dt,
-                "venue_name": item["venue_type"],
-                "venue_address": "Main Celebration Venue Premises",
-                "is_outdoor": item["is_outdoor"],
-                "is_muhurat_locked": item["is_muhurat_locked"],
-                "muhurat_notes": item.get("muhurat_notes"),
-                "sort_order": idx
-            })
+            result.append(
+                {
+                    "name": item["name"],
+                    "start_time": start_dt,
+                    "end_time": end_dt,
+                    "venue_name": item["venue_type"],
+                    "venue_address": "Main Celebration Venue Premises",
+                    "is_outdoor": item["is_outdoor"],
+                    "is_muhurat_locked": item["is_muhurat_locked"],
+                    "muhurat_notes": item.get("muhurat_notes"),
+                    "sort_order": idx,
+                }
+            )
         return result
 
     @classmethod
@@ -793,11 +971,15 @@ class DAGScheduler:
         return any(node not in visited and dfs(node) for node in adj)
 
     @classmethod
-    def generate_scheduled_tasks(cls, start_date_val: date, event_type: str = "wedding") -> list[dict[str, Any]]:
+    def generate_scheduled_tasks(
+        cls, start_date_val: date, event_type: str = "wedding"
+    ) -> list[dict[str, Any]]:
         e_key = (event_type or "").lower()
         if "birthday" in e_key:
             task_nodes = cls.BIRTHDAY_TASKS
-        elif any(k in e_key for k in ("community", "festival", "mela", "society", "ganesh", "navratri")):
+        elif any(
+            k in e_key for k in ("community", "festival", "mela", "society", "ganesh", "navratri")
+        ):
             task_nodes = cls.COMMUNITY_TASKS
         else:
             task_nodes = cls.FOUNDATION_TASKS
@@ -811,16 +993,18 @@ class DAGScheduler:
             task_start = datetime.combine(task_date, time(10, 0), tzinfo=UTC)
             task_end = task_start + timedelta(minutes=task.duration_minutes)
 
-            scheduled.append({
-                "title": task.title,
-                "description": f"Standard operational milestone: {task.title}",
-                "status": "pending",
-                "scheduled_start": task_start,
-                "scheduled_end": task_end,
-                "duration_minutes": task.duration_minutes,
-                "dependency_task_ids": task.dependencies,
-                "assigned_role": task.assigned_role
-            })
+            scheduled.append(
+                {
+                    "title": task.title,
+                    "description": f"Standard operational milestone: {task.title}",
+                    "status": "pending",
+                    "scheduled_start": task_start,
+                    "scheduled_end": task_end,
+                    "duration_minutes": task.duration_minutes,
+                    "dependency_task_ids": task.dependencies,
+                    "assigned_role": task.assigned_role,
+                }
+            )
         return scheduled
 
     @classmethod
@@ -839,20 +1023,24 @@ class DAGScheduler:
             new_start = old_start + timedelta(days=days_delta) if old_start else None
             new_end = old_end + timedelta(days=days_delta) if old_end else None
 
-            diffs.append({
-                "task_id": t_id,
-                "title": title,
-                "old_start": old_start.isoformat() if old_start else None,
-                "new_start": new_start.isoformat() if new_start else None,
-                "old_end": old_end.isoformat() if old_end else None,
-                "new_end": new_end.isoformat() if new_end else None,
-                "days_shifted": days_delta,
-                "formula": f"Date moved: shifted by {days_delta:+d} days to match new event date"
-            })
+            diffs.append(
+                {
+                    "task_id": t_id,
+                    "title": title,
+                    "old_start": old_start.isoformat() if old_start else None,
+                    "new_start": new_start.isoformat() if new_start else None,
+                    "old_end": old_end.isoformat() if old_end else None,
+                    "new_end": new_end.isoformat() if new_end else None,
+                    "days_shifted": days_delta,
+                    "formula": f"Date moved: shifted by {days_delta:+d} days to match new event date",
+                }
+            )
         return diffs
 
     @classmethod
-    def shift_sub_events_for_date_moved(cls, sub_events: list[Any], days_delta: int) -> list[dict[str, Any]]:
+    def shift_sub_events_for_date_moved(
+        cls, sub_events: list[Any], days_delta: int
+    ) -> list[dict[str, Any]]:
         """
         Shifts sub-event start and end timestamps by days_delta.
         Flags whether religious muhurats are preserved.
@@ -868,16 +1056,18 @@ class DAGScheduler:
             new_start = old_start + timedelta(days=days_delta) if old_start else None
             new_end = old_end + timedelta(days=days_delta) if old_end else None
 
-            diffs.append({
-                "sub_event_id": se_id,
-                "name": name,
-                "old_start": old_start.isoformat() if old_start else None,
-                "new_start": new_start.isoformat() if new_start else None,
-                "old_end": old_end.isoformat() if old_end else None,
-                "new_end": new_end.isoformat() if new_end else None,
-                "is_muhurat_locked": is_muhurat_locked,
-                "formula": f"Event date moved: shifted by {days_delta:+d} days (Muhurat lock: {'Preserved' if is_muhurat_locked else 'Standard'})"
-            })
+            diffs.append(
+                {
+                    "sub_event_id": se_id,
+                    "name": name,
+                    "old_start": old_start.isoformat() if old_start else None,
+                    "new_start": new_start.isoformat() if new_start else None,
+                    "old_end": old_end.isoformat() if old_end else None,
+                    "new_end": new_end.isoformat() if new_end else None,
+                    "is_muhurat_locked": is_muhurat_locked,
+                    "formula": f"Event date moved: shifted by {days_delta:+d} days (Muhurat lock: {'Preserved' if is_muhurat_locked else 'Standard'})",
+                }
+            )
         return diffs
 
     @classmethod
@@ -886,7 +1076,7 @@ class DAGScheduler:
         start_date_val: date,
         tradition_code: str,
         secondary_tradition_code: str | None = None,
-        db: Any | None = None
+        db: Any | None = None,
     ) -> list[dict[str, Any]]:
         """
         Generates structured preparation and procurement tasks for ritual samagri,
@@ -895,36 +1085,42 @@ class DAGScheduler:
         items = []
         if db:
             from backend.app.models.models import RitualItem
+
             codes = [c for c in [tradition_code, secondary_tradition_code] if c]
             db_items = db.query(RitualItem).filter(RitualItem.tradition_code.in_(codes)).all()
             for i in db_items:
-                items.append({
-                    "item_name": i.item_name,
-                    "regional_name": i.regional_name,
-                    "standard_quantity": i.standard_quantity,
-                    "ritual_name": i.ritual_name or "Puja Vidhi",
-                    "category": i.category or "puja_samagri",
-                    "spiritual_purpose": i.spiritual_purpose or "Sacred ceremonial element",
-                    "tradition_code": i.tradition_code,
-                })
+                items.append(
+                    {
+                        "item_name": i.item_name,
+                        "regional_name": i.regional_name,
+                        "standard_quantity": i.standard_quantity,
+                        "ritual_name": i.ritual_name or "Puja Vidhi",
+                        "category": i.category or "puja_samagri",
+                        "spiritual_purpose": i.spiritual_purpose or "Sacred ceremonial element",
+                        "tradition_code": i.tradition_code,
+                    }
+                )
 
         if not items:
             from backend.app.db.seed_traditions import CURATED_TRADITIONS
+
             tradition_set = {tradition_code}
             if secondary_tradition_code:
                 tradition_set.add(secondary_tradition_code)
             for t in CURATED_TRADITIONS:
                 if t["code"] in tradition_set:
                     for name, reg, qty, cat, purp, rit in t["items"]:
-                        items.append({
-                            "item_name": name,
-                            "regional_name": reg,
-                            "standard_quantity": qty,
-                            "ritual_name": rit,
-                            "category": cat,
-                            "spiritual_purpose": purp,
-                            "tradition_code": t["code"],
-                        })
+                        items.append(
+                            {
+                                "item_name": name,
+                                "regional_name": reg,
+                                "standard_quantity": qty,
+                                "ritual_name": rit,
+                                "category": cat,
+                                "spiritual_purpose": purp,
+                                "tradition_code": t["code"],
+                            }
+                        )
 
         tasks = []
         rituals_grouped: dict[str, list[dict[str, Any]]] = {}
@@ -940,23 +1136,27 @@ class DAGScheduler:
             task_start = datetime.combine(task_date, time(9 + (idx % 4), 0), tzinfo=UTC)
             task_end = task_start + timedelta(minutes=90)
 
-            item_list_str = "; ".join([f"{it['item_name']} ({it['standard_quantity']})" for it in group_items[:4]])
+            item_list_str = "; ".join(
+                [f"{it['item_name']} ({it['standard_quantity']})" for it in group_items[:4]]
+            )
             if len(group_items) > 4:
                 item_list_str += f"; and {len(group_items) - 4} more items"
 
-            tasks.append({
-                "title": f"Procure Ritual Samagri: {rit_name}",
-                "description": (
-                    f"Checklist verification and procurement for {rit_name}. "
-                    f"Items include: {item_list_str}. "
-                    f"Review quantities with family Panditji / priest before final purchase."
-                ),
-                "status": "pending",
-                "scheduled_start": task_start,
-                "scheduled_end": task_end,
-                "duration_minutes": 90,
-                "dependency_task_ids": ["task-vendor-intake"],
-                "assigned_role": "Family Elder / Ritual Lead"
-            })
+            tasks.append(
+                {
+                    "title": f"Procure Ritual Samagri: {rit_name}",
+                    "description": (
+                        f"Checklist verification and procurement for {rit_name}. "
+                        f"Items include: {item_list_str}. "
+                        f"Review quantities with family Panditji / priest before final purchase."
+                    ),
+                    "status": "pending",
+                    "scheduled_start": task_start,
+                    "scheduled_end": task_end,
+                    "duration_minutes": 90,
+                    "dependency_task_ids": ["task-vendor-intake"],
+                    "assigned_role": "Family Elder / Ritual Lead",
+                }
+            )
 
         return tasks

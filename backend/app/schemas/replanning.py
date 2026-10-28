@@ -6,15 +6,11 @@ from pydantic import BaseModel, ConfigDict, Field
 
 class ChangeRequestSchema(BaseModel):
     change_type: Literal[
-        "guest_count_changed",
-        "vendor_cancelled",
-        "date_moved",
-        "budget_cut",
-        "venue_unavailable"
+        "guest_count_changed", "vendor_cancelled", "date_moved", "budget_cut", "venue_unavailable"
     ]
     payload: dict[str, Any] = Field(
         ...,
-        description="Raw change parameters, e.g. {'from_guest_count': 150, 'to_guest_count': 220}"
+        description="Raw change parameters, e.g. {'from_guest_count': 150, 'to_guest_count': 220}",
     )
 
 
@@ -55,13 +51,18 @@ class ChangeProposalResponseSchema(BaseModel):
     infeasibility_reason: str | None = None
     explanation: str | None = None
     mitigation_suggestions: list[str] = Field(default_factory=list)
-    provider_used: str = Field(default="deterministic_stub", description="Actual provider that generated the explanation ('gemini', 'stub', 'stub_fallback_quota_exhausted', 'stub_fallback_error')")
-    fallback_warning: str | None = Field(default=None, description="Prominent alert when an LLM provider fails or is rate-limited and falls back to deterministic stub")
+    provider_used: str = Field(
+        default="deterministic_stub",
+        description="Actual provider that generated the explanation ('gemini', 'stub', 'stub_fallback_quota_exhausted', 'stub_fallback_error')",
+    )
+    fallback_warning: str | None = Field(
+        default=None,
+        description="Prominent alert when an LLM provider fails or is rate-limited and falls back to deterministic stub",
+    )
     created_at: datetime
 
 
 class PatchChangeProposalSchema(BaseModel):
     budget_overrides: dict[str, float] | None = Field(
-        default=None,
-        description="Map of budget_item_id to overridden new_amount"
+        default=None, description="Map of budget_item_id to overridden new_amount"
     )

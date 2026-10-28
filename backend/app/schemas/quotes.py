@@ -9,7 +9,9 @@ class ExtractedLineItemSchema(BaseModel):
 
     name: str = Field(..., description="Line item service or material name")
     qty: float = Field(default=1.0, gt=0, description="Quantity")
-    unit: str = Field(default="units", description="Unit of measurement (plates, days, sqft, units)")
+    unit: str = Field(
+        default="units", description="Unit of measurement (plates, days, sqft, units)"
+    )
     unit_price: float = Field(..., ge=0, description="Unit rate in INR")
     total: float = Field(..., ge=0, description="Line item total in INR")
     category_tag: str | None = Field(default=None, description="Granular category tag")
@@ -20,7 +22,9 @@ class QuoteExtractionPayloadSchema(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     vendor_name: str = Field(..., description="Vendor business or contact name")
-    category: str = Field(..., description="Service category (caterer, venue, decorator, photographer, other)")
+    category: str = Field(
+        ..., description="Service category (caterer, venue, decorator, photographer, other)"
+    )
     currency: str = Field(default="INR", description="Quote currency")
     subtotal: float = Field(..., ge=0, description="Pre-tax subtotal")
     tax_amount: float = Field(default=0.0, ge=0, description="Explicit tax amount")
@@ -28,7 +32,9 @@ class QuoteExtractionPayloadSchema(BaseModel):
     line_items: list[ExtractedLineItemSchema] = Field(default_factory=list)
     terms_and_conditions: list[str] = Field(default_factory=list)
     validity_date: str | None = Field(default=None, description="Quote validity or expiration date")
-    is_gst_included: bool = Field(default=False, description="Whether total explicitly includes GST")
+    is_gst_included: bool = Field(
+        default=False, description="Whether total explicitly includes GST"
+    )
     confidence_score: float = Field(default=0.95, ge=0.0, le=1.0)
 
     def compute_deterministic_confidence(self) -> float:
@@ -74,13 +80,22 @@ class QuoteExtractionPayloadSchema(BaseModel):
         # 5. Math Consistency: sum(line_items) vs Subtotal / Total (0.45)
         if self.line_items and len(self.line_items) >= 1:
             items_sum = sum(it.total for it in self.line_items)
-            if (self.subtotal > 0 and abs(items_sum - self.subtotal) <= 2.0) or (self.total_amount > 0 and abs(items_sum - self.total_amount) <= 2.0) or (self.total_amount > 0 and abs((items_sum + self.tax_amount) - self.total_amount) <= 2.0):
+            if (
+                (self.subtotal > 0 and abs(items_sum - self.subtotal) <= 2.0)
+                or (self.total_amount > 0 and abs(items_sum - self.total_amount) <= 2.0)
+                or (
+                    self.total_amount > 0
+                    and abs((items_sum + self.tax_amount) - self.total_amount) <= 2.0
+                )
+            ):
                 score += 0.45
 
         # 6. Tax & Grand Total Integrity (0.15)
         if self.total_amount > 0:
             if self.subtotal > 0:
-                if abs((self.subtotal + self.tax_amount) - self.total_amount) <= 2.0 or (self.is_gst_included and abs(self.subtotal - self.total_amount) <= 2.0):
+                if abs((self.subtotal + self.tax_amount) - self.total_amount) <= 2.0 or (
+                    self.is_gst_included and abs(self.subtotal - self.total_amount) <= 2.0
+                ):
                     score += 0.15
             elif self.tax_amount == 0.0:
                 score += 0.15
@@ -94,7 +109,10 @@ class HiddenCostAlertSchema(BaseModel):
     description: str
     typical_impact: str
     suggested_question: str
-    status: str = Field(default="missing_from_quote", description="'missing_from_quote', 'explicitly_covered', or 'ambiguous'")
+    status: str = Field(
+        default="missing_from_quote",
+        description="'missing_from_quote', 'explicitly_covered', or 'ambiguous'",
+    )
 
 
 class BenchmarkComparisonSchema(BaseModel):
@@ -103,7 +121,9 @@ class BenchmarkComparisonSchema(BaseModel):
     sample_size: int
     median_unit_cost: float | None = None
     quote_unit_cost: float | None = None
-    cost_status: str = Field(description="'above_median', 'near_median', 'below_median', or 'limited_data'")
+    cost_status: str = Field(
+        description="'above_median', 'near_median', 'below_median', or 'limited_data'"
+    )
     percentage_diff_vs_median: float | None = None
     is_limited_data: bool = Field(default=False, description="True if sample size < 5")
     reasoning: dict[str, Any]
@@ -124,7 +144,7 @@ class QuoteDocumentResponseSchema(BaseModel):
         description=(
             "Extraction state: 'completed' (confidence >= 0.60), 'flagged_review' (confidence < 0.60, e.g. non-quote "
             "or low clarity document), or 'failed_needs_manual_entry' (corrupted file, unparseable schema, or hard error)"
-        )
+        ),
     )
     total_quoted_amount: float | None = None
     tax_amount: float | None = None
@@ -178,4 +198,6 @@ class NegotiationDraftResponseSchema(BaseModel):
     target_discount_percentage: float
     leverage_points: list[str]
     draft_variants: dict[str, NegotiationMessageVariantSchema]  # 'polite', 'firm', 'bundle_ask'
-    disclaimer: str = "Draft messages are suggestions only. Utsav never sends messages autonomously."
+    disclaimer: str = (
+        "Draft messages are suggestions only. Utsav never sends messages autonomously."
+    )

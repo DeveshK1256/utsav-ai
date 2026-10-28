@@ -33,14 +33,16 @@ class VibeService:
         db: Session,
         event_id: str,
         files: list[UploadFile],
-        text_description: str | None = None
+        text_description: str | None = None,
     ) -> StyleProfile:
         event = db.query(Event).filter(Event.id == event_id).first()
         if not event:
             raise HTTPException(status_code=404, detail="Event not found")
 
         if len(files) > 10:
-            raise HTTPException(status_code=400, detail="Maximum 10 images allowed per style profile")
+            raise HTTPException(
+                status_code=400, detail="Maximum 10 images allowed per style profile"
+            )
 
         # Read images into memory
         image_records = []
@@ -54,31 +56,25 @@ class VibeService:
             if len(content) > MAX_IMAGE_SIZE_BYTES:
                 raise HTTPException(
                     status_code=400,
-                    detail=f"Image '{f.filename or 'upload'}' exceeds 5MB limit ({len(content)} bytes)"
+                    detail=f"Image '{f.filename or 'upload'}' exceeds 5MB limit ({len(content)} bytes)",
                 )
             m_type = f.content_type or "image/jpeg"
-            raw_images_for_provider.append({
-                "bytes": content,
-                "mime_type": m_type,
-                "file_name": f.filename or "image.jpg"
-            })
-            image_records.append({
-                "id": generate_uuid(),
-                "content_type": m_type,
-                "image_data": content
-            })
+            raw_images_for_provider.append(
+                {"bytes": content, "mime_type": m_type, "file_name": f.filename or "image.jpg"}
+            )
+            image_records.append(
+                {"id": generate_uuid(), "content_type": m_type, "image_data": content}
+            )
 
         # Call extraction provider (real Gemini batched call or deterministic stub)
         provider = get_vibe_extraction_provider()
         extraction_res = provider.extract_vibe_from_images(
-            images=raw_images_for_provider,
-            text_description=text_description
+            images=raw_images_for_provider, text_description=text_description
         )
 
         # Aggregate palette and tags across images deterministically
         aggregated = VibeAggregationEngine.aggregate(
-            payload=extraction_res,
-            text_description=text_description
+            payload=extraction_res, text_description=text_description
         )
 
         # Create StyleProfile record
@@ -92,7 +88,7 @@ class VibeService:
             extracted_palette=aggregated["extracted_palette"],
             style_tags=aggregated["style_tags"],
             mood_words=aggregated["mood_words"],
-            text_description=text_description
+            text_description=text_description,
         )
         db.add(profile)
 
@@ -102,7 +98,7 @@ class VibeService:
                 id=rec["id"],
                 style_profile_id=profile_id,
                 image_data=rec["image_data"],
-                content_type=rec["content_type"]
+                content_type=rec["content_type"],
             )
             db.add(uploaded_img)
 
@@ -114,8 +110,8 @@ class VibeService:
                 "style_profile_id": profile_id,
                 "image_count": len(image_records),
                 "palette": aggregated["extracted_palette"],
-                "style_tags": aggregated["style_tags"]
-            }
+                "style_tags": aggregated["style_tags"],
+            },
         )
         db.add(log)
 
@@ -124,20 +120,16 @@ class VibeService:
         return profile
 
     @classmethod
-    def generate_theme(
-        cls,
-        db: Session,
-        event_id: str,
-        profile_id: str
-    ) -> ThemeProposal:
+    def generate_theme(cls, db: Session, event_id: str, profile_id: str) -> ThemeProposal:
         event = db.query(Event).filter(Event.id == event_id).first()
         if not event:
             raise HTTPException(status_code=404, detail="Event not found")
 
-        profile = db.query(StyleProfile).filter(
-            StyleProfile.id == profile_id,
-            StyleProfile.event_id == event_id
-        ).first()
+        profile = (
+            db.query(StyleProfile)
+            .filter(StyleProfile.id == profile_id, StyleProfile.event_id == event_id)
+            .first()
+        )
         if not profile:
             raise HTTPException(status_code=404, detail="Style profile not found")
 
@@ -145,14 +137,14 @@ class VibeService:
             "extracted_palette": profile.extracted_palette,
             "style_tags": profile.style_tags,
             "mood_words": profile.mood_words,
-            "text_description": profile.text_description
+            "text_description": profile.text_description,
         }
 
         event_details_dict = {
             "event_type": event.event_type or "Wedding",
             "city": event.city or "Jaipur",
             "guest_count": event.guest_count or 250,
-            "total_budget": float(event.total_budget or 1500000.0)
+            "total_budget": float(event.total_budget or 1500000.0),
         }
 
         provider = get_theme_generation_provider()
@@ -173,7 +165,7 @@ class VibeService:
             invitation_design_brief=proposal_payload.invitation_design_brief,
             status="proposed",
             provider_used=provider_used,
-            fallback_warning=fallback_warning
+            fallback_warning=fallback_warning,
         )
         db.add(theme_record)
 
@@ -183,15 +175,14 @@ class VibeService:
 
         for item_data in proposal_payload.decor_items:
             qty = DecorCostEngine.resolve_quantity_formula(
-                item_data.quantity_formula,
-                guest_count=guest_count
+                item_data.quantity_formula, guest_count=guest_count
             )
             cost_low, cost_high = DecorCostEngine.calculate_cost_range(
                 category=item_data.category,
                 cost_tier=item_data.cost_tier,
                 quantity=qty,
                 city=city,
-                formula_str=item_data.quantity_formula
+                formula_str=item_data.quantity_formula,
             )
 
             decor_rec = DecorItem(
@@ -206,7 +197,7 @@ class VibeService:
                 cost_range_high=cost_high,
                 sourcing_type=item_data.sourcing_type,
                 status="proposed",
-                reasoning=item_data.reasoning
+                reasoning=item_data.reasoning,
             )
             db.add(decor_rec)
 
@@ -217,8 +208,8 @@ class VibeService:
                 "theme_id": theme_id,
                 "theme_name": proposal_payload.theme_name,
                 "item_count": len(proposal_payload.decor_items),
-                "provider_used": provider_used
-            }
+                "provider_used": provider_used,
+            },
         )
         db.add(log)
 
@@ -227,11 +218,7 @@ class VibeService:
         return theme_record
 
     @classmethod
-    def get_moodboard(
-        cls,
-        db: Session,
-        profile_id: str
-    ) -> bytes:
+    def get_moodboard(cls, db: Session, profile_id: str) -> bytes:
         profile = db.query(StyleProfile).filter(StyleProfile.id == profile_id).first()
         if not profile:
             raise HTTPException(status_code=404, detail="Style profile not found")
@@ -239,9 +226,12 @@ class VibeService:
         images = db.query(UploadedImage).filter(UploadedImage.style_profile_id == profile_id).all()
         image_bytes_list = [img.image_data for img in images if img.image_data]
 
-        latest_theme = db.query(ThemeProposal).filter(
-            ThemeProposal.style_profile_id == profile_id
-        ).order_by(ThemeProposal.created_at.desc()).first()
+        latest_theme = (
+            db.query(ThemeProposal)
+            .filter(ThemeProposal.style_profile_id == profile_id)
+            .order_by(ThemeProposal.created_at.desc())
+            .first()
+        )
 
         theme_name = latest_theme.theme_name if latest_theme else "Wedding Vibe Moodboard"
 
@@ -249,15 +239,11 @@ class VibeService:
             image_bytes_list=image_bytes_list,
             palette=profile.extracted_palette,
             theme_name=theme_name,
-            style_tags=profile.style_tags
+            style_tags=profile.style_tags,
         )
 
     @classmethod
-    def accept_decor_item(
-        cls,
-        db: Session,
-        item_id: str
-    ) -> DecorItem:
+    def accept_decor_item(cls, db: Session, item_id: str) -> DecorItem:
         item = db.query(DecorItem).filter(DecorItem.id == item_id).first()
         if not item:
             raise HTTPException(status_code=404, detail="Decor item not found")
@@ -289,8 +275,8 @@ class VibeService:
                 "formula": item.quantity_formula,
                 "quantity": item.computed_quantity,
                 "sourcing_type": item.sourcing_type,
-                "cost_tier": item.cost_tier
-            }
+                "cost_tier": item.cost_tier,
+            },
         )
         db.add(budget_item)
 
@@ -301,7 +287,7 @@ class VibeService:
             event_id=event_id,
             title=f"Source {item.name} ({item.sourcing_type.upper()})",
             description=f"Quantity: {item.computed_quantity}. Estimated Cost: ₹{item.cost_range_low:,.0f} - ₹{item.cost_range_high:,.0f} ({item.sourcing_type.upper()})",
-            status="pending"
+            status="pending",
         )
         db.add(task)
 
@@ -319,8 +305,8 @@ class VibeService:
                 "name": item.name,
                 "budget_item_id": budget_item_id,
                 "task_id": task_id,
-                "allocated_amount": float(item.cost_range_high)
-            }
+                "allocated_amount": float(item.cost_range_high),
+            },
         )
         db.add(log)
 
@@ -329,11 +315,7 @@ class VibeService:
         return item
 
     @classmethod
-    def reject_decor_item(
-        cls,
-        db: Session,
-        item_id: str
-    ) -> DecorItem:
+    def reject_decor_item(cls, db: Session, item_id: str) -> DecorItem:
         item = db.query(DecorItem).filter(DecorItem.id == item_id).first()
         if not item:
             raise HTTPException(status_code=404, detail="Decor item not found")

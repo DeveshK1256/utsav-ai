@@ -13,7 +13,7 @@ def normalize_hex(color_str: str) -> str | None:
     if re.match(r"^#[0-9A-F]{6}$", c):
         return c
     if re.match(r"^#[0-9A-F]{3}$", c):
-        return f"#{c[1]*2}{c[2]*2}{c[3]*2}"
+        return f"#{c[1] * 2}{c[2] * 2}{c[3] * 2}"
     return None
 
 
@@ -28,7 +28,7 @@ class VibeAggregationEngine:
         cls,
         image_vibes: list[SingleImageVibeSchema],
         text_description: str | None = None,
-        overall_mood_words: list[str] | None = None
+        overall_mood_words: list[str] | None = None,
     ) -> dict[str, Any]:
         color_counter: Counter[str] = Counter()
         tag_counter: Counter[str] = Counter()
@@ -107,19 +107,15 @@ class VibeAggregationEngine:
             "materials": [m for m, _ in material_counter.most_common(5)],
             "flower_types": [f for f, _ in flower_counter.most_common(5)],
             "mood_words": list(dict.fromkeys(mood_words))[:8],
-            "text_description": text_description
+            "text_description": text_description,
         }
 
     @classmethod
-    def aggregate(
-        cls,
-        payload: Any,
-        text_description: str | None = None
-    ) -> dict[str, Any]:
+    def aggregate(cls, payload: Any, text_description: str | None = None) -> dict[str, Any]:
         images = getattr(payload, "images", payload)
         overall_mood_words = getattr(payload, "overall_mood_words", None)
         return cls.aggregate_vibe_profiles(
             image_vibes=images,
             text_description=text_description,
-            overall_mood_words=overall_mood_words
+            overall_mood_words=overall_mood_words,
         )

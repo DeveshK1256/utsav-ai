@@ -5,11 +5,12 @@ Revises: 0004_m3_vibe_to_plan_schema
 Create Date: 2026-10-23 00:00:00.000000
 
 """
+
 from alembic import op
 
 # revision identifiers, used by Alembic.
-revision = '0005_backfill_scaling_rules'
-down_revision = '0004_m3_vibe_to_plan_schema'
+revision = "0005_backfill_scaling_rules"
+down_revision = "0004_m3_vibe_to_plan_schema"
 branch_labels = None
 depends_on = None
 

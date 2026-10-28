@@ -48,7 +48,7 @@ class InvitationWordingAgent:
         venue_str: str | None,
         muhurat_time: str | None = None,
         ceremony_names: list[str] | None = None,
-        design_brief: str | None = None
+        design_brief: str | None = None,
     ) -> InvitationWordingResponse:
         # Check for Gemini API key
         gemini_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
@@ -64,10 +64,21 @@ class InvitationWordingAgent:
                     venue_str=venue_str,
                     muhurat_time=muhurat_time,
                     ceremony_names=ceremony_names,
-                    design_brief=design_brief
+                    design_brief=design_brief,
                 )
-            except (httpx.HTTPError, ValueError, KeyError, json.JSONDecodeError, RuntimeError, TypeError, OSError) as exc:
-                logger.warning("Gemini invitation wording generation failed, invoking deterministic stub: %s", exc)
+            except (
+                httpx.HTTPError,
+                ValueError,
+                KeyError,
+                json.JSONDecodeError,
+                RuntimeError,
+                TypeError,
+                OSError,
+            ) as exc:
+                logger.warning(
+                    "Gemini invitation wording generation failed, invoking deterministic stub: %s",
+                    exc,
+                )
                 stub_resp = cls._deterministic_fallback(
                     event_name=event_name,
                     host_name=host_name,
@@ -75,9 +86,11 @@ class InvitationWordingAgent:
                     date_str=date_str,
                     venue_str=venue_str,
                     muhurat_time=muhurat_time,
-                    ceremony_names=ceremony_names
+                    ceremony_names=ceremony_names,
                 )
-                stub_resp.fallback_warning = f"Live LLM composer unavailable ({exc}); deterministic template active."
+                stub_resp.fallback_warning = (
+                    f"Live LLM composer unavailable ({exc}); deterministic template active."
+                )
                 return stub_resp
 
         return cls._deterministic_fallback(
@@ -87,7 +100,7 @@ class InvitationWordingAgent:
             date_str=date_str,
             venue_str=venue_str,
             muhurat_time=muhurat_time,
-            ceremony_names=ceremony_names
+            ceremony_names=ceremony_names,
         )
 
     @classmethod
@@ -99,14 +112,16 @@ class InvitationWordingAgent:
         date_str: str,
         venue_str: str | None,
         muhurat_time: str | None = None,
-        ceremony_names: list[str] | None = None
+        ceremony_names: list[str] | None = None,
     ) -> InvitationWordingResponse:
         """Deterministic non-LLM template options conforming strictly to facts."""
         clean_event = event_name.strip() or "Celebration"
         clean_date = date_str.strip() or "Date to be confirmed"
         clean_venue = venue_str.strip() if venue_str else "Venue to be confirmed"
         if host_name:
-            host_intro = f"The {host_name}" if "family" in host_name.lower() else f"The {host_name} family"
+            host_intro = (
+                f"The {host_name}" if "family" in host_name.lower() else f"The {host_name} family"
+            )
         else:
             host_intro = "We"
 
@@ -143,23 +158,23 @@ class InvitationWordingAgent:
                     id="traditional",
                     title="Traditional & Auspicious",
                     body_text=v1_text,
-                    tone="Warm, respectful, blessings-focused"
+                    tone="Warm, respectful, blessings-focused",
                 ),
                 WordingVariant(
                     id="contemporary",
                     title="Contemporary & Celebratory",
                     body_text=v2_text,
-                    tone="Joyful, modern, welcoming"
+                    tone="Joyful, modern, welcoming",
                 ),
                 WordingVariant(
                     id="formal",
                     title="Formal & Elegant",
                     body_text=v3_text,
-                    tone="Classic, formal, refined"
-                )
+                    tone="Classic, formal, refined",
+                ),
             ],
             provider_used="stub",
-            fallback_warning=None
+            fallback_warning=None,
         )
 
     @classmethod
@@ -173,7 +188,7 @@ class InvitationWordingAgent:
         venue_str: str | None,
         muhurat_time: str | None,
         ceremony_names: list[str] | None,
-        design_brief: str | None
+        design_brief: str | None,
     ) -> InvitationWordingResponse:
         import httpx
 
@@ -188,12 +203,12 @@ STRICT INVENTED-FACTS POLICY:
 
 EVENT DATA:
 - Event Name: {event_name}
-- Host: {host_name or 'The Family'}
+- Host: {host_name or "The Family"}
 - Date: {date_str}
-- Venue: {venue_str or 'Venue to be confirmed'}
-- Auspicious Muhurat: {muhurat_time or 'None'}
-- Ceremonies: {', '.join(ceremony_names) if ceremony_names else 'Standard'}
-- Aesthetic Brief: {design_brief or 'Elegant Indian celebration'}
+- Venue: {venue_str or "Venue to be confirmed"}
+- Auspicious Muhurat: {muhurat_time or "None"}
+- Ceremonies: {", ".join(ceremony_names) if ceremony_names else "Standard"}
+- Aesthetic Brief: {design_brief or "Elegant Indian celebration"}
 
 OUTPUT JSON FORMAT ONLY:
 {{
@@ -222,7 +237,7 @@ OUTPUT JSON FORMAT ONLY:
         url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={gemini_key}"
         payload = {
             "contents": [{"parts": [{"text": prompt}]}],
-            "generationConfig": {"temperature": 0.4, "responseMimeType": "application/json"}
+            "generationConfig": {"temperature": 0.4, "responseMimeType": "application/json"},
         }
 
         with httpx.Client(timeout=15.0) as client:
@@ -235,9 +250,9 @@ OUTPUT JSON FORMAT ONLY:
             variants = [
                 WordingVariant(
                     id=v.get("id", f"v_{idx}"),
-                    title=v.get("title", f"Option {idx+1}"),
+                    title=v.get("title", f"Option {idx + 1}"),
                     body_text=v.get("body_text", ""),
-                    tone=v.get("tone", "Celebratory")
+                    tone=v.get("tone", "Celebratory"),
                 )
                 for idx, v in enumerate(parsed.get("variants", []))
             ]
@@ -246,7 +261,5 @@ OUTPUT JSON FORMAT ONLY:
                 raise ValueError("Empty variants from Gemini")
 
             return InvitationWordingResponse(
-                variants=variants,
-                provider_used="gemini",
-                fallback_warning=None
+                variants=variants, provider_used="gemini", fallback_warning=None
             )

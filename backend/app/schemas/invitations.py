@@ -7,7 +7,9 @@ from backend.app.services.invitation_wording_agent import WordingVariant
 
 class InvitationGenerateRequest(BaseModel):
     theme_proposal_id: str | None = None
-    layout_variant: str = Field("classic_royal", description="classic_royal, modern_minimal, or floral_festive")
+    layout_variant: str = Field(
+        "classic_royal", description="classic_royal, modern_minimal, or floral_festive"
+    )
     wording_text: str | None = None
     wording_variant_index: int | None = None
 

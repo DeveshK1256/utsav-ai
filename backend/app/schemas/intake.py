@@ -31,10 +31,16 @@ class BudgetCalculationResponseSchema(BaseModel):
 
 class IntakeRequestSchema(BaseModel):
     name: str = Field(..., min_length=2, max_length=255, description="Celebration Name")
-    host_name: str = Field(..., min_length=2, max_length=150, description="Primary Host / Couple Name")
+    host_name: str = Field(
+        ..., min_length=2, max_length=150, description="Primary Host / Couple Name"
+    )
     phone_number: str = Field(..., description="Indian E.164 Phone Number")
-    event_type: str = Field(default="wedding", description="Celebration Type (wedding, puja, community_festival, etc.)")
-    tradition_code: str = Field(default="maharashtrian_vedic", description="Cultural Tradition Code")
+    event_type: str = Field(
+        default="wedding", description="Celebration Type (wedding, puja, community_festival, etc.)"
+    )
+    tradition_code: str = Field(
+        default="maharashtrian_vedic", description="Cultural Tradition Code"
+    )
     guest_count: int = Field(..., gt=0, description="Estimated Total Guest Count")
     total_budget: float = Field(..., ge=0, description="Total Target Budget Envelope in INR")
     city: str = Field(..., min_length=2, description="Target Celebration City")
@@ -46,6 +52,7 @@ class IntakeRequestSchema(BaseModel):
     @classmethod
     def sanitize_strings(cls, v: str) -> str:
         import html
+
         return html.escape(v.strip())
 
     @field_validator("end_date")

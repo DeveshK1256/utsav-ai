@@ -1,10 +1,10 @@
 import json
-import os
+from pathlib import Path
 from typing import Any, ClassVar
 
 from backend.app.schemas.quotes import ExtractedLineItemSchema, HiddenCostAlertSchema
 
-CONFIG_PATH = os.path.join(os.path.dirname(__file__), "..", "config", "hidden_cost_checklist.json")
+CONFIG_PATH = Path(__file__).resolve().parent.parent / "config" / "hidden_cost_checklist.json"
 
 
 class HiddenCostDetector:
@@ -13,8 +13,8 @@ class HiddenCostDetector:
     @classmethod
     def load_checklist(cls) -> dict[str, list[dict[str, Any]]]:
         if not cls._checklist_cache:
-            if os.path.exists(CONFIG_PATH):
-                with open(CONFIG_PATH, encoding="utf-8") as f:
+            if CONFIG_PATH.exists():
+                with CONFIG_PATH.open(encoding="utf-8") as f:
                     cls._checklist_cache = json.load(f)
             else:
                 cls._checklist_cache = {}
@@ -25,7 +25,7 @@ class HiddenCostDetector:
         cls,
         category: str,
         line_items: list[ExtractedLineItemSchema],
-        terms_and_conditions: list[str] | None = None
+        terms_and_conditions: list[str] | None = None,
     ) -> list[HiddenCostAlertSchema]:
         """
         Pure deterministic diff between extracted quote line items and the category checklist.
@@ -37,10 +37,10 @@ class HiddenCostDetector:
             return []
 
         # Combine all extracted textual content for matching
-        all_text = " ".join([
-            f"{item.name} {item.category_tag or ''} {item.notes or ''}"
-            for item in line_items
-        ] + (terms_and_conditions or [])).lower()
+        all_text = " ".join(
+            [f"{item.name} {item.category_tag or ''} {item.notes or ''}" for item in line_items]
+            + (terms_and_conditions or [])
+        ).lower()
 
         alerts = []
         for check in checklist:
@@ -63,7 +63,7 @@ class HiddenCostDetector:
                     description=desc,
                     typical_impact=impact,
                     suggested_question=question,
-                    status=status
+                    status=status,
                 )
             )
 
@@ -86,13 +86,18 @@ class HiddenCostDetector:
             "venue_valet_parking": ["valet", "parking", "traffic marshal"],
             "dec_dismantling": ["dismantl", "teardown", "clearance", "strike down"],
             "dec_heavy_electricity": ["electrician", "3-phase", "cabling", "power hookup"],
-            "dec_fresh_flower_fluctuation": ["mandi", "wholesale rate", "price fluctuation", "fixed floral"],
+            "dec_fresh_flower_fluctuation": [
+                "mandi",
+                "wholesale rate",
+                "price fluctuation",
+                "fixed floral",
+            ],
             "dec_transport_logistics": ["freight", "truck", "tempo", "loading", "unloading"],
             "dec_taxes": ["gst", "18%", "tax invoice", "taxes included"],
             "photo_overtime": ["overtime", "per hour", "extended hour", "hourly rate"],
             "photo_hard_drive": ["hard drive", "raw footage", "hdd", "ssd", "raw files"],
             "photo_drone_permissions": ["drone", "aerial", "pilot", "uav", "police noc"],
             "photo_album_shipping": ["album", "canvera", "courier", "flush mount", "photobook"],
-            "photo_crew_travel": ["crew meal", "travel", "accommodation", "outstation", "cab"]
+            "photo_crew_travel": ["crew meal", "travel", "accommodation", "outstation", "cab"],
         }
         return mapping.get(code, [code.replace("_", " ")])

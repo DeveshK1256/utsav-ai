@@ -71,7 +71,9 @@ class EventDetailResponseSchema(EventResponseSchema):
 
 class ComposeUpdateSchema(BaseModel):
     step: str | None = Field(None, description="Current step: 'venue', 'timing', 'invitation'")
-    vendor_profile_id: str | None = Field(None, description="UUID of real vendor_profile from discovery directory")
+    vendor_profile_id: str | None = Field(
+        None, description="UUID of real vendor_profile from discovery directory"
+    )
     venue_name: str | None = None
     venue_locality: str | None = None
     venue_address: str | None = None
@@ -97,7 +99,7 @@ def create_event(payload: EventCreateSchema, db: Session = Depends(get_db)) -> E
             phone_number=payload.host_phone,
             full_name=payload.host_name,
             role="host",
-            preferred_language="en"
+            preferred_language="en",
         )
         db.add(user)
         db.flush()
@@ -115,7 +117,7 @@ def create_event(payload: EventCreateSchema, db: Session = Depends(get_db)) -> E
         end_date=payload.end_date or date.today(),
         status="planning",
         owner_token=owner_token,
-        metadata_json={"owner_token": owner_token, "host_name": payload.host_name}
+        metadata_json={"owner_token": owner_token, "host_name": payload.host_name},
     )
     db.add(event)
     db.commit()
@@ -125,9 +127,7 @@ def create_event(payload: EventCreateSchema, db: Session = Depends(get_db)) -> E
 
 @router.get("/{event_id}", response_model=EventDetailResponseSchema)
 def get_event(
-    event_id: str,
-    event: Event = Depends(verify_event_owner_token),
-    db: Session = Depends(get_db)
+    event_id: str, event: Event = Depends(verify_event_owner_token), db: Session = Depends(get_db)
 ) -> EventDetailResponseSchema:
     returned_token = event.owner_token or (event.metadata_json or {}).get("owner_token")
     tier = BudgetScalingEngine.resolve_city_tier(event.city)
@@ -147,7 +147,7 @@ def get_event(
             is_outdoor=se.is_outdoor,
             is_muhurat_locked=se.is_muhurat_locked,
             muhurat_notes=se.muhurat_notes,
-            sort_order=se.sort_order
+            sort_order=se.sort_order,
         )
         for se in event.sub_events
     ]
@@ -164,7 +164,7 @@ def get_event(
                 planned_amount=float(b.planned_amount),
                 actual_amount=float(b.actual_amount or 0.0),
                 percentage=pct,
-                reasoning_spec=b.reasoning_spec
+                reasoning_spec=b.reasoning_spec,
             )
         )
 
@@ -176,7 +176,7 @@ def get_event(
             scheduled_start=t.scheduled_start,
             scheduled_end=t.scheduled_end,
             duration_minutes=t.duration_minutes,
-            assigned_role=t.assigned_role
+            assigned_role=t.assigned_role,
         )
         for t in event.tasks
     ]
@@ -201,7 +201,7 @@ def get_event(
         budget_breakdown=budget_list,
         tasks=tasks_list,
         owner_token=returned_token,
-        metadata_json=event.metadata_json or {}
+        metadata_json=event.metadata_json or {},
     )
 
 
@@ -210,7 +210,7 @@ def update_event_compose_progress(
     event_id: str,
     payload: ComposeUpdateSchema,
     event: Event = Depends(verify_event_owner_token),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ) -> EventDetailResponseSchema:
     """
     Orchestration progress persistence for the Compose Celebration flow.
@@ -235,7 +235,9 @@ def update_event_compose_progress(
         compose_state.pop("venue_status", None)
         meta.pop("venue", None)
     elif payload.vendor_profile_id:
-        vendor = db.query(VendorProfile).filter(VendorProfile.id == payload.vendor_profile_id).first()
+        vendor = (
+            db.query(VendorProfile).filter(VendorProfile.id == payload.vendor_profile_id).first()
+        )
         if not vendor:
             # If not yet in DB (e.g. dynamically selected from OpenStreetMap search or client cache),
             # dynamically INSERT a permanent row into vendor_profiles NOW so it has a real database identity
@@ -253,9 +255,14 @@ def update_event_compose_progress(
                     is_verified_profile=False,
                     average_rating=None,  # Honest unrated
                     rating_count=0,
-                    coordinate_precision="exact_osm_node" if payload.latitude else "locality_approximate",
-                    source_notes=payload.source_notes or f"OpenStreetMap Selected (OSM Record: {payload.osm_id or 'user_selection'})",
-                    metadata_json={"address": payload.venue_address} if payload.venue_address else {}
+                    coordinate_precision="exact_osm_node"
+                    if payload.latitude
+                    else "locality_approximate",
+                    source_notes=payload.source_notes
+                    or f"OpenStreetMap Selected (OSM Record: {payload.osm_id or 'user_selection'})",
+                    metadata_json={"address": payload.venue_address}
+                    if payload.venue_address
+                    else {},
                 )
                 db.add(vendor)
                 db.commit()
@@ -263,25 +270,33 @@ def update_event_compose_progress(
             else:
                 raise HTTPException(
                     status_code=status.HTTP_404_NOT_FOUND,
-                    detail=f"Vendor profile with ID '{payload.vendor_profile_id}' not found in discovery directory"
+                    detail=f"Vendor profile with ID '{payload.vendor_profile_id}' not found in discovery directory",
                 )
-        venue_display = f"{vendor.business_name}, {vendor.locality}" if vendor.locality else vendor.business_name
+        venue_display = (
+            f"{vendor.business_name}, {vendor.locality}"
+            if vendor.locality
+            else vendor.business_name
+        )
         meta["venue"] = venue_display
         compose_state["vendor_profile_id"] = vendor.id
         compose_state["venue_name"] = vendor.business_name
         compose_state["venue_locality"] = vendor.locality
         compose_state["venue_city"] = vendor.city
-        compose_state["venue_status"] = "shortlist_pick"  # Honest note: shortlist pick, not confirmed booking
+        compose_state["venue_status"] = (
+            "shortlist_pick"  # Honest note: shortlist pick, not confirmed booking
+        )
         compose_state["venue_skipped"] = False
 
         if event.fact_sheet and payload.venue_address:
             event.fact_sheet.venue_address = payload.venue_address
         elif event.fact_sheet and vendor.locality:
-            event.fact_sheet.venue_address = f"{vendor.business_name}, {vendor.locality}, {vendor.city}"
+            event.fact_sheet.venue_address = (
+                f"{vendor.business_name}, {vendor.locality}, {vendor.city}"
+            )
     elif payload.step == "venue" and not payload.skip_venue:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Step A venue selection requires a valid vendor_profile_id from the discovery directory (or skip_venue: true)"
+            detail="Step A venue selection requires a valid vendor_profile_id from the discovery directory (or skip_venue: true)",
         )
 
     # Step B: Timing & Muhurat handling
@@ -299,14 +314,24 @@ def update_event_compose_progress(
 
         # If we have sub_events, lock the primary / first ceremony
         from backend.app.models.models import SubEvent
+
         target_sub = None
         if payload.sub_event_name:
-            target_sub = db.query(SubEvent).filter(
-                SubEvent.event_id == event.id,
-                SubEvent.name.ilike(f"%{payload.sub_event_name}%")
-            ).first()
+            target_sub = (
+                db.query(SubEvent)
+                .filter(
+                    SubEvent.event_id == event.id,
+                    SubEvent.name.ilike(f"%{payload.sub_event_name}%"),
+                )
+                .first()
+            )
         if not target_sub:
-            target_sub = db.query(SubEvent).filter(SubEvent.event_id == event.id).order_by(SubEvent.start_time).first()
+            target_sub = (
+                db.query(SubEvent)
+                .filter(SubEvent.event_id == event.id)
+                .order_by(SubEvent.start_time)
+                .first()
+            )
 
         if target_sub:
             target_sub.is_muhurat_locked = True
@@ -320,18 +345,12 @@ def update_event_compose_progress(
     db.commit()
     db.refresh(event)
 
-    return get_event(
-        event_id=event.id,
-        event=event,
-        db=db
-    )
+    return get_event(event_id=event.id, event=event, db=db)
 
 
 @router.delete("/{event_id}", status_code=status.HTTP_200_OK)
 def delete_event(
-    event_id: str,
-    event: Event = Depends(verify_event_owner_token),
-    db: Session = Depends(get_db)
+    event_id: str, event: Event = Depends(verify_event_owner_token), db: Session = Depends(get_db)
 ) -> dict[str, Any]:
     owner_id = event.owner_id
     db.delete(event)

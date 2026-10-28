@@ -37,7 +37,7 @@ def import_guests(
     event_id: str,
     payload: GuestImportRequest | None = None,
     event: Event = Depends(verify_event_owner_token),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ) -> GuestImportResponse:
     """
     Imports, validates, and normalizes guest rows for an event.
@@ -52,7 +52,7 @@ async def import_guests_csv(
     event_id: str,
     file: UploadFile = File(...),
     event: Event = Depends(verify_event_owner_token),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ) -> GuestImportResponse:
     """
     Imports guests via CSV file upload.
@@ -65,9 +65,7 @@ async def import_guests_csv(
 
 @router.get("/{event_id}/guests", response_model=list[GuestItemResponse])
 def list_guests(
-    event_id: str,
-    status: str | None = Query(None),
-    db: Session = Depends(get_db)
+    event_id: str, status: str | None = Query(None), db: Session = Depends(get_db)
 ) -> list[GuestItemResponse]:
     """Lists all guests for an event with optional RSVP status filter."""
     query = db.query(Guest).filter(Guest.event_id == event_id)
@@ -90,17 +88,14 @@ def list_guests(
             language=g.language,
             notes=g.notes,
             needs_host_review=g.needs_host_review,
-            created_at=g.created_at.isoformat()
+            created_at=g.created_at.isoformat(),
         )
         for g in guests
     ]
 
 
 @router.get("/{event_id}/guests/rsvp-summary", response_model=RSVPSummary)
-def get_rsvp_summary(
-    event_id: str,
-    db: Session = Depends(get_db)
-) -> RSVPSummary:
+def get_rsvp_summary(event_id: str, db: Session = Depends(get_db)) -> RSVPSummary:
     """Deterministic live RSVP metrics for the event dashboard."""
     event = db.query(Event).filter(Event.id == event_id).first()
     if not event:
@@ -114,7 +109,7 @@ def send_invitations(
     event_id: str,
     guest_ids: list[str] | None = None,
     event: Event = Depends(verify_event_owner_token),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ) -> BatchSendResult:
     """
     Batch-sends WhatsApp invitations to guests.
@@ -128,7 +123,7 @@ def delete_guest(
     event_id: str,
     guest_id: str,
     event: Event = Depends(verify_event_owner_token),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ) -> DeleteGuestResponseSchema:
     """Purges guest data on request per privacy and data-deletion policies."""
     success = GuestService.delete_guest_privacy_purge(db, event_id, guest_id)
@@ -138,10 +133,7 @@ def delete_guest(
 
 
 @router.get("/{event_id}/fact-sheet", response_model=FactSheetResponseSchema)
-def get_fact_sheet(
-    event_id: str,
-    db: Session = Depends(get_db)
-) -> FactSheetResponseSchema:
+def get_fact_sheet(event_id: str, db: Session = Depends(get_db)) -> FactSheetResponseSchema:
     """Retrieves the verified event fact sheet (only source for guest FAQ bot)."""
     fs = db.query(EventFactSheet).filter(EventFactSheet.event_id == event_id).first()
     if not fs:
@@ -152,7 +144,7 @@ def get_fact_sheet(
             dress_code=None,
             timing_notes=None,
             map_link=None,
-            other_facts={}
+            other_facts={},
         )
     return FactSheetResponseSchema(
         event_id=fs.event_id,
@@ -161,7 +153,7 @@ def get_fact_sheet(
         dress_code=fs.dress_code,
         timing_notes=fs.timing_notes,
         map_link=fs.map_link,
-        other_facts=fs.other_facts or {}
+        other_facts=fs.other_facts or {},
     )
 
 
@@ -170,7 +162,7 @@ def update_fact_sheet(
     event_id: str,
     payload: FactSheetSchema,
     event: Event = Depends(verify_event_owner_token),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ) -> FactSheetResponseSchema:
     """Creates or updates the verified event fact sheet."""
     fs = db.query(EventFactSheet).filter(EventFactSheet.event_id == event_id).first()
@@ -182,7 +174,7 @@ def update_fact_sheet(
             dress_code=payload.dress_code,
             timing_notes=payload.timing_notes,
             map_link=payload.map_link,
-            other_facts=payload.other_facts or {}
+            other_facts=payload.other_facts or {},
         )
         db.add(fs)
     else:
@@ -207,14 +199,13 @@ def update_fact_sheet(
         dress_code=fs.dress_code,
         timing_notes=fs.timing_notes,
         map_link=fs.map_link,
-        other_facts=fs.other_facts or {}
+        other_facts=fs.other_facts or {},
     )
 
 
 @router.get("/{event_id}/reminders", response_model=list[ScheduledReminderPlan])
 def get_reminder_schedule(
-    event_id: str,
-    db: Session = Depends(get_db)
+    event_id: str, db: Session = Depends(get_db)
 ) -> list[ScheduledReminderPlan]:
     """Returns deterministic scheduled reminders for all sub-events in an event."""
     event = db.query(Event).filter(Event.id == event_id).first()

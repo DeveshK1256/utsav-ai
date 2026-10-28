@@ -37,22 +37,66 @@ class EphemPanchangProvider(PanchangProvider):
     """
 
     TITHI_NAMES: ClassVar[list[str]] = [
-        "Shukla Pratipada", "Shukla Dwitiya", "Shukla Tritiya", "Shukla Chaturthi",
-        "Shukla Panchami", "Shukla Shashthi", "Shukla Saptami", "Shukla Ashtami",
-        "Shukla Navami", "Shukla Dashami", "Shukla Ekadashi", "Shukla Dwadashi",
-        "Shukla Trayodashi", "Shukla Chaturdashi", "Purnima",
-        "Krishna Pratipada", "Krishna Dwitiya", "Krishna Tritiya", "Krishna Chaturthi",
-        "Krishna Panchami", "Krishna Shashthi", "Krishna Saptami", "Krishna Ashtami",
-        "Krishna Navami", "Krishna Dashami", "Krishna Ekadashi", "Krishna Dwadashi",
-        "Krishna Trayodashi", "Krishna Chaturdashi", "Amavasya"
+        "Shukla Pratipada",
+        "Shukla Dwitiya",
+        "Shukla Tritiya",
+        "Shukla Chaturthi",
+        "Shukla Panchami",
+        "Shukla Shashthi",
+        "Shukla Saptami",
+        "Shukla Ashtami",
+        "Shukla Navami",
+        "Shukla Dashami",
+        "Shukla Ekadashi",
+        "Shukla Dwadashi",
+        "Shukla Trayodashi",
+        "Shukla Chaturdashi",
+        "Purnima",
+        "Krishna Pratipada",
+        "Krishna Dwitiya",
+        "Krishna Tritiya",
+        "Krishna Chaturthi",
+        "Krishna Panchami",
+        "Krishna Shashthi",
+        "Krishna Saptami",
+        "Krishna Ashtami",
+        "Krishna Navami",
+        "Krishna Dashami",
+        "Krishna Ekadashi",
+        "Krishna Dwadashi",
+        "Krishna Trayodashi",
+        "Krishna Chaturdashi",
+        "Amavasya",
     ]
 
     NAKSHATRA_NAMES: ClassVar[list[str]] = [
-        "Ashwini", "Bharani", "Krittika", "Rohini", "Mrigashirsha", "Ardra",
-        "Punarvasu", "Pushya", "Ashlesha", "Magha", "Purva Phalguni", "Uttara Phalguni",
-        "Hasta", "Chitra", "Swati", "Vishakha", "Anuradha", "Jyeshtha",
-        "Mula", "Purva Ashadha", "Uttara Ashadha", "Shravana", "Dhanishta", "Shatabhisha",
-        "Purva Bhadrapada", "Uttara Bhadrapada", "Revati"
+        "Ashwini",
+        "Bharani",
+        "Krittika",
+        "Rohini",
+        "Mrigashirsha",
+        "Ardra",
+        "Punarvasu",
+        "Pushya",
+        "Ashlesha",
+        "Magha",
+        "Purva Phalguni",
+        "Uttara Phalguni",
+        "Hasta",
+        "Chitra",
+        "Swati",
+        "Vishakha",
+        "Anuradha",
+        "Jyeshtha",
+        "Mula",
+        "Purva Ashadha",
+        "Uttara Ashadha",
+        "Shravana",
+        "Dhanishta",
+        "Shatabhisha",
+        "Purva Bhadrapada",
+        "Uttara Bhadrapada",
+        "Revati",
     ]
 
     # Traditional 1-based octile mapping for Rahu Kaalam
@@ -82,7 +126,7 @@ class EphemPanchangProvider(PanchangProvider):
         Annual precession rate: 50.290966" / year.
         """
         t_centuries = (jd - 2451545.0) / 36525.0
-        ayan = 23.8570916667 + (5029.0966 * t_centuries + 1.112 * (t_centuries ** 2)) / 3600.0
+        ayan = 23.8570916667 + (5029.0966 * t_centuries + 1.112 * (t_centuries**2)) / 3600.0
         return ayan
 
     def calculate_panchang(
@@ -158,7 +202,9 @@ class EphemPanchangProvider(PanchangProvider):
         nakshatra_progress = (sidereal_moon_lon % (360.0 / 27.0)) / (360.0 / 27.0)
 
         # Abhijit cautionary note for Wednesdays (Budhavara)
-        abhijit_applicable = weekday != 2  # Wednesday has traditional taboo due to Rahu overlap / mutual affliction
+        abhijit_applicable = (
+            weekday != 2
+        )  # Wednesday has traditional taboo due to Rahu overlap / mutual affliction
 
         return {
             "date": event_date.isoformat(),
@@ -181,7 +227,9 @@ class EphemPanchangProvider(PanchangProvider):
                 "start": abhijit_start.strftime("%H:%M:%S"),
                 "end": abhijit_end.strftime("%H:%M:%S"),
                 "is_auspicious": abhijit_applicable,
-                "caution": "Traditional calendars advise alternative muhurats on Wednesdays" if not abhijit_applicable else None,
+                "caution": "Traditional calendars advise alternative muhurats on Wednesdays"
+                if not abhijit_applicable
+                else None,
             },
             "tithi": {
                 "name": self.TITHI_NAMES[tithi_idx],

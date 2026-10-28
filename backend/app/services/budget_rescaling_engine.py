@@ -1,10 +1,10 @@
 import json
-import os
+from pathlib import Path
 from typing import Any, ClassVar
 
 from pydantic import BaseModel
 
-CONFIG_PATH = os.path.join(os.path.dirname(__file__), "..", "config", "tier_breakpoints.json")
+CONFIG_PATH = Path(__file__).resolve().parent.parent / "config" / "tier_breakpoints.json"
 
 
 class BudgetItemDiff(BaseModel):
@@ -35,8 +35,8 @@ class BudgetRescalingEngine:
     @classmethod
     def load_tier_config(cls) -> dict[str, Any]:
         if not cls._tiers_cache:
-            if os.path.exists(CONFIG_PATH):
-                with open(CONFIG_PATH, encoding="utf-8") as f:
+            if CONFIG_PATH.exists():
+                with CONFIG_PATH.open(encoding="utf-8") as f:
                     cls._tiers_cache = json.load(f)
             else:
                 cls._tiers_cache = {}
@@ -51,7 +51,14 @@ class BudgetRescalingEngine:
         - Per-guest: catering, rentals, wardrobe, logistics, gifts_favors, invitations, contingency
         """
         cat = (category or "").lower().strip()
-        if cat in {"venue", "photography", "entertainment", "rituals", "ritual_priest", "security_and_permits"}:
+        if cat in {
+            "venue",
+            "photography",
+            "entertainment",
+            "rituals",
+            "ritual_priest",
+            "security_and_permits",
+        }:
             return "fixed"
         if cat in {"decor", "sound_light", "sound_and_lighting", "pandal_and_stage"}:
             return "tiered"
@@ -77,7 +84,7 @@ class BudgetRescalingEngine:
         old_guest_count: int,
         new_guest_count: int,
         budget_items: list[Any],
-        venue_capacity: int | None = None
+        venue_capacity: int | None = None,
     ) -> BudgetRescalingResult:
         """
         Deterministic recomputation of budget items when guest count changes.
@@ -100,7 +107,9 @@ class BudgetRescalingEngine:
 
             # Resolve canonical scaling rule per DEC-018 if missing or defaulted to per_guest
             canonical_rule = cls.resolve_scaling_rule(cat)
-            if not stored_rule or (stored_rule.lower() == "per_guest" and canonical_rule != "per_guest"):
+            if not stored_rule or (
+                stored_rule.lower() == "per_guest" and canonical_rule != "per_guest"
+            ):
                 rule = canonical_rule
             else:
                 rule = stored_rule.lower()
@@ -111,7 +120,9 @@ class BudgetRescalingEngine:
             if rule == "per_guest":
                 ratio = new_guest_count / old_guest_count
                 new_amt = round(old_amt * ratio, 2)
-                formula = f"{cat}: {old_amt:.2f} * ({new_guest_count}/{old_guest_count}) = {new_amt:.2f}"
+                formula = (
+                    f"{cat}: {old_amt:.2f} * ({new_guest_count}/{old_guest_count}) = {new_amt:.2f}"
+                )
             elif rule == "tiered":
                 old_mult, old_tier = cls.get_tier_info(cat, old_guest_count)
                 new_mult, new_tier = cls.get_tier_info(cat, new_guest_count)
@@ -143,7 +154,7 @@ class BudgetRescalingEngine:
                     old_amount=old_amt,
                     new_amount=new_amt,
                     difference=diff_val,
-                    formula=formula
+                    formula=formula,
                 )
             )
 
@@ -171,22 +182,21 @@ class BudgetRescalingEngine:
             venue_capacity=venue_capacity,
             capacity_exceeded=capacity_exceeded,
             capacity_delta=capacity_delta,
-            capacity_warning=capacity_warning
+            capacity_warning=capacity_warning,
         )
 
     @classmethod
     def rescale_for_budget_cut(
-        cls,
-        from_budget: float,
-        to_budget: float,
-        budget_items: list[Any]
+        cls, from_budget: float, to_budget: float, budget_items: list[Any]
     ) -> BudgetRescalingResult:
         """
         Proportionally scales down flexible/unpaid budget items when a budget cut is declared.
         Protects committed/paid items.
         """
         if to_budget >= from_budget:
-            raise ValueError(f"to_budget ({to_budget}) must be strictly less than from_budget ({from_budget})")
+            raise ValueError(
+                f"to_budget ({to_budget}) must be strictly less than from_budget ({from_budget})"
+            )
         if to_budget <= 0:
             raise ValueError(f"to_budget must be positive (received {to_budget})")
 
@@ -207,9 +217,15 @@ class BudgetRescalingEngine:
             else:
                 flexible_items.append(b)
 
-        flexible_old_total = sum(float(getattr(b, "planned_amount", 0.0) or 0.0) for b in flexible_items)
+        flexible_old_total = sum(
+            float(getattr(b, "planned_amount", 0.0) or 0.0) for b in flexible_items
+        )
         target_flexible_total = max(0.0, to_budget - committed_total)
-        cut_ratio = target_flexible_total / flexible_old_total if flexible_old_total > 0 else (to_budget / from_budget)
+        cut_ratio = (
+            target_flexible_total / flexible_old_total
+            if flexible_old_total > 0
+            else (to_budget / from_budget)
+        )
 
         for b in budget_items:
             b_id = getattr(b, "id", "")
@@ -222,10 +238,14 @@ class BudgetRescalingEngine:
 
             if is_paid or actual_amt > 0:
                 new_amt = old_amt
-                formula = f"{cat}: {old_amt:.2f} * (Locked/Paid item - non-reducible) = {new_amt:.2f}"
+                formula = (
+                    f"{cat}: {old_amt:.2f} * (Locked/Paid item - non-reducible) = {new_amt:.2f}"
+                )
             else:
                 new_amt = round(old_amt * cut_ratio, 2)
-                formula = f"{cat}: {old_amt:.2f} * (Flexible cut ratio {cut_ratio:.4f}) = {new_amt:.2f}"
+                formula = (
+                    f"{cat}: {old_amt:.2f} * (Flexible cut ratio {cut_ratio:.4f}) = {new_amt:.2f}"
+                )
 
             diff_val = round(new_amt - old_amt, 2)
             total_new += new_amt
@@ -239,7 +259,7 @@ class BudgetRescalingEngine:
                     old_amount=old_amt,
                     new_amount=new_amt,
                     difference=diff_val,
-                    formula=formula
+                    formula=formula,
                 )
             )
 
@@ -248,8 +268,5 @@ class BudgetRescalingEngine:
         total_delta = round(total_new - total_old, 2)
 
         return BudgetRescalingResult(
-            items=diffs,
-            total_old=total_old,
-            total_new=total_new,
-            total_delta=total_delta
+            items=diffs, total_old=total_old, total_new=total_new, total_delta=total_delta
         )

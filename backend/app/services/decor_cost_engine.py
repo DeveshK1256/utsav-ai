@@ -9,10 +9,12 @@ CONFIG_PATH = Path(__file__).resolve().parent.parent / "config" / "city_tiers.js
 
 def get_city_multiplier(city: str) -> float:
     if CONFIG_PATH.exists():
-        with open(CONFIG_PATH, encoding="utf-8") as f:
+        with CONFIG_PATH.open(encoding="utf-8") as f:
             cfg = json.load(f)
             c_norm = (city or "").strip().lower()
-            tier_name = cfg.get("city_to_tier", {}).get(c_norm, cfg.get("city_to_tier", {}).get("default", "tier_2"))
+            tier_name = cfg.get("city_to_tier", {}).get(
+                c_norm, cfg.get("city_to_tier", {}).get("default", "tier_2")
+            )
             return float(cfg.get("multipliers", {}).get(tier_name, 0.68))
     return 0.68
 
@@ -24,9 +26,20 @@ class DecorCostEngine:
     Zero LLM math. All monetary calculations are performed in code.
     """
 
-    STRUCTURAL_CATEGORIES: ClassVar[set[str]] = {"mandap", "stage_backdrop", "entrance_arch", "photobooth", "ceiling_drapes"}
+    STRUCTURAL_CATEGORIES: ClassVar[set[str]] = {
+        "mandap",
+        "stage_backdrop",
+        "entrance_arch",
+        "photobooth",
+        "ceiling_drapes",
+    }
     SERVICE_CATEGORIES: ClassVar[set[str]] = {"cultural_performance"}
-    DISTRIBUTED_CATEGORIES: ClassVar[set[str]] = {"lighting", "seating_lounges", "table_centerpiece", "default"}
+    DISTRIBUTED_CATEGORIES: ClassVar[set[str]] = {
+        "lighting",
+        "seating_lounges",
+        "table_centerpiece",
+        "default",
+    }
 
     BASE_UNIT_COSTS: ClassVar[dict[str, dict[str, tuple[float, float]]]] = {
         # Structural Installations (typically 1-2 fixed units per celebration)
@@ -55,14 +68,12 @@ class DecorCostEngine:
             "medium": (16000.0, 28000.0),
             "high": (32000.0, 55000.0),
         },
-
         # Cultural Services & Live Traditional Welcome Acts
         "cultural_performance": {
             "low": (4000.0, 8000.0),
             "medium": (8000.0, 15000.0),
             "high": (16000.0, 30000.0),
         },
-
         # Distributed Per-Unit Items (scale with guest count, tables, or counts)
         "lighting": {
             "low": (400.0, 800.0),
@@ -83,7 +94,7 @@ class DecorCostEngine:
             "low": (350.0, 700.0),
             "medium": (800.0, 1500.0),
             "high": (1800.0, 3200.0),
-        }
+        },
     }
 
     # Rates for standalone fixed accent/display items when categorized under 'default'
@@ -108,7 +119,9 @@ class DecorCostEngine:
     }
 
     @classmethod
-    def resolve_quantity_formula(cls, formula_str: str, guest_count: int, table_size: int = 10) -> int:
+    def resolve_quantity_formula(
+        cls, formula_str: str, guest_count: int, table_size: int = 10
+    ) -> int:
         """
         Parses formula string and calculates integer quantity from event guest_count.
         Examples:
@@ -149,7 +162,7 @@ class DecorCostEngine:
         computed_quantity: int = 1,
         city: str = "pune",
         quantity: int | None = None,
-        formula_str: str | None = None
+        formula_str: str | None = None,
     ) -> tuple[float, float]:
         """
         Resolves unit cost based on category and tier, applies city multiplier,
@@ -166,12 +179,18 @@ class DecorCostEngine:
         is_fixed = (qty == 1) or ("fixed" in formula_lower)
 
         # 1. Package lighting
-        if cat_clean == "lighting" and is_fixed and any(w in formula_lower for w in ("package", "venue", "full")):
+        if (
+            cat_clean == "lighting"
+            and is_fixed
+            and any(w in formula_lower for w in ("package", "venue", "full"))
+        ):
             cat_costs = cls.LIGHTING_PACKAGE_COSTS
             low_unit, high_unit = cat_costs.get(tier_clean, cat_costs["medium"])
         # 2. Standalone fixed default items (focal displays, welcome accents)
         elif cat_clean == "default" and is_fixed:
-            low_unit, high_unit = cls.STANDALONE_DEFAULT_COSTS.get(tier_clean, cls.STANDALONE_DEFAULT_COSTS["medium"])
+            low_unit, high_unit = cls.STANDALONE_DEFAULT_COSTS.get(
+                tier_clean, cls.STANDALONE_DEFAULT_COSTS["medium"]
+            )
         # 3. Standard category resolution
         else:
             cat_costs = cls.BASE_UNIT_COSTS.get(cat_clean, cls.BASE_UNIT_COSTS["default"])
@@ -184,7 +203,9 @@ class DecorCostEngine:
 
         # 4. Defensive floor guard: ensure fixed/standalone items never collapse below viable vendor cost
         if is_fixed:
-            min_floor_low, min_floor_high = cls.MIN_STANDALONE_FLOOR.get(tier_clean, cls.MIN_STANDALONE_FLOOR["medium"])
+            min_floor_low, min_floor_high = cls.MIN_STANDALONE_FLOOR.get(
+                tier_clean, cls.MIN_STANDALONE_FLOOR["medium"]
+            )
             scaled_floor_low = round(min_floor_low * city_mult, 2)
             scaled_floor_high = round(min_floor_high * city_mult, 2)
             total_low = max(total_low, scaled_floor_low)

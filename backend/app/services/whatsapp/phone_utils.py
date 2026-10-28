@@ -20,7 +20,9 @@ def normalize_e164_phone(phone_raw: str) -> str:
         digits = cleaned[3:]
         if len(digits) == 10 and digits.isdigit() and digits[0] in "6789":
             return f"+91{digits}"
-        raise ValueError(f"Invalid Indian mobile number '{phone_raw}': 10 digits starting with 6-9 required")
+        raise ValueError(
+            f"Invalid Indian mobile number '{phone_raw}': 10 digits starting with 6-9 required"
+        )
 
     # Case 2: Indian numbers with 91 prefix (12 digits)
     if cleaned.startswith("91") and len(cleaned) == 12:
@@ -40,7 +42,9 @@ def normalize_e164_phone(phone_raw: str) -> str:
     if len(cleaned) == 10 and cleaned.isdigit():
         if cleaned[0] in "6789":
             return f"+91{cleaned}"
-        raise ValueError(f"Invalid Indian mobile number '{phone_raw}': must start with 6, 7, 8, or 9")
+        raise ValueError(
+            f"Invalid Indian mobile number '{phone_raw}': must start with 6, 7, 8, or 9"
+        )
 
     # Case 5: International E.164 number (starts with '+' and 8-15 digits)
     if cleaned.startswith("+"):
@@ -49,7 +53,9 @@ def normalize_e164_phone(phone_raw: str) -> str:
             return cleaned
         raise ValueError(f"Invalid international E.164 phone number: '{phone_raw}'")
 
-    raise ValueError(f"Unparseable phone number '{phone_raw}'. Provide a valid 10-digit Indian mobile or +E.164 format.")
+    raise ValueError(
+        f"Unparseable phone number '{phone_raw}'. Provide a valid 10-digit Indian mobile or +E.164 format."
+    )
 
 
 def validate_and_normalize_guest_phone(phone_raw: str) -> tuple[bool, str | None, str | None]:

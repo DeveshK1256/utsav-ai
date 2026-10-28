@@ -10,14 +10,9 @@ from backend.app.schemas.quotes import (
 
 
 class QuoteComparisonEngine:
-
     @classmethod
     def compute_median_benchmark(
-        cls,
-        category: str,
-        city_tier: str,
-        benchmark_samples: list[float],
-        quote_unit_cost: float
+        cls, category: str, city_tier: str, benchmark_samples: list[float], quote_unit_cost: float
     ) -> BenchmarkComparisonSchema:
         """
         Computes median benchmark for category and city tier.
@@ -39,8 +34,8 @@ class QuoteComparisonEngine:
                     "rule": "DEC-014: Sample size below statistical reliability threshold (n < 5)",
                     "sample_count": n,
                     "city_tier": city_tier,
-                    "status_label": "Limited data"
-                }
+                    "status_label": "Limited data",
+                },
             )
 
         median_val = round(float(statistics.median(benchmark_samples)), 2)
@@ -66,17 +61,13 @@ class QuoteComparisonEngine:
                 "formula": f"(({quote_unit_cost:.2f} - {median_val:.2f}) / {median_val:.2f}) * 100 = {diff_pct:.1f}%",
                 "sample_count": n,
                 "city_tier": city_tier,
-                "benchmark_basis": f"Median of {n} verified {category} vendor contracts in {city_tier}"
-            }
+                "benchmark_basis": f"Median of {n} verified {category} vendor contracts in {city_tier}",
+            },
         )
 
     @classmethod
     def normalize_quote_to_guest_count(
-        cls,
-        raw_total: float,
-        quoted_guest_count: int,
-        target_guest_count: int,
-        category: str
+        cls, raw_total: float, quoted_guest_count: int, target_guest_count: int, category: str
     ) -> float:
         """
         Normalizes variable per-guest quotes (e.g. catering, extra plate buffer)
@@ -100,7 +91,7 @@ class QuoteComparisonEngine:
         category: str,
         target_guest_count: int,
         quotes_data: list[dict[str, Any]],
-        benchmark_samples: list[float] | None = None
+        benchmark_samples: list[float] | None = None,
     ) -> QuoteComparisonResponseSchema:
         """
         Compares multiple quotes side-by-side, adding conservative buffers for missing hidden costs.
@@ -113,7 +104,9 @@ class QuoteComparisonEngine:
             vendor_name = q["vendor_name"]
             raw_total = float(q["total_amount"])
             quoted_guests = q.get("quoted_guest_count", target_guest_count)
-            normalized_base = cls.normalize_quote_to_guest_count(raw_total, quoted_guests, target_guest_count, category)
+            normalized_base = cls.normalize_quote_to_guest_count(
+                raw_total, quoted_guests, target_guest_count, category
+            )
 
             # Analyze hidden cost risks
             alerts: list[HiddenCostAlertSchema] = q.get("hidden_cost_alerts", [])
@@ -133,15 +126,24 @@ class QuoteComparisonEngine:
                     normalized_cost_per_guest=per_guest,
                     line_items=q.get("line_items", []),
                     hidden_cost_risk_count=len(missing_risks),
-                    hidden_cost_risks=missing_risks
+                    hidden_cost_risks=missing_risks,
                 )
             )
 
         # Find best value: minimum effective total with lowest hidden risks
-        best_quote = min(compared_items, key=lambda x: (x.effective_total_with_hidden_buffer, x.hidden_cost_risk_count)) if compared_items else None
+        best_quote = (
+            min(
+                compared_items,
+                key=lambda x: (x.effective_total_with_hidden_buffer, x.hidden_cost_risk_count),
+            )
+            if compared_items
+            else None
+        )
 
         n_samples = len(benchmark_samples)
-        median_unit = round(float(statistics.median(benchmark_samples)), 2) if n_samples >= 5 else None
+        median_unit = (
+            round(float(statistics.median(benchmark_samples)), 2) if n_samples >= 5 else None
+        )
 
         return QuoteComparisonResponseSchema(
             event_id=event_id,
@@ -156,6 +158,6 @@ class QuoteComparisonEngine:
                 "formula": "Effective Total = Normalized Base Quote + (Missing Hidden Cost Items * ₹12,500 Risk Buffer)",
                 "normalized_guest_count": target_guest_count,
                 "benchmark_sample_size": n_samples,
-                "comparison_metric": "Effective Total Cost after normalizing headcounts and risk buffers"
-            }
+                "comparison_metric": "Effective Total Cost after normalizing headcounts and risk buffers",
+            },
         )

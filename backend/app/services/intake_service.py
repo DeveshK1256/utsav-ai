@@ -42,23 +42,74 @@ def normalize_indian_phone(phone: str) -> str:
 
 
 class IntakeService:
-
     @classmethod
     def ensure_default_traditions(cls, db: Session) -> None:
         known_traditions = [
-            ("maharashtrian_vedic", "Maharashtrian Vedic Lagna", "Classical Maharashtrian wedding rituals including Sakharpuda, Haldi, Mandap Muhurat, and Saptapadi."),
-            ("gujarati_hindu", "Gujarati Hindu Vivah", "Vibrant Gujarati rituals featuring Mameru, Dandiya Raas, Mandap, and Hastamelap."),
-            ("punjabi_sikh", "Punjabi Anand Karaj", "Joyous celebration with Roka, Mehndi/Sangeet, sacred Anand Karaj, and Reception."),
-            ("south_indian_iyer", "Tamil Brahmin Iyer Kalyanam", "Traditional rituals including Vratham, Kasi Yatra, Oonjal, and Kanyadaan."),
-            ("marwari_traditional", "Marwari Traditional Vivah", "Royal Marwari rituals with Mudha Tika, Pithi, Tel Baan, and Baraat."),
-            ("satyanarayan_puja", "Satyanarayan Vrat Katha", "Sacred home blessing and thanksgiving puja ceremony."),
-            ("community_festival", "Sarvajanik Community Festival", "Public community festival celebration with cultural programs, aarti, and volunteer coordination."),
-            ("birthday_kids_carnival", "Kids Themed Birthday Carnival", "Fun-filled kids birthday celebration with interactive games, magic show, custom cake, and return gifts."),
-            ("birthday_milestone", "Milestone Jubilee Birthday", "Celebration for 18th, 21st, 50th, or 60th birthday with family blessings, toasts, and gala feast."),
-            ("birthday_traditional", "Traditional Vedic Ayushya Homa", "Sacred birthday rituals including Ayushya Homa, Ganapati puja, elder blessings, and satvik meal."),
-            ("community_sarvajanik", "Sarvajanik Utsav & Pandal", "Public festival (Ganesh Utsav / Durga Puja) with murti sthapana, maha aarti, cultural night, and bhandara."),
-            ("community_navratri", "Navratri Garba & Dandiya Mahotsav", "Multi-night folk dance celebration with live orchestra, Dandiya Raas, awards, and prasad."),
-            ("community_society_mela", "Housing Society Cultural Mela", "Residential community gathering with food & game stalls, resident talent show, and society feast.")
+            (
+                "maharashtrian_vedic",
+                "Maharashtrian Vedic Lagna",
+                "Classical Maharashtrian wedding rituals including Sakharpuda, Haldi, Mandap Muhurat, and Saptapadi.",
+            ),
+            (
+                "gujarati_hindu",
+                "Gujarati Hindu Vivah",
+                "Vibrant Gujarati rituals featuring Mameru, Dandiya Raas, Mandap, and Hastamelap.",
+            ),
+            (
+                "punjabi_sikh",
+                "Punjabi Anand Karaj",
+                "Joyous celebration with Roka, Mehndi/Sangeet, sacred Anand Karaj, and Reception.",
+            ),
+            (
+                "south_indian_iyer",
+                "Tamil Brahmin Iyer Kalyanam",
+                "Traditional rituals including Vratham, Kasi Yatra, Oonjal, and Kanyadaan.",
+            ),
+            (
+                "marwari_traditional",
+                "Marwari Traditional Vivah",
+                "Royal Marwari rituals with Mudha Tika, Pithi, Tel Baan, and Baraat.",
+            ),
+            (
+                "satyanarayan_puja",
+                "Satyanarayan Vrat Katha",
+                "Sacred home blessing and thanksgiving puja ceremony.",
+            ),
+            (
+                "community_festival",
+                "Sarvajanik Community Festival",
+                "Public community festival celebration with cultural programs, aarti, and volunteer coordination.",
+            ),
+            (
+                "birthday_kids_carnival",
+                "Kids Themed Birthday Carnival",
+                "Fun-filled kids birthday celebration with interactive games, magic show, custom cake, and return gifts.",
+            ),
+            (
+                "birthday_milestone",
+                "Milestone Jubilee Birthday",
+                "Celebration for 18th, 21st, 50th, or 60th birthday with family blessings, toasts, and gala feast.",
+            ),
+            (
+                "birthday_traditional",
+                "Traditional Vedic Ayushya Homa",
+                "Sacred birthday rituals including Ayushya Homa, Ganapati puja, elder blessings, and satvik meal.",
+            ),
+            (
+                "community_sarvajanik",
+                "Sarvajanik Utsav & Pandal",
+                "Public festival (Ganesh Utsav / Durga Puja) with murti sthapana, maha aarti, cultural night, and bhandara.",
+            ),
+            (
+                "community_navratri",
+                "Navratri Garba & Dandiya Mahotsav",
+                "Multi-night folk dance celebration with live orchestra, Dandiya Raas, awards, and prasad.",
+            ),
+            (
+                "community_society_mela",
+                "Housing Society Cultural Mela",
+                "Residential community gathering with food & game stalls, resident talent show, and society feast.",
+            ),
         ]
         for code, name, desc in known_traditions:
             if not db.query(Tradition).filter(Tradition.code == code).first():
@@ -67,7 +118,9 @@ class IntakeService:
         db.commit()
 
     @classmethod
-    def generate_master_plan(cls, db: Session, req: IntakeRequestSchema) -> MasterPlanResponseSchema:
+    def generate_master_plan(
+        cls, db: Session, req: IntakeRequestSchema
+    ) -> MasterPlanResponseSchema:
         cls.ensure_default_traditions(db)
         clean_phone = normalize_indian_phone(req.phone_number)
 
@@ -78,7 +131,7 @@ class IntakeService:
                 phone_number=clean_phone,
                 full_name=req.host_name,
                 role="host",
-                preferred_language="en"
+                preferred_language="en",
             )
             db.add(user)
             db.flush()
@@ -98,13 +151,15 @@ class IntakeService:
             end_date=req.end_date,
             status="planning",
             owner_token=owner_token,
-            metadata_json={"host_name": req.host_name, "owner_token": owner_token}
+            metadata_json={"host_name": req.host_name, "owner_token": owner_token},
         )
         db.add(event)
         db.flush()
 
         # 3. Sub-Events via DAGScheduler
-        sub_event_specs = DAGScheduler.get_sub_events_for_tradition(req.tradition_code, req.start_date, req.event_type)
+        sub_event_specs = DAGScheduler.get_sub_events_for_tradition(
+            req.tradition_code, req.start_date, req.event_type
+        )
         created_sub_events = []
         for spec in sub_event_specs:
             se = SubEvent(
@@ -117,7 +172,7 @@ class IntakeService:
                 is_outdoor=spec["is_outdoor"],
                 is_muhurat_locked=spec["is_muhurat_locked"],
                 muhurat_notes=spec["muhurat_notes"],
-                sort_order=spec["sort_order"]
+                sort_order=spec["sort_order"],
             )
             db.add(se)
             db.flush()
@@ -128,7 +183,7 @@ class IntakeService:
             total_envelope=req.total_budget,
             event_type=req.event_type,
             city=req.city,
-            guest_count=req.guest_count
+            guest_count=req.guest_count,
         )
         created_budget_items = []
         for alloc in budget_allocations:
@@ -141,7 +196,7 @@ class IntakeService:
                 actual_amount=0.00,
                 is_paid=False,
                 scaling_rule=rule,
-                reasoning_spec=alloc["reasoning_spec"]
+                reasoning_spec=alloc["reasoning_spec"],
             )
             db.add(b_item)
             db.flush()
@@ -160,7 +215,7 @@ class IntakeService:
                 scheduled_end=t["scheduled_end"],
                 duration_minutes=t["duration_minutes"],
                 dependency_task_ids=t["dependency_task_ids"],
-                assigned_role=t["assigned_role"]
+                assigned_role=t["assigned_role"],
             )
             db.add(task)
             db.flush()
@@ -174,9 +229,9 @@ class IntakeService:
                 "sub_events_count": len(created_sub_events),
                 "budget_items_count": len(created_budget_items),
                 "tasks_count": len(created_tasks),
-                "city_tier": BudgetScalingEngine.resolve_city_tier(req.city)
+                "city_tier": BudgetScalingEngine.resolve_city_tier(req.city),
             },
-            actor_id=user.id
+            actor_id=user.id,
         )
         db.add(event_log)
         db.commit()
@@ -202,7 +257,7 @@ class IntakeService:
                     is_outdoor=se.is_outdoor,
                     is_muhurat_locked=se.is_muhurat_locked,
                     muhurat_notes=se.muhurat_notes,
-                    sort_order=se.sort_order
+                    sort_order=se.sort_order,
                 )
                 for se in created_sub_events
             ],
@@ -214,7 +269,7 @@ class IntakeService:
                     planned_amount=float(bi[0].planned_amount),
                     actual_amount=float(bi[0].actual_amount),
                     percentage=bi[1],
-                    reasoning_spec=bi[0].reasoning_spec
+                    reasoning_spec=bi[0].reasoning_spec,
                 )
                 for bi in created_budget_items
             ],
@@ -226,9 +281,9 @@ class IntakeService:
                     scheduled_start=t.scheduled_start,
                     scheduled_end=t.scheduled_end,
                     duration_minutes=t.duration_minutes,
-                    assigned_role=t.assigned_role
+                    assigned_role=t.assigned_role,
                 )
                 for t in created_tasks
             ],
-            created_at=event.created_at
+            created_at=event.created_at,
         )

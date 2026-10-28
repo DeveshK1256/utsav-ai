@@ -4,7 +4,9 @@ from pydantic import BaseModel, Field
 class CostEstimateResponse(BaseModel):
     is_estimate: bool = Field(True, description="Always labeled estimate per DEC-014, never actual")
     limited_data: bool = Field(True, description="True when sample size is insufficient or unrated")
-    estimated_cost_display: str = Field("Limited data", description="Honest placeholder copy when no real quote data exists")
+    estimated_cost_display: str = Field(
+        "Limited data", description="Honest placeholder copy when no real quote data exists"
+    )
     min_amount: float | None = None
     max_amount: float | None = None
     currency: str = "INR"
@@ -20,7 +22,10 @@ class VendorDiscoveryItem(BaseModel):
     latitude: float | None = None
     longitude: float | None = None
     distance_km: float | None = None
-    rating_tier: str = Field("new_unrated", description="Rating tier per DEC-013: top_rated, highly_rated, rated, new_unrated")
+    rating_tier: str = Field(
+        "new_unrated",
+        description="Rating tier per DEC-013: top_rated, highly_rated, rated, new_unrated",
+    )
     average_rating: float | None = None
     rating_count: int = 0
     is_verified_profile: bool = False

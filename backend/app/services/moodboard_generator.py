@@ -9,7 +9,7 @@ def hex_to_rgb(hex_str: str) -> tuple:
     if len(hex_clean) == 3:
         hex_clean = "".join(c * 2 for c in hex_clean)
     if len(hex_clean) == 6:
-        return tuple(int(hex_clean[i:i+2], 16) for i in (0, 2, 4))
+        return tuple(int(hex_clean[i : i + 2], 16) for i in (0, 2, 4))
     return (226, 114, 91)  # terracotta default
 
 
@@ -26,7 +26,7 @@ class MoodboardCollageGenerator:
         image_bytes_list: list[bytes],
         palette: list[str],
         theme_name: str = "Cultural Celebration Theme",
-        style_tags: list[str] | None = None
+        style_tags: list[str] | None = None,
     ) -> bytes:
         canvas_width = 1200
         canvas_height = 800
@@ -51,22 +51,33 @@ class MoodboardCollageGenerator:
         sidebar_width = 220
         sidebar_x = canvas_width - sidebar_width
         sidebar_top = header_height
-        draw.rectangle([(sidebar_x, sidebar_top), (canvas_width, canvas_height)], fill=(240, 236, 230))
+        draw.rectangle(
+            [(sidebar_x, sidebar_top), (canvas_width, canvas_height)], fill=(240, 236, 230)
+        )
 
         draw.text((sidebar_x + 20, sidebar_top + 20), "COLOR PALETTE", fill=(70, 50, 35))
 
         swatch_top = sidebar_top + 55
         swatch_height = 90
         swatch_spacing = 15
-        for idx, hex_code in enumerate((palette or ["#E2725B", "#FFD700", "#FFF8DC", "#2E8B57", "#800020"])[:5]):
+        for idx, hex_code in enumerate(
+            (palette or ["#E2725B", "#FFD700", "#FFF8DC", "#2E8B57", "#800020"])[:5]
+        ):
             y1 = swatch_top + idx * (swatch_height + swatch_spacing)
             y2 = y1 + swatch_height
             color_rgb = hex_to_rgb(hex_code)
 
             # Draw swatch rectangle
-            draw.rectangle([(sidebar_x + 20, y1), (canvas_width - 20, y2)], fill=color_rgb, outline=(200, 195, 185), width=2)
+            draw.rectangle(
+                [(sidebar_x + 20, y1), (canvas_width - 20, y2)],
+                fill=color_rgb,
+                outline=(200, 195, 185),
+                width=2,
+            )
             # Label hex
-            draw.rectangle([(sidebar_x + 20, y2 - 24), (sidebar_x + 105, y2)], fill=(255, 255, 255, 200))
+            draw.rectangle(
+                [(sidebar_x + 20, y2 - 24), (sidebar_x + 105, y2)], fill=(255, 255, 255, 200)
+            )
             draw.text((sidebar_x + 26, y2 - 20), hex_code.upper(), fill=(20, 20, 20))
 
         # 3. Main Image Grid (Left Area)
@@ -78,8 +89,20 @@ class MoodboardCollageGenerator:
         num_images = len(image_bytes_list)
         if num_images == 0:
             # Draw empty aesthetic placeholder
-            draw.rectangle([(grid_x_start, grid_y_start), (grid_x_start + grid_width, grid_y_start + grid_height)], fill=(245, 240, 235), outline=(220, 215, 205), width=2)
-            draw.text((grid_x_start + 150, grid_y_start + grid_height // 2), "Inspiration Moodboard generated from text vibe description", fill=(120, 110, 100))
+            draw.rectangle(
+                [
+                    (grid_x_start, grid_y_start),
+                    (grid_x_start + grid_width, grid_y_start + grid_height),
+                ],
+                fill=(245, 240, 235),
+                outline=(220, 215, 205),
+                width=2,
+            )
+            draw.text(
+                (grid_x_start + 150, grid_y_start + grid_height // 2),
+                "Inspiration Moodboard generated from text vibe description",
+                fill=(120, 110, 100),
+            )
         else:
             # Determine grid cols and rows (max 6 images displayed cleanly)
             max_tiles = min(num_images, 6)
@@ -112,10 +135,16 @@ class MoodboardCollageGenerator:
 
                     img_resized = img_cropped.resize((tile_w, tile_h), Image.Resampling.LANCZOS)
                     collage.paste(img_resized, (tx, ty))
-                    draw.rectangle([(tx, ty), (tx + tile_w, ty + tile_h)], outline=(220, 215, 205), width=2)
+                    draw.rectangle(
+                        [(tx, ty), (tx + tile_w, ty + tile_h)], outline=(220, 215, 205), width=2
+                    )
                 except (OSError, ValueError, TypeError, RuntimeError):
                     # In case of decode error, draw neutral swatch
-                    draw.rectangle([(tx, ty), (tx + tile_w, ty + tile_h)], fill=(230, 225, 215), outline=(200, 195, 185))
+                    draw.rectangle(
+                        [(tx, ty), (tx + tile_w, ty + tile_h)],
+                        fill=(230, 225, 215),
+                        outline=(200, 195, 185),
+                    )
 
         out_io = io.BytesIO()
         collage.save(out_io, format="JPEG", quality=92)

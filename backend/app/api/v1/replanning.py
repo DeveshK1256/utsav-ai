@@ -22,13 +22,17 @@ router = APIRouter(prefix="/events/{id}/changes", tags=["Replanning (Plan B)"])
 
 @router.get("", response_model=list[ChangeProposalResponseSchema])
 def list_change_proposals(
-    id: str,
-    db: Session = Depends(get_db)
+    id: str, db: Session = Depends(get_db)
 ) -> list[ChangeProposalResponseSchema]:
     """
     Lists all change proposals for the specified event.
     """
-    changes = db.query(ChangeEvent).filter(ChangeEvent.event_id == id).order_by(ChangeEvent.created_at.desc()).all()
+    changes = (
+        db.query(ChangeEvent)
+        .filter(ChangeEvent.event_id == id)
+        .order_by(ChangeEvent.created_at.desc())
+        .all()
+    )
     results: list[ChangeProposalResponseSchema] = []
     for c in changes:
         with contextlib.suppress(ValueError, KeyError):
@@ -41,7 +45,7 @@ def submit_change_event(
     id: str,
     payload: ChangeRequestSchema,
     event: Event = Depends(verify_event_owner_token),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ) -> ChangeProposalResponseSchema:
     """
     Submits a change event (guest count, vendor cancel, date move, budget cut, venue unavailable).
@@ -55,16 +59,13 @@ def submit_change_event(
     except (KeyError, RuntimeError, SQLAlchemyError) as e:
         logger.error("Replanning error for event %s: %s", id, e)
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Replanning error: {e!s}"
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Replanning error: {e!s}"
         ) from e
 
 
 @router.get("/{change_id}", response_model=ChangeProposalResponseSchema)
 def get_change_proposal(
-    id: str,
-    change_id: str,
-    db: Session = Depends(get_db)
+    id: str, change_id: str, db: Session = Depends(get_db)
 ) -> ChangeProposalResponseSchema:
     """
     Retrieves an existing change proposal diff and explanation.
@@ -80,7 +81,7 @@ def accept_change_proposal(
     id: str,
     change_id: str,
     event: Event = Depends(verify_event_owner_token),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ) -> ChangeProposalResponseSchema:
     """
     Explicit user confirmation to accept and atomically apply the proposal to the database.
@@ -93,8 +94,7 @@ def accept_change_proposal(
     except (KeyError, RuntimeError, SQLAlchemyError) as e:
         logger.error("Failed to accept proposal %s: %s", change_id, e)
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Accept error: {e!s}"
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Accept error: {e!s}"
         ) from e
 
 
@@ -103,7 +103,7 @@ def reject_change_proposal(
     id: str,
     change_id: str,
     event: Event = Depends(verify_event_owner_token),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ) -> ChangeProposalResponseSchema:
     """
     Explicit user rejection of a change proposal. Database remains untouched.
@@ -115,8 +115,7 @@ def reject_change_proposal(
     except (KeyError, RuntimeError, SQLAlchemyError) as e:
         logger.error("Failed to reject proposal %s: %s", change_id, e)
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Reject error: {e!s}"
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Reject error: {e!s}"
         ) from e
 
 
@@ -126,18 +125,19 @@ def patch_change_proposal(
     change_id: str,
     payload: PatchChangeProposalSchema,
     event: Event = Depends(verify_event_owner_token),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ) -> ChangeProposalResponseSchema:
     """
     Allows user manual edits/overrides to proposal diffs prior to acceptance.
     """
     try:
-        return ReplanningService.patch_change(db, event_id=id, change_id=change_id, patch_data=payload)
+        return ReplanningService.patch_change(
+            db, event_id=id, change_id=change_id, patch_data=payload
+        )
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
     except (KeyError, RuntimeError, SQLAlchemyError) as e:
         logger.error("Failed to patch proposal %s: %s", change_id, e)
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Patch error: {e!s}"
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Patch error: {e!s}"
         ) from e

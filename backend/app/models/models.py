@@ -34,7 +34,12 @@ class User(Base):
     role = mapped_column(String(50), default="host", nullable=False)
     preferred_language = mapped_column(String(10), default="en", nullable=False)
     created_at = mapped_column(DateTime, default=lambda: datetime.now(UTC), nullable=False)
-    updated_at = mapped_column(DateTime, default=lambda: datetime.now(UTC), onupdate=lambda: datetime.now(UTC), nullable=False)
+    updated_at = mapped_column(
+        DateTime,
+        default=lambda: datetime.now(UTC),
+        onupdate=lambda: datetime.now(UTC),
+        nullable=False,
+    )
 
     events = relationship("Event", back_populates="owner", cascade="all, delete-orphan")
 
@@ -49,7 +54,9 @@ class Tradition(Base):
     is_verified = mapped_column(Boolean, default=False, nullable=False)
     verification_source = mapped_column(String(255), nullable=True)
 
-    ritual_items = relationship("RitualItem", back_populates="tradition", cascade="all, delete-orphan")
+    ritual_items = relationship(
+        "RitualItem", back_populates="tradition", cascade="all, delete-orphan"
+    )
     events = relationship("Event", back_populates="tradition", foreign_keys="Event.tradition_code")
 
 
@@ -57,7 +64,9 @@ class RitualItem(Base):
     __tablename__ = "ritual_items"
 
     id = mapped_column(String(36), primary_key=True, default=generate_uuid)
-    tradition_code = mapped_column(String(50), ForeignKey("traditions.code"), nullable=False, index=True)
+    tradition_code = mapped_column(
+        String(50), ForeignKey("traditions.code"), nullable=False, index=True
+    )
     ritual_name = mapped_column(String(100), nullable=True)
     category = mapped_column(String(50), default="puja_samagri", nullable=True)
     item_name = mapped_column(String(150), nullable=False)
@@ -73,11 +82,17 @@ class Event(Base):
     __tablename__ = "events"
 
     id = mapped_column(String(36), primary_key=True, default=generate_uuid)
-    owner_id = mapped_column(String(36), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    owner_id = mapped_column(
+        String(36), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
+    )
     name = mapped_column(String(255), nullable=False)
-    event_type = mapped_column(String(50), nullable=False)  # wedding, puja, community_festival, etc.
+    event_type = mapped_column(
+        String(50), nullable=False
+    )  # wedding, puja, community_festival, etc.
     tradition_code = mapped_column(String(50), ForeignKey("traditions.code"), nullable=True)
-    secondary_tradition_code = mapped_column(String(50), ForeignKey("traditions.code"), nullable=True)
+    secondary_tradition_code = mapped_column(
+        String(50), ForeignKey("traditions.code"), nullable=True
+    )
     guest_count = mapped_column(Integer, nullable=False)
     total_budget = mapped_column(Numeric(14, 2), nullable=False)
     city = mapped_column(String(100), nullable=False)
@@ -86,7 +101,9 @@ class Event(Base):
     end_date = mapped_column(Date, nullable=False)
     status = mapped_column(String(50), default="planning", nullable=False, index=True)
     owner_token = mapped_column(String(64), nullable=True, index=True)
-    venue_capacity = mapped_column(Integer, nullable=True)  # Manually-entered placeholder per DEC-016
+    venue_capacity = mapped_column(
+        Integer, nullable=True
+    )  # Manually-entered placeholder per DEC-016
     metadata_json = mapped_column(JSON, default=dict, nullable=False)
     created_at = mapped_column(DateTime, default=lambda: datetime.now(UTC), nullable=False)
 
@@ -99,26 +116,45 @@ class Event(Base):
     owner = relationship("User", back_populates="events")
     tradition = relationship("Tradition", foreign_keys=[tradition_code], back_populates="events")
     secondary_tradition = relationship("Tradition", foreign_keys=[secondary_tradition_code])
-    sub_events = relationship("SubEvent", back_populates="event", cascade="all, delete-orphan", order_by="SubEvent.sort_order")
+    sub_events = relationship(
+        "SubEvent",
+        back_populates="event",
+        cascade="all, delete-orphan",
+        order_by="SubEvent.sort_order",
+    )
     budget_items = relationship("BudgetItem", back_populates="event", cascade="all, delete-orphan")
     tasks = relationship("Task", back_populates="event", cascade="all, delete-orphan")
     event_logs = relationship("EventLog", back_populates="event", cascade="all, delete-orphan")
     vendors = relationship("Vendor", back_populates="event", cascade="all, delete-orphan")
-    quote_documents = relationship("QuoteDocument", back_populates="event", cascade="all, delete-orphan")
-    change_events = relationship("ChangeEvent", back_populates="event", cascade="all, delete-orphan")
-    ai_suggestions = relationship("AISuggestion", back_populates="event", cascade="all, delete-orphan")
-    style_profiles = relationship("StyleProfile", back_populates="event", cascade="all, delete-orphan")
+    quote_documents = relationship(
+        "QuoteDocument", back_populates="event", cascade="all, delete-orphan"
+    )
+    change_events = relationship(
+        "ChangeEvent", back_populates="event", cascade="all, delete-orphan"
+    )
+    ai_suggestions = relationship(
+        "AISuggestion", back_populates="event", cascade="all, delete-orphan"
+    )
+    style_profiles = relationship(
+        "StyleProfile", back_populates="event", cascade="all, delete-orphan"
+    )
     guests = relationship("Guest", back_populates="event", cascade="all, delete-orphan")
     message_logs = relationship("MessageLog", back_populates="event", cascade="all, delete-orphan")
-    fact_sheet = relationship("EventFactSheet", back_populates="event", uselist=False, cascade="all, delete-orphan")
-    invitation_cards = relationship("InvitationCard", back_populates="event", cascade="all, delete-orphan")
+    fact_sheet = relationship(
+        "EventFactSheet", back_populates="event", uselist=False, cascade="all, delete-orphan"
+    )
+    invitation_cards = relationship(
+        "InvitationCard", back_populates="event", cascade="all, delete-orphan"
+    )
 
 
 class SubEvent(Base):
     __tablename__ = "sub_events"
 
     id = mapped_column(String(36), primary_key=True, default=generate_uuid)
-    event_id = mapped_column(String(36), ForeignKey("events.id", ondelete="CASCADE"), nullable=False, index=True)
+    event_id = mapped_column(
+        String(36), ForeignKey("events.id", ondelete="CASCADE"), nullable=False, index=True
+    )
     name = mapped_column(String(150), nullable=False)
     start_time = mapped_column(DateTime, nullable=False)
     end_time = mapped_column(DateTime, nullable=False)
@@ -137,11 +173,15 @@ class BudgetItem(Base):
     __tablename__ = "budget_items"
 
     id = mapped_column(String(36), primary_key=True, default=generate_uuid)
-    event_id = mapped_column(String(36), ForeignKey("events.id", ondelete="CASCADE"), nullable=False, index=True)
+    event_id = mapped_column(
+        String(36), ForeignKey("events.id", ondelete="CASCADE"), nullable=False, index=True
+    )
     vendor_id = mapped_column(String(36), nullable=True)
     category = mapped_column(String(100), nullable=False)
     name = mapped_column(String(255), nullable=False)
-    scaling_rule = mapped_column(String(50), default="per_guest", nullable=False)  # per_guest, fixed, tiered per DEC-018
+    scaling_rule = mapped_column(
+        String(50), default="per_guest", nullable=False
+    )  # per_guest, fixed, tiered per DEC-018
     planned_amount = mapped_column(Numeric(14, 2), nullable=False)
     actual_amount = mapped_column(Numeric(14, 2), default=0.00, nullable=False)
     is_paid = mapped_column(Boolean, default=False, nullable=False)
@@ -155,8 +195,12 @@ class Task(Base):
     __tablename__ = "tasks"
 
     id = mapped_column(String(36), primary_key=True, default=generate_uuid)
-    event_id = mapped_column(String(36), ForeignKey("events.id", ondelete="CASCADE"), nullable=False, index=True)
-    sub_event_id = mapped_column(String(36), ForeignKey("sub_events.id", ondelete="SET NULL"), nullable=True, index=True)
+    event_id = mapped_column(
+        String(36), ForeignKey("events.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    sub_event_id = mapped_column(
+        String(36), ForeignKey("sub_events.id", ondelete="SET NULL"), nullable=True, index=True
+    )
     title = mapped_column(String(255), nullable=False)
     description = mapped_column(Text, nullable=True)
     status = mapped_column(String(50), default="pending", nullable=False)
@@ -175,7 +219,9 @@ class EventLog(Base):
     __tablename__ = "event_log"
 
     id = mapped_column(String(36), primary_key=True, default=generate_uuid)
-    event_id = mapped_column(String(36), ForeignKey("events.id", ondelete="CASCADE"), nullable=False, index=True)
+    event_id = mapped_column(
+        String(36), ForeignKey("events.id", ondelete="CASCADE"), nullable=False, index=True
+    )
     action_type = mapped_column(String(100), nullable=False)
     diff_payload = mapped_column(JSON, nullable=False)
     actor_id = mapped_column(String(36), nullable=True)
@@ -188,7 +234,9 @@ class Vendor(Base):
     __tablename__ = "vendors"
 
     id = mapped_column(String(36), primary_key=True, default=generate_uuid)
-    event_id = mapped_column(String(36), ForeignKey("events.id", ondelete="CASCADE"), nullable=False, index=True)
+    event_id = mapped_column(
+        String(36), ForeignKey("events.id", ondelete="CASCADE"), nullable=False, index=True
+    )
     business_name = mapped_column(String(255), nullable=False)
     category = mapped_column(String(100), nullable=False)
     contact_person = mapped_column(String(150), nullable=True)
@@ -208,8 +256,12 @@ class QuoteDocument(Base):
     __tablename__ = "quote_documents"
 
     id = mapped_column(String(36), primary_key=True, default=generate_uuid)
-    event_id = mapped_column(String(36), ForeignKey("events.id", ondelete="CASCADE"), nullable=False, index=True)
-    vendor_id = mapped_column(String(36), ForeignKey("vendors.id", ondelete="SET NULL"), nullable=True, index=True)
+    event_id = mapped_column(
+        String(36), ForeignKey("events.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    vendor_id = mapped_column(
+        String(36), ForeignKey("vendors.id", ondelete="SET NULL"), nullable=True, index=True
+    )
     vendor_name = mapped_column(String(200), nullable=False)
     category = mapped_column(String(50), nullable=False, index=True)
     file_name = mapped_column(String(255), nullable=False)
@@ -223,14 +275,18 @@ class QuoteDocument(Base):
 
     event = relationship("Event", back_populates="quote_documents")
     vendor = relationship("Vendor", back_populates="quotes")
-    line_items = relationship("QuoteLineItem", back_populates="quote_document", cascade="all, delete-orphan")
+    line_items = relationship(
+        "QuoteLineItem", back_populates="quote_document", cascade="all, delete-orphan"
+    )
 
 
 class QuoteLineItem(Base):
     __tablename__ = "quote_line_items"
 
     id = mapped_column(String(36), primary_key=True, default=generate_uuid)
-    quote_document_id = mapped_column(String(36), ForeignKey("quote_documents.id", ondelete="CASCADE"), nullable=False, index=True)
+    quote_document_id = mapped_column(
+        String(36), ForeignKey("quote_documents.id", ondelete="CASCADE"), nullable=False, index=True
+    )
     name = mapped_column(String(255), nullable=False)
     qty = mapped_column(Numeric(10, 2), default=1.0, nullable=False)
     unit = mapped_column(String(50), default="units", nullable=False)
@@ -249,7 +305,9 @@ class VendorBenchmarkSample(Base):
     category = mapped_column(String(50), nullable=False, index=True)
     city_tier = mapped_column(String(20), nullable=False, index=True)
     normalized_unit_cost = mapped_column(Numeric(14, 2), nullable=False)
-    source_event_id = mapped_column(String(36), ForeignKey("events.id", ondelete="SET NULL"), nullable=True)
+    source_event_id = mapped_column(
+        String(36), ForeignKey("events.id", ondelete="SET NULL"), nullable=True
+    )
     notes = mapped_column(String(255), nullable=True)
     created_at = mapped_column(DateTime, default=lambda: datetime.now(UTC), nullable=False)
 
@@ -258,22 +316,34 @@ class ChangeEvent(Base):
     __tablename__ = "change_events"
 
     id = mapped_column(String(36), primary_key=True, default=generate_uuid)
-    event_id = mapped_column(String(36), ForeignKey("events.id", ondelete="CASCADE"), nullable=False, index=True)
-    change_type = mapped_column(String(50), nullable=False)  # guest_count_changed, vendor_cancelled, date_moved, budget_cut, venue_unavailable
+    event_id = mapped_column(
+        String(36), ForeignKey("events.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    change_type = mapped_column(
+        String(50), nullable=False
+    )  # guest_count_changed, vendor_cancelled, date_moved, budget_cut, venue_unavailable
     payload = mapped_column(JSON, nullable=False)
-    status = mapped_column(String(50), default="pending", nullable=False, index=True)  # pending, queued, applied, rejected, blocked_infeasible
+    status = mapped_column(
+        String(50), default="pending", nullable=False, index=True
+    )  # pending, queued, applied, rejected, blocked_infeasible
     created_at = mapped_column(DateTime, default=lambda: datetime.now(UTC), nullable=False)
 
     event = relationship("Event", back_populates="change_events")
-    suggestions = relationship("AISuggestion", back_populates="change_event", cascade="all, delete-orphan")
+    suggestions = relationship(
+        "AISuggestion", back_populates="change_event", cascade="all, delete-orphan"
+    )
 
 
 class AISuggestion(Base):
     __tablename__ = "ai_suggestions"
 
     id = mapped_column(String(36), primary_key=True, default=generate_uuid)
-    event_id = mapped_column(String(36), ForeignKey("events.id", ondelete="CASCADE"), nullable=False, index=True)
-    change_event_id = mapped_column(String(36), ForeignKey("change_events.id", ondelete="CASCADE"), nullable=True, index=True)
+    event_id = mapped_column(
+        String(36), ForeignKey("events.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    change_event_id = mapped_column(
+        String(36), ForeignKey("change_events.id", ondelete="CASCADE"), nullable=True, index=True
+    )
     agent_name = mapped_column(String(100), nullable=False)
     proposal_payload = mapped_column(JSON, nullable=False)
     reasoning = mapped_column(JSON, nullable=True)
@@ -288,7 +358,9 @@ class StyleProfile(Base):
     __tablename__ = "style_profiles"
 
     id = mapped_column(String(36), primary_key=True, default=generate_uuid)
-    event_id = mapped_column(String(36), ForeignKey("events.id", ondelete="CASCADE"), nullable=False, index=True)
+    event_id = mapped_column(
+        String(36), ForeignKey("events.id", ondelete="CASCADE"), nullable=False, index=True
+    )
     uploaded_image_refs = mapped_column(JSON, default=list, nullable=False)
     extracted_palette = mapped_column(JSON, default=list, nullable=False)  # Array of hex colors
     style_tags = mapped_column(JSON, default=list, nullable=False)
@@ -297,15 +369,21 @@ class StyleProfile(Base):
     created_at = mapped_column(DateTime, default=lambda: datetime.now(UTC), nullable=False)
 
     event = relationship("Event", back_populates="style_profiles")
-    uploaded_images = relationship("UploadedImage", back_populates="style_profile", cascade="all, delete-orphan")
-    theme_proposals = relationship("ThemeProposal", back_populates="style_profile", cascade="all, delete-orphan")
+    uploaded_images = relationship(
+        "UploadedImage", back_populates="style_profile", cascade="all, delete-orphan"
+    )
+    theme_proposals = relationship(
+        "ThemeProposal", back_populates="style_profile", cascade="all, delete-orphan"
+    )
 
 
 class UploadedImage(Base):
     __tablename__ = "uploaded_images"
 
     id = mapped_column(String(36), primary_key=True, default=generate_uuid)
-    style_profile_id = mapped_column(String(36), ForeignKey("style_profiles.id", ondelete="CASCADE"), nullable=False, index=True)
+    style_profile_id = mapped_column(
+        String(36), ForeignKey("style_profiles.id", ondelete="CASCADE"), nullable=False, index=True
+    )
     image_data = mapped_column(LargeBinary, nullable=False)  # Stored directly as bytea per DEC-017
     content_type = mapped_column(String(100), nullable=False)
     uploaded_at = mapped_column(DateTime, default=lambda: datetime.now(UTC), nullable=False)
@@ -317,28 +395,38 @@ class ThemeProposal(Base):
     __tablename__ = "theme_proposals"
 
     id = mapped_column(String(36), primary_key=True, default=generate_uuid)
-    style_profile_id = mapped_column(String(36), ForeignKey("style_profiles.id", ondelete="CASCADE"), nullable=False, index=True)
+    style_profile_id = mapped_column(
+        String(36), ForeignKey("style_profiles.id", ondelete="CASCADE"), nullable=False, index=True
+    )
     theme_name = mapped_column(String(255), nullable=False)
     palette = mapped_column(JSON, default=list, nullable=False)
     menu_direction = mapped_column(Text, nullable=True)
     playlist_genres = mapped_column(JSON, default=list, nullable=False)
     dress_code_suggestion = mapped_column(Text, nullable=True)
     invitation_design_brief = mapped_column(Text, nullable=True)
-    status = mapped_column(String(50), default="proposed", nullable=False, index=True)  # proposed, accepted, rejected
+    status = mapped_column(
+        String(50), default="proposed", nullable=False, index=True
+    )  # proposed, accepted, rejected
     provider_used = mapped_column(String(100), default="gemini-3-flash-preview", nullable=True)
     fallback_warning = mapped_column(Text, nullable=True)
     created_at = mapped_column(DateTime, default=lambda: datetime.now(UTC), nullable=False)
 
     style_profile = relationship("StyleProfile", back_populates="theme_proposals")
-    decor_items = relationship("DecorItem", back_populates="theme_proposal", cascade="all, delete-orphan")
+    decor_items = relationship(
+        "DecorItem", back_populates="theme_proposal", cascade="all, delete-orphan"
+    )
 
 
 class DecorItem(Base):
     __tablename__ = "decor_items"
 
     id = mapped_column(String(36), primary_key=True, default=generate_uuid)
-    theme_proposal_id = mapped_column(String(36), ForeignKey("theme_proposals.id", ondelete="CASCADE"), nullable=False, index=True)
-    category = mapped_column(String(100), nullable=False)  # stage_backdrop, table_centerpiece, entrance_arch, lighting, photobooth, seating_lounges
+    theme_proposal_id = mapped_column(
+        String(36), ForeignKey("theme_proposals.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    category = mapped_column(
+        String(100), nullable=False
+    )  # stage_backdrop, table_centerpiece, entrance_arch, lighting, photobooth, seating_lounges
     name = mapped_column(String(255), nullable=False)
     quantity_formula = mapped_column(Text, nullable=False)
     computed_quantity = mapped_column(Integer, default=1, nullable=False)
@@ -346,9 +434,15 @@ class DecorItem(Base):
     cost_range_low = mapped_column(Numeric(14, 2), nullable=False)
     cost_range_high = mapped_column(Numeric(14, 2), nullable=False)
     sourcing_type = mapped_column(String(50), default="rent", nullable=False)  # rent, diy, buy
-    budget_item_id = mapped_column(String(36), ForeignKey("budget_items.id", ondelete="SET NULL"), nullable=True, index=True)
-    task_id = mapped_column(String(36), ForeignKey("tasks.id", ondelete="SET NULL"), nullable=True, index=True)
-    status = mapped_column(String(50), default="proposed", nullable=False, index=True)  # proposed, accepted, rejected
+    budget_item_id = mapped_column(
+        String(36), ForeignKey("budget_items.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    task_id = mapped_column(
+        String(36), ForeignKey("tasks.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    status = mapped_column(
+        String(50), default="proposed", nullable=False, index=True
+    )  # proposed, accepted, rejected
     reasoning = mapped_column(JSON, default=dict, nullable=False)
     created_at = mapped_column(DateTime, default=lambda: datetime.now(UTC), nullable=False)
 
@@ -361,25 +455,34 @@ class Guest(Base):
     __tablename__ = "guests"
 
     id = mapped_column(String(36), primary_key=True, default=generate_uuid)
-    event_id = mapped_column(String(36), ForeignKey("events.id", ondelete="CASCADE"), nullable=False, index=True)
+    event_id = mapped_column(
+        String(36), ForeignKey("events.id", ondelete="CASCADE"), nullable=False, index=True
+    )
     name = mapped_column(String(150), nullable=False)
     phone = mapped_column(String(30), nullable=False, index=True)
-    group_side = mapped_column(String(50), nullable=True)  # bride, groom, family, friends, society, general
+    group_side = mapped_column(
+        String(50), nullable=True
+    )  # bride, groom, family, friends, society, general
     diet = mapped_column(String(50), default="veg", nullable=True)  # veg, jain, non_veg, vegan
     mobility_needs = mapped_column(Boolean, default=False, nullable=False)
     kids_count = mapped_column(Integer, default=0, nullable=False)
     headcount = mapped_column(Integer, default=1, nullable=False)
-    rsvp_status = mapped_column(String(30), default="pending", nullable=False, index=True)  # pending, attending, declined, maybe
+    rsvp_status = mapped_column(
+        String(30), default="pending", nullable=False, index=True
+    )  # pending, attending, declined, maybe
     accommodation = mapped_column(Boolean, default=False, nullable=False)
     language = mapped_column(String(10), default="en", nullable=False)
     notes = mapped_column(Text, nullable=True)
     needs_host_review = mapped_column(Boolean, default=False, nullable=False)
     created_at = mapped_column(DateTime, default=lambda: datetime.now(UTC), nullable=False)
-    updated_at = mapped_column(DateTime, default=lambda: datetime.now(UTC), onupdate=lambda: datetime.now(UTC), nullable=False)
-
-    __table_args__ = (
-        Index("idx_guests_event_phone", "event_id", "phone", unique=True),
+    updated_at = mapped_column(
+        DateTime,
+        default=lambda: datetime.now(UTC),
+        onupdate=lambda: datetime.now(UTC),
+        nullable=False,
     )
+
+    __table_args__ = (Index("idx_guests_event_phone", "event_id", "phone", unique=True),)
 
     event = relationship("Event", back_populates="guests")
     messages = relationship("MessageLog", back_populates="guest", cascade="all, delete-orphan")
@@ -390,11 +493,15 @@ class MessageTemplate(Base):
 
     id = mapped_column(String(36), primary_key=True, default=generate_uuid)
     template_name = mapped_column(String(100), unique=True, nullable=False, index=True)
-    category = mapped_column(String(50), nullable=False)  # invitation, reminder, faq_response, update
+    category = mapped_column(
+        String(50), nullable=False
+    )  # invitation, reminder, faq_response, update
     language = mapped_column(String(10), default="en", nullable=False)
     body_text = mapped_column(Text, nullable=False)
     meta_template_id = mapped_column(String(100), nullable=True)
-    approval_status = mapped_column(String(50), default="approved", nullable=False)  # pending, approved, rejected
+    approval_status = mapped_column(
+        String(50), default="approved", nullable=False
+    )  # pending, approved, rejected
     created_at = mapped_column(DateTime, default=lambda: datetime.now(UTC), nullable=False)
 
 
@@ -402,16 +509,24 @@ class MessageLog(Base):
     __tablename__ = "message_log"
 
     id = mapped_column(String(36), primary_key=True, default=generate_uuid)
-    guest_id = mapped_column(String(36), ForeignKey("guests.id", ondelete="SET NULL"), nullable=True, index=True)
-    event_id = mapped_column(String(36), ForeignKey("events.id", ondelete="CASCADE"), nullable=False, index=True)
+    guest_id = mapped_column(
+        String(36), ForeignKey("guests.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    event_id = mapped_column(
+        String(36), ForeignKey("events.id", ondelete="CASCADE"), nullable=False, index=True
+    )
     phone_number = mapped_column(String(30), nullable=False, index=True)
     direction = mapped_column(String(20), nullable=False)  # outbound, inbound
     message_type = mapped_column(String(30), nullable=False)  # template, freeform, quick_reply
     content_snapshot = mapped_column(Text, nullable=False)
     whatsapp_message_id = mapped_column(String(100), nullable=True, index=True)
-    delivery_status = mapped_column(String(30), default="queued", nullable=False, index=True)  # queued, sent, delivered, read, failed
+    delivery_status = mapped_column(
+        String(30), default="queued", nullable=False, index=True
+    )  # queued, sent, delivered, read, failed
     failure_reason = mapped_column(Text, nullable=True)
-    created_at = mapped_column(DateTime, default=lambda: datetime.now(UTC), nullable=False, index=True)
+    created_at = mapped_column(
+        DateTime, default=lambda: datetime.now(UTC), nullable=False, index=True
+    )
 
     guest = relationship("Guest", back_populates="messages")
     event = relationship("Event", back_populates="message_logs")
@@ -421,7 +536,13 @@ class EventFactSheet(Base):
     __tablename__ = "event_fact_sheets"
 
     id = mapped_column(String(36), primary_key=True, default=generate_uuid)
-    event_id = mapped_column(String(36), ForeignKey("events.id", ondelete="CASCADE"), unique=True, nullable=False, index=True)
+    event_id = mapped_column(
+        String(36),
+        ForeignKey("events.id", ondelete="CASCADE"),
+        unique=True,
+        nullable=False,
+        index=True,
+    )
     venue_address = mapped_column(Text, nullable=True)
     parking_info = mapped_column(Text, nullable=True)
     dress_code = mapped_column(Text, nullable=True)
@@ -429,7 +550,12 @@ class EventFactSheet(Base):
     map_link = mapped_column(String(500), nullable=True)
     other_facts = mapped_column(JSON, default=dict, nullable=False)
     created_at = mapped_column(DateTime, default=lambda: datetime.now(UTC), nullable=False)
-    updated_at = mapped_column(DateTime, default=lambda: datetime.now(UTC), onupdate=lambda: datetime.now(UTC), nullable=False)
+    updated_at = mapped_column(
+        DateTime,
+        default=lambda: datetime.now(UTC),
+        onupdate=lambda: datetime.now(UTC),
+        nullable=False,
+    )
 
     event = relationship("Event", back_populates="fact_sheet")
 
@@ -447,11 +573,17 @@ class InvitationCard(Base):
     __tablename__ = "invitation_cards"
 
     id = mapped_column(String(36), primary_key=True, default=generate_uuid)
-    event_id = mapped_column(String(36), ForeignKey("events.id", ondelete="CASCADE"), nullable=False, index=True)
-    theme_proposal_id = mapped_column(String(36), ForeignKey("theme_proposals.id", ondelete="SET NULL"), nullable=True, index=True)
+    event_id = mapped_column(
+        String(36), ForeignKey("events.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    theme_proposal_id = mapped_column(
+        String(36), ForeignKey("theme_proposals.id", ondelete="SET NULL"), nullable=True, index=True
+    )
     layout_variant = mapped_column(String(50), nullable=False, default="classic_royal")
     wording_text = mapped_column(Text, nullable=False)
-    guest_id = mapped_column(String(36), ForeignKey("guests.id", ondelete="CASCADE"), nullable=True, index=True)
+    guest_id = mapped_column(
+        String(36), ForeignKey("guests.id", ondelete="CASCADE"), nullable=True, index=True
+    )
     rendered_png = mapped_column(LargeBinary, nullable=True)
     rendered_pdf = mapped_column(LargeBinary, nullable=True)
     generated_at = mapped_column(DateTime, default=lambda: datetime.now(UTC), nullable=False)
@@ -466,11 +598,14 @@ class VendorProfile(Base):
     Global vendor/venue directory profile (F15).
     Distinct from the per-event `Vendor` contract table.
     """
+
     __tablename__ = "vendor_profiles"
 
     id = mapped_column(String(36), primary_key=True, default=generate_uuid)
     business_name = mapped_column(String(200), nullable=False)
-    category = mapped_column(String(50), nullable=False, index=True)  # venue, caterer, decorator, etc.
+    category = mapped_column(
+        String(50), nullable=False, index=True
+    )  # venue, caterer, decorator, etc.
     latitude = mapped_column(Numeric(9, 6), nullable=True)
     longitude = mapped_column(Numeric(9, 6), nullable=True)
     service_area_radius_km = mapped_column(Integer, nullable=True)
@@ -478,15 +613,12 @@ class VendorProfile(Base):
     locality = mapped_column(String(150), nullable=True)
     city_tier = mapped_column(String(20), nullable=True)
     contact_phone = mapped_column(String(20), nullable=True)
-    average_rating = mapped_column(Numeric(2, 1), default=None, nullable=True)  # NULL when unrated (DEC-013)
+    average_rating = mapped_column(
+        Numeric(2, 1), default=None, nullable=True
+    )  # NULL when unrated (DEC-013)
     rating_count = mapped_column(Integer, default=0, nullable=False)
     is_verified_profile = mapped_column(Boolean, default=False, nullable=False)
     coordinate_precision = mapped_column(String(50), default="locality_approximate", nullable=False)
     source_notes = mapped_column(Text, nullable=True)
     metadata_json = mapped_column(JSON, default=dict, nullable=False)
     created_at = mapped_column(DateTime, default=lambda: datetime.now(UTC), nullable=False)
-
-
-
-
-

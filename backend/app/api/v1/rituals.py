@@ -37,8 +37,12 @@ class PanchangResponseSchema(BaseModel):
 
 
 class MergeTraditionsRequest(BaseModel):
-    primary_tradition_code: str = Field(..., description="Primary cultural code, e.g. maharashtrian_vedic")
-    secondary_tradition_code: str = Field(..., description="Secondary cultural code, e.g. punjabi_traditional")
+    primary_tradition_code: str = Field(
+        ..., description="Primary cultural code, e.g. maharashtrian_vedic"
+    )
+    secondary_tradition_code: str = Field(
+        ..., description="Secondary cultural code, e.g. punjabi_traditional"
+    )
     start_date: date | None = None
     event_id: str | None = None
     notes: str | None = None
@@ -58,14 +62,14 @@ def get_panchang_for_date(
     if not (-90.0 <= latitude <= 90.0) or not (-180.0 <= longitude <= 180.0):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Latitude must be in [-90, 90] and longitude in [-180, 180]"
+            detail="Latitude must be in [-90, 90] and longitude in [-180, 180]",
         )
 
     res = default_panchang_provider.calculate_panchang(
         event_date=event_date,
         latitude=latitude,
         longitude=longitude,
-        elevation_meters=elevation_meters
+        elevation_meters=elevation_meters,
     )
     return PanchangResponseSchema.model_validate(res)
 
@@ -93,7 +97,9 @@ def get_tradition_samagri(code: str, db: Session = Depends(get_db)) -> dict[str,
     """Retrieves full itemized samagri checklist for a given cultural tradition."""
     tradition = db.query(Tradition).filter(Tradition.code == code).first()
     if not tradition:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Tradition '{code}' not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=f"Tradition '{code}' not found"
+        )
 
     items = db.query(RitualItem).filter(RitualItem.tradition_code == code).all()
     return {
@@ -122,12 +128,14 @@ def get_tradition_samagri(code: str, db: Session = Depends(get_db)) -> dict[str,
                 "is_verified": i.is_verified,
             }
             for i in items
-        ]
+        ],
     }
 
 
 @router.post("/merge-traditions")
-def merge_dual_traditions(payload: MergeTraditionsRequest, db: Session = Depends(get_db)) -> dict[str, Any]:
+def merge_dual_traditions(
+    payload: MergeTraditionsRequest, db: Session = Depends(get_db)
+) -> dict[str, Any]:
     """
     Reconciles two distinct cultural traditions into an integrated schedule and samagri list.
     Tags source traditions, combines shared sacred items, detects conflicts, and creates elder alignment points.
@@ -149,7 +157,7 @@ def merge_dual_traditions(payload: MergeTraditionsRequest, db: Session = Depends
             secondary_code=payload.secondary_tradition_code,
             start_date=event_start,
             event_name=event_name,
-            notes=payload.notes
+            notes=payload.notes,
         )
         return merged
     except ValueError as e:
@@ -158,9 +166,7 @@ def merge_dual_traditions(payload: MergeTraditionsRequest, db: Session = Depends
 
 @router.post("/events/{event_id}/generate-tasks")
 def generate_ritual_tasks_for_event(
-    event_id: str,
-    event: Event = Depends(verify_event_owner_token),
-    db: Session = Depends(get_db)
+    event_id: str, event: Event = Depends(verify_event_owner_token), db: Session = Depends(get_db)
 ) -> dict[str, Any]:
     """
     Generates structured preparation and procurement tasks for ritual samagri,
@@ -170,6 +176,7 @@ def generate_ritual_tasks_for_event(
 
     from backend.app.models.models import Task
     from backend.app.services.dag_scheduler import DAGScheduler
+
     if not event:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Event not found")
 
@@ -177,7 +184,7 @@ def generate_ritual_tasks_for_event(
         start_date_val=event.start_date,
         tradition_code=event.tradition_code or "maharashtrian_vedic",
         secondary_tradition_code=event.secondary_tradition_code,
-        db=db
+        db=db,
     )
 
     created_tasks = []
@@ -192,22 +199,24 @@ def generate_ritual_tasks_for_event(
             scheduled_end=t_data["scheduled_end"],
             duration_minutes=t_data["duration_minutes"],
             dependency_task_ids=t_data["dependency_task_ids"],
-            assigned_role=t_data["assigned_role"]
+            assigned_role=t_data["assigned_role"],
         )
         db.add(task_obj)
-        created_tasks.append({
-            "id": task_obj.id,
-            "title": task_obj.title,
-            "scheduled_start": task_obj.scheduled_start.isoformat(),
-            "assigned_role": task_obj.assigned_role,
-        })
+        created_tasks.append(
+            {
+                "id": task_obj.id,
+                "title": task_obj.title,
+                "scheduled_start": task_obj.scheduled_start.isoformat(),
+                "assigned_role": task_obj.assigned_role,
+            }
+        )
 
     db.commit()
     return {
         "status": "success",
         "event_id": event.id,
         "tasks_created_count": len(created_tasks),
-        "tasks": created_tasks
+        "tasks": created_tasks,
     }
 
 
@@ -216,7 +225,7 @@ def get_muhurat_candidates(
     event_date: date = Query(..., description="Date YYYY-MM-DD"),
     latitude: float = Query(28.6139, description="Venue latitude"),
     longitude: float = Query(77.2090, description="Venue longitude"),
-    elevation_meters: float = Query(216.0, description="Elevation in meters")
+    elevation_meters: float = Query(216.0, description="Elevation in meters"),
 ) -> dict[str, Any]:
     """
     Calculates 3 auspicious candidate muhurat windows (Morning Brahma/Pratah, Midday Abhijit, Evening Godhuli/Twilight)
@@ -226,10 +235,11 @@ def get_muhurat_candidates(
         event_date=event_date,
         latitude=latitude,
         longitude=longitude,
-        elevation_meters=elevation_meters
+        elevation_meters=elevation_meters,
     )
 
     from datetime import datetime, timedelta
+
     sunrise_dt = datetime.strptime(p_data["sunrise"], "%H:%M:%S")
 
     # Morning auspicious window: 1.5h to 3.5h post-sunrise
@@ -254,7 +264,9 @@ def get_muhurat_candidates(
             "id": "muhurat-abhijit",
             "name": "Abhijit Muhurat (Midday Solar Zenith)",
             "window": f"{p_data['abhijit_muhurat']['start'][:5]} - {p_data['abhijit_muhurat']['end'][:5]}",
-            "suitability": "Auspicious (Universal Victory Muhurat)" if p_data["abhijit_muhurat"]["is_auspicious"] else "Caution on Wednesdays",
+            "suitability": "Auspicious (Universal Victory Muhurat)"
+            if p_data["abhijit_muhurat"]["is_auspicious"]
+            else "Caution on Wednesdays",
             "planetary_rationale": "8th Muhurat of daytime, removes blemishes except when falling on Wednesdays.",
             "is_recommended": p_data["abhijit_muhurat"]["is_auspicious"],
         },
@@ -265,7 +277,7 @@ def get_muhurat_candidates(
             "suitability": "Auspicious Evening Horizon",
             "planetary_rationale": "Sacred twilight transition, revered across Vedic, Rajasthani, and Bengali traditions.",
             "is_recommended": False,
-        }
+        },
     ]
 
     return {
@@ -276,7 +288,7 @@ def get_muhurat_candidates(
         "tithi": p_data["tithi"],
         "nakshatra": p_data["nakshatra"],
         "candidates": candidates,
-        "elevated_disclaimer": p_data["priest_disclaimer"]
+        "elevated_disclaimer": p_data["priest_disclaimer"],
     }
 
 
@@ -302,14 +314,13 @@ def generate_pandit_guide(event_id: str, db: Session = Depends(get_db)) -> dict[
 
     # Calculate astronomical panchang for event start date
     panchang = default_panchang_provider.calculate_panchang(
-        event_date=event.start_date,
-        latitude=lat,
-        longitude=lon,
-        elevation_meters=elev
+        event_date=event.start_date, latitude=lat, longitude=lon, elevation_meters=elev
     )
 
     # Sub-events / Itinerary
-    sub_events = db.query(SubEvent).filter(SubEvent.event_id == event_id).order_by(SubEvent.sort_order).all()
+    sub_events = (
+        db.query(SubEvent).filter(SubEvent.event_id == event_id).order_by(SubEvent.sort_order).all()
+    )
     itinerary_summary = [
         {
             "name": se.name,
@@ -327,10 +338,14 @@ def generate_pandit_guide(event_id: str, db: Session = Depends(get_db)) -> dict[
         merge_res = service.merge_traditions(event.tradition_code, event.secondary_tradition_code)
         samagri_items = merge_res["samagri_items"]
         alignment_points = merge_res["family_alignment_points"]
-        tradition_summary = f"{merge_res['primary_tradition']['name']} & {merge_res['secondary_tradition']['name']}"
+        tradition_summary = (
+            f"{merge_res['primary_tradition']['name']} & {merge_res['secondary_tradition']['name']}"
+        )
     elif event.tradition_code:
         tradition = db.query(Tradition).filter(Tradition.code == event.tradition_code).first()
-        raw_items = db.query(RitualItem).filter(RitualItem.tradition_code == event.tradition_code).all()
+        raw_items = (
+            db.query(RitualItem).filter(RitualItem.tradition_code == event.tradition_code).all()
+        )
         samagri_items = [
             {
                 "item_name": i.item_name,

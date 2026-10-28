@@ -42,13 +42,9 @@ class RSVPSummary(BaseModel):
 
 
 class GuestService:
-
     @classmethod
     def import_guest_rows(
-        cls,
-        db: Session,
-        event_id: str,
-        rows: list[dict[str, Any]]
+        cls, db: Session, event_id: str, rows: list[dict[str, Any]]
     ) -> GuestImportResponse:
         """
         Validates, normalizes, and ingests guest rows.
@@ -74,32 +70,38 @@ class GuestService:
             phone_raw = str(row.get("phone") or row.get("phone_number") or "").strip()
 
             if not name:
-                errors.append(GuestImportError(
-                    row_number=idx,
-                    name=name,
-                    phone_raw=phone_raw,
-                    reason="Guest name is required"
-                ))
+                errors.append(
+                    GuestImportError(
+                        row_number=idx,
+                        name=name,
+                        phone_raw=phone_raw,
+                        reason="Guest name is required",
+                    )
+                )
                 continue
 
             if not phone_raw:
-                errors.append(GuestImportError(
-                    row_number=idx,
-                    name=name,
-                    phone_raw=phone_raw,
-                    reason="Phone number is required"
-                ))
+                errors.append(
+                    GuestImportError(
+                        row_number=idx,
+                        name=name,
+                        phone_raw=phone_raw,
+                        reason="Phone number is required",
+                    )
+                )
                 continue
 
             # Validate & normalize phone to E.164
             is_valid, norm_phone, err_msg = validate_and_normalize_guest_phone(phone_raw)
             if not is_valid or not norm_phone:
-                errors.append(GuestImportError(
-                    row_number=idx,
-                    name=name,
-                    phone_raw=phone_raw,
-                    reason=err_msg or "Invalid phone number format"
-                ))
+                errors.append(
+                    GuestImportError(
+                        row_number=idx,
+                        name=name,
+                        phone_raw=phone_raw,
+                        reason=err_msg or "Invalid phone number format",
+                    )
+                )
                 continue
 
             # Deduplication Check
@@ -128,8 +130,12 @@ class GuestService:
             except (ValueError, TypeError):
                 pass
 
-            mobility = bool(str(row.get("mobility_needs") or "").lower() in ("true", "1", "yes", "wheelchair"))
-            accommodation = bool(str(row.get("accommodation") or "").lower() in ("true", "1", "yes"))
+            mobility = bool(
+                str(row.get("mobility_needs") or "").lower() in ("true", "1", "yes", "wheelchair")
+            )
+            accommodation = bool(
+                str(row.get("accommodation") or "").lower() in ("true", "1", "yes")
+            )
             language = str(row.get("language") or "en").strip().lower()[:10]
             notes = str(row.get("notes") or "").strip() or None
 
@@ -145,16 +151,18 @@ class GuestService:
                 rsvp_status="pending",
                 accommodation=accommodation,
                 language=language,
-                notes=notes
+                notes=notes,
             )
             db.add(guest)
-            successful.append({
-                "name": name,
-                "phone": norm_phone,
-                "group_side": group_side,
-                "diet": diet,
-                "headcount": headcount
-            })
+            successful.append(
+                {
+                    "name": name,
+                    "phone": norm_phone,
+                    "group_side": group_side,
+                    "diet": diet,
+                    "headcount": headcount,
+                }
+            )
 
         db.commit()
 
@@ -164,7 +172,7 @@ class GuestService:
             skipped_duplicates_count=skipped_duplicates,
             invalid_rows_count=len(errors),
             imported_guests=successful,
-            errors=errors
+            errors=errors,
         )
 
     @classmethod
@@ -223,7 +231,7 @@ class GuestService:
             diet_breakdown=diet_counts,
             mobility_needs_count=mobility_count,
             kids_count=total_kids,
-            accommodation_needed_count=accommodation_count
+            accommodation_needed_count=accommodation_count,
         )
 
     @classmethod

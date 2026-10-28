@@ -20,11 +20,7 @@ class ExtractionValidationError(Exception):
 class BaseQuoteExtractionProvider(ABC):
     @abstractmethod
     def extract_quote_from_document(
-        self,
-        file_bytes: bytes,
-        file_name: str,
-        mime_type: str,
-        category_hint: str | None = None
+        self, file_bytes: bytes, file_name: str, mime_type: str, category_hint: str | None = None
     ) -> QuoteExtractionPayloadSchema:
         """Extract structured quote payload from document bytes."""
 
@@ -39,7 +35,7 @@ class BaseNegotiationDraftProvider(ABC):
         target_discount_pct: float,
         leverage_points: list[str],
         competing_vendor_name: str | None = None,
-        competing_quote_total: float | None = None
+        competing_quote_total: float | None = None,
     ) -> dict[str, dict[str, str]]:
         """Generate polite, firm, and bundle-ask negotiation draft variants in English and Hindi."""
 
@@ -47,10 +43,7 @@ class BaseNegotiationDraftProvider(ABC):
 class BaseReplanningExplanationProvider(ABC):
     @abstractmethod
     def generate_explanation_and_mitigations(
-        self,
-        change_type: str,
-        diff_summary: dict[str, Any],
-        total_budget: float
+        self, change_type: str, diff_summary: dict[str, Any], total_budget: float
     ) -> dict[str, Any]:
         """
         Generate plain-language explanation of calculated changes and mitigation suggestions
@@ -61,9 +54,7 @@ class BaseReplanningExplanationProvider(ABC):
 class BaseVibeExtractionProvider(ABC):
     @abstractmethod
     def extract_vibe_from_images(
-        self,
-        images: list[dict[str, Any]],
-        text_description: str | None = None
+        self, images: list[dict[str, Any]], text_description: str | None = None
     ) -> VibeExtractionPayloadSchema:
         """
         Extract aesthetic vibe (palettes, tags, materials, mood keywords) from a batch of images.
@@ -74,9 +65,7 @@ class BaseVibeExtractionProvider(ABC):
 class BaseThemeGenerationProvider(ABC):
     @abstractmethod
     def generate_theme_proposal(
-        self,
-        style_profile: dict[str, Any],
-        event_details: dict[str, Any]
+        self, style_profile: dict[str, Any], event_details: dict[str, Any]
     ) -> ThemeGenerationPayloadSchema:
         """
         Generate a comprehensive theme proposal with >=10 concrete decor items with formulas,
@@ -91,11 +80,7 @@ class DeterministicStubQuoteExtractionProvider(BaseQuoteExtractionProvider):
     """
 
     def extract_quote_from_document(
-        self,
-        file_bytes: bytes,
-        file_name: str,
-        mime_type: str,
-        category_hint: str | None = None
+        self, file_bytes: bytes, file_name: str, mime_type: str, category_hint: str | None = None
     ) -> QuoteExtractionPayloadSchema:
         cat = (category_hint or "caterer").lower()
 
@@ -112,7 +97,7 @@ class DeterministicStubQuoteExtractionProvider(BaseQuoteExtractionProvider):
                 confidence_score=0.98,
                 terms_and_conditions=[
                     "50% advance at booking, balance 2 days prior to event",
-                    "Breakage of crockery to be charged at ₹150 per plate/glass"
+                    "Breakage of crockery to be charged at ₹150 per plate/glass",
                 ],
                 line_items=[
                     ExtractedLineItemSchema(
@@ -122,7 +107,7 @@ class DeterministicStubQuoteExtractionProvider(BaseQuoteExtractionProvider):
                         unit_price=1200.0,
                         total=420000.0,
                         category_tag="food_buffet",
-                        notes="Includes 4 starters, 3 main vegetables, dal baati churma, 3 desserts"
+                        notes="Includes 4 starters, 3 main vegetables, dal baati churma, 3 desserts",
                     ),
                     ExtractedLineItemSchema(
                         name="Live Chaat & Mocktail Counter",
@@ -131,7 +116,7 @@ class DeterministicStubQuoteExtractionProvider(BaseQuoteExtractionProvider):
                         unit_price=250.0,
                         total=87500.0,
                         category_tag="live_counter",
-                        notes="Pani puri, dahi bhalla, 4 mocktail varieties"
+                        notes="Pani puri, dahi bhalla, 4 mocktail varieties",
                     ),
                     ExtractedLineItemSchema(
                         name="Uniformed Banquet Service Staff",
@@ -140,9 +125,9 @@ class DeterministicStubQuoteExtractionProvider(BaseQuoteExtractionProvider):
                         unit_price=1150.0,
                         total=17500.0,
                         category_tag="service_staff",
-                        notes="Standard 6-hour dinner service"
-                    )
-                ]
+                        notes="Standard 6-hour dinner service",
+                    ),
+                ],
             )
         elif "venue" in cat:
             return QuoteExtractionPayloadSchema(
@@ -157,7 +142,7 @@ class DeterministicStubQuoteExtractionProvider(BaseQuoteExtractionProvider):
                 confidence_score=0.96,
                 terms_and_conditions=[
                     "Hall AC timing strictly 6:00 PM to 11:30 PM",
-                    "Outside decorators must pay ₹35,000 royalty fee"
+                    "Outside decorators must pay ₹35,000 royalty fee",
                 ],
                 line_items=[
                     ExtractedLineItemSchema(
@@ -166,7 +151,7 @@ class DeterministicStubQuoteExtractionProvider(BaseQuoteExtractionProvider):
                         unit="day",
                         unit_price=650000.0,
                         total=650000.0,
-                        category_tag="rent"
+                        category_tag="rent",
                     ),
                     ExtractedLineItemSchema(
                         name="Bridal Suite & Green Rooms (2 Rooms)",
@@ -174,7 +159,7 @@ class DeterministicStubQuoteExtractionProvider(BaseQuoteExtractionProvider):
                         unit="rooms",
                         unit_price=25000.0,
                         total=50000.0,
-                        category_tag="rooms"
+                        category_tag="rooms",
                     ),
                     ExtractedLineItemSchema(
                         name="Valet Parking Logistics & Marshals",
@@ -182,9 +167,9 @@ class DeterministicStubQuoteExtractionProvider(BaseQuoteExtractionProvider):
                         unit="package",
                         unit_price=50000.0,
                         total=50000.0,
-                        category_tag="parking"
-                    )
-                ]
+                        category_tag="parking",
+                    ),
+                ],
             )
         elif "decorator" in cat:
             return QuoteExtractionPayloadSchema(
@@ -198,7 +183,7 @@ class DeterministicStubQuoteExtractionProvider(BaseQuoteExtractionProvider):
                 confidence_score=0.94,
                 terms_and_conditions=[
                     "Floral rates subject to wholesale mandi fluctuations",
-                    "Teardown must be complete by 6:00 AM next day"
+                    "Teardown must be complete by 6:00 AM next day",
                 ],
                 line_items=[
                     ExtractedLineItemSchema(
@@ -207,7 +192,7 @@ class DeterministicStubQuoteExtractionProvider(BaseQuoteExtractionProvider):
                         unit="set",
                         unit_price=240000.0,
                         total=240000.0,
-                        category_tag="mandap"
+                        category_tag="mandap",
                     ),
                     ExtractedLineItemSchema(
                         name="Grand Entrance Arch & Pathway Truss Lighting",
@@ -215,7 +200,7 @@ class DeterministicStubQuoteExtractionProvider(BaseQuoteExtractionProvider):
                         unit="set",
                         unit_price=120000.0,
                         total=120000.0,
-                        category_tag="entrance"
+                        category_tag="entrance",
                     ),
                     ExtractedLineItemSchema(
                         name="Dining Area Centerpieces & Fabric Draping",
@@ -223,9 +208,9 @@ class DeterministicStubQuoteExtractionProvider(BaseQuoteExtractionProvider):
                         unit="package",
                         unit_price=60000.0,
                         total=60000.0,
-                        category_tag="draping"
-                    )
-                ]
+                        category_tag="draping",
+                    ),
+                ],
             )
         else:
             return QuoteExtractionPayloadSchema(
@@ -239,7 +224,7 @@ class DeterministicStubQuoteExtractionProvider(BaseQuoteExtractionProvider):
                 confidence_score=0.97,
                 terms_and_conditions=[
                     "Raw footage provided on external hard drive provided by client",
-                    "Teaser video delivered within 15 days, main film within 60 days"
+                    "Teaser video delivered within 15 days, main film within 60 days",
                 ],
                 line_items=[
                     ExtractedLineItemSchema(
@@ -248,7 +233,7 @@ class DeterministicStubQuoteExtractionProvider(BaseQuoteExtractionProvider):
                         unit="days",
                         unit_price=90000.0,
                         total=180000.0,
-                        category_tag="photo_video"
+                        category_tag="photo_video",
                     ),
                     ExtractedLineItemSchema(
                         name="Candid Lead Photographer & Cinematic Teaser",
@@ -256,9 +241,9 @@ class DeterministicStubQuoteExtractionProvider(BaseQuoteExtractionProvider):
                         unit="package",
                         unit_price=100000.0,
                         total=100000.0,
-                        category_tag="candid"
-                    )
-                ]
+                        category_tag="candid",
+                    ),
+                ],
             )
 
 
@@ -276,11 +261,13 @@ class DeterministicStubNegotiationDraftProvider(BaseNegotiationDraftProvider):
         target_discount_pct: float,
         leverage_points: list[str],
         competing_vendor_name: str | None = None,
-        competing_quote_total: float | None = None
+        competing_quote_total: float | None = None,
     ) -> dict[str, dict[str, str]]:
         target_amount = round(quoted_total * (1.0 - target_discount_pct / 100.0), 2)
         diff_amount = round(quoted_total - target_amount, 2)
-        leverage_summary_en = "; ".join(leverage_points) if leverage_points else "standard regional festival rates"
+        leverage_summary_en = (
+            "; ".join(leverage_points) if leverage_points else "standard regional festival rates"
+        )
 
         polite_en = (
             f"Dear {vendor_name},\n\n"
@@ -299,7 +286,11 @@ class DeterministicStubNegotiationDraftProvider(BaseNegotiationDraftProvider):
         firm_en = (
             f"Dear {vendor_name},\n\n"
             f"We have thoroughly reviewed your quote of ₹{quoted_total:,.0f}. "
-            + (f"We currently have a competitive and fully itemized proposal from {competing_vendor_name} at ₹{competing_quote_total:,.0f}. " if competing_vendor_name and competing_quote_total else "")
+            + (
+                f"We currently have a competitive and fully itemized proposal from {competing_vendor_name} at ₹{competing_quote_total:,.0f}. "
+                if competing_vendor_name and competing_quote_total
+                else ""
+            )
             + f"Furthermore, we noted potential extra contingencies ({leverage_summary_en}) that need to be explicitly capped.\n\n"
             f"We are prepared to close today at ₹{target_amount:,.0f} inclusive of all taxes, overtime, and logistics with zero hidden surcharges. "
             f"Please let us know if this works so we can sign the agreement.\n\nRegards,\nEvent Host"
@@ -307,7 +298,11 @@ class DeterministicStubNegotiationDraftProvider(BaseNegotiationDraftProvider):
         firm_hi = (
             f"नमस्कार {vendor_name} जी,\n\n"
             f"हमने आपके ₹{quoted_total:,.0f} के प्रस्ताव की समीक्षा की है। "
-            + (f"हमारे पास {competing_vendor_name} से ₹{competing_quote_total:,.0f} का पूरा प्रस्ताव भी उपलब्ध है। " if competing_vendor_name and competing_quote_total else "")
+            + (
+                f"हमारे पास {competing_vendor_name} से ₹{competing_quote_total:,.0f} का पूरा प्रस्ताव भी उपलब्ध है। "
+                if competing_vendor_name and competing_quote_total
+                else ""
+            )
             + f"साथ ही कुछ अतिरिक्त खर्चों ({leverage_summary_en}) पर स्पष्टता जरूरी है।\n\n"
             f"यदि आप बिना किसी छिपे शुल्क के सभी कर सहित ₹{target_amount:,.0f} में तैयार हैं, तो हम आज ही अनुबंध कर सकते हैं।\n\nधन्यवाद,\nहोस्ट"
         )
@@ -327,7 +322,7 @@ class DeterministicStubNegotiationDraftProvider(BaseNegotiationDraftProvider):
         return {
             "polite": {"english": polite_en, "hindi": polite_hi},
             "firm": {"english": firm_en, "hindi": firm_hi},
-            "bundle_ask": {"english": bundle_en, "hindi": bundle_hi}
+            "bundle_ask": {"english": bundle_en, "hindi": bundle_hi},
         }
 
 
@@ -342,9 +337,12 @@ def get_quote_extraction_provider() -> BaseQuoteExtractionProvider:
             from backend.app.services.providers.gemini_provider import (
                 GeminiQuoteExtractionProvider,
             )
+
             return GeminiQuoteExtractionProvider(api_key=gemini_key)
         except (ImportError, AttributeError, TypeError, ValueError, RuntimeError, KeyError) as exc:
-            logger.debug("GeminiQuoteExtractionProvider initialization failed, falling back: %s", exc)
+            logger.debug(
+                "GeminiQuoteExtractionProvider initialization failed, falling back: %s", exc
+            )
 
     openai_key = os.getenv("OPENAI_API_KEY")
     if openai_key:
@@ -352,9 +350,14 @@ def get_quote_extraction_provider() -> BaseQuoteExtractionProvider:
             from backend.app.services.providers.openai_provider import (
                 OpenAIQuoteExtractionProvider,
             )
-            return cast(BaseQuoteExtractionProvider, OpenAIQuoteExtractionProvider(api_key=openai_key))
+
+            return cast(
+                BaseQuoteExtractionProvider, OpenAIQuoteExtractionProvider(api_key=openai_key)
+            )
         except (ImportError, AttributeError, TypeError, ValueError, RuntimeError, KeyError) as exc:
-            logger.debug("OpenAIQuoteExtractionProvider initialization failed, falling back: %s", exc)
+            logger.debug(
+                "OpenAIQuoteExtractionProvider initialization failed, falling back: %s", exc
+            )
 
     return DeterministicStubQuoteExtractionProvider()
 
@@ -369,9 +372,12 @@ def get_negotiation_draft_provider() -> BaseNegotiationDraftProvider:
             from backend.app.services.providers.gemini_provider import (
                 GeminiNegotiationDraftProvider,
             )
+
             return GeminiNegotiationDraftProvider(api_key=gemini_key)
         except (ImportError, AttributeError, TypeError, ValueError, RuntimeError, KeyError) as exc:
-            logger.debug("GeminiNegotiationDraftProvider initialization failed, falling back: %s", exc)
+            logger.debug(
+                "GeminiNegotiationDraftProvider initialization failed, falling back: %s", exc
+            )
 
     return DeterministicStubNegotiationDraftProvider()
 
@@ -383,10 +389,7 @@ class DeterministicStubReplanningExplanationProvider(BaseReplanningExplanationPr
     """
 
     def generate_explanation_and_mitigations(
-        self,
-        change_type: str,
-        diff_summary: dict[str, Any],
-        total_budget: float
+        self, change_type: str, diff_summary: dict[str, Any], total_budget: float
     ) -> dict[str, Any]:
         delta = diff_summary.get("budget_total_delta", 0.0)
         new_total = diff_summary.get("budget_total_new", 0.0)
@@ -428,18 +431,18 @@ class DeterministicStubReplanningExplanationProvider(BaseReplanningExplanationPr
             )
         elif change_type == "venue_unavailable":
             v_name = diff_summary.get("venue_name", "primary venue")
-            explanation = (
-                f"Venue unavailability noted for {v_name}. Critical path emergency venue scouting tasks have been added."
-            )
+            explanation = f"Venue unavailability noted for {v_name}. Critical path emergency venue scouting tasks have been added."
         else:
-            explanation = f"Change event ({change_type}) evaluated with total budget delta of ₹{delta:+,.2f}."
+            explanation = (
+                f"Change event ({change_type}) evaluated with total budget delta of ₹{delta:+,.2f}."
+            )
 
         mitigations = []
         if over_budget:
             mitigations = [
                 f"Reduce flexible decor and lighting production tiers to absorb the ₹{over_amount:,.0f} overage.",
                 "Negotiate fixed lump-sum packages with photography and entertainment vendors.",
-                "Review high-cost catering line items (live stations, exotic desserts) to trim per-plate costs."
+                "Review high-cost catering line items (live stations, exotic desserts) to trim per-plate costs.",
             ]
 
         return {
@@ -452,8 +455,8 @@ class DeterministicStubReplanningExplanationProvider(BaseReplanningExplanationPr
                 "change_type": change_type,
                 "budget_total_delta": delta,
                 "is_over_budget": over_budget,
-                "overage_amount": over_amount
-            }
+                "overage_amount": over_amount,
+            },
         }
 
 
@@ -467,9 +470,12 @@ def get_replanning_explanation_provider() -> BaseReplanningExplanationProvider:
             from backend.app.services.providers.gemini_provider import (
                 GeminiReplanningExplanationProvider,
             )
+
             return GeminiReplanningExplanationProvider(api_key=gemini_key)
         except (ImportError, AttributeError, TypeError, ValueError, RuntimeError, KeyError) as exc:
-            logger.debug("GeminiReplanningExplanationProvider initialization failed, falling back: %s", exc)
+            logger.debug(
+                "GeminiReplanningExplanationProvider initialization failed, falling back: %s", exc
+            )
 
     return DeterministicStubReplanningExplanationProvider()
 
@@ -481,9 +487,7 @@ class DeterministicStubVibeProvider(BaseVibeExtractionProvider, BaseThemeGenerat
     """
 
     def extract_vibe_from_images(
-        self,
-        images: list[dict[str, Any]],
-        text_description: str | None = None
+        self, images: list[dict[str, Any]], text_description: str | None = None
     ) -> VibeExtractionPayloadSchema:
         single_images = []
         count = max(len(images), 1)
@@ -499,24 +503,33 @@ class DeterministicStubVibeProvider(BaseVibeExtractionProvider, BaseThemeGenerat
             single_images.append(
                 SingleImageVibeSchema(
                     palette=p,
-                    style_tags=["royal_rajasthani", "heritage_palace", "marigold_grandeur", "traditional"],
+                    style_tags=[
+                        "royal_rajasthani",
+                        "heritage_palace",
+                        "marigold_grandeur",
+                        "traditional",
+                    ],
                     materials=["brass", "marigold", "raw_silk", "terracotta"],
                     lighting_mood="warm_candlelight_ambient",
-                    flower_types=["genda_marigold", "rajnigandha", "red_rose"]
+                    flower_types=["genda_marigold", "rajnigandha", "red_rose"],
                 )
             )
 
         return VibeExtractionPayloadSchema(
             images=single_images,
-            overall_mood_words=["regal", "vibrant", "traditional", "festive", "auspicious"]
+            overall_mood_words=["regal", "vibrant", "traditional", "festive", "auspicious"],
         )
 
     def generate_theme_proposal(
-        self,
-        style_profile: dict[str, Any],
-        event_details: dict[str, Any]
+        self, style_profile: dict[str, Any], event_details: dict[str, Any]
     ) -> ThemeGenerationPayloadSchema:
-        palette = style_profile.get("extracted_palette") or ["#FF9933", "#800020", "#FFD700", "#2E8B57", "#FFF8DC"]
+        palette = style_profile.get("extracted_palette") or [
+            "#FF9933",
+            "#800020",
+            "#FFD700",
+            "#2E8B57",
+            "#FFF8DC",
+        ]
 
         decor_items = [
             DecorItemProposalSchema(
@@ -525,7 +538,7 @@ class DeterministicStubVibeProvider(BaseVibeExtractionProvider, BaseThemeGenerat
                 quantity_formula="1 fixed",
                 cost_tier="medium",
                 sourcing_type="rent",
-                reasoning={"aesthetic": "focal point regal stage framing"}
+                reasoning={"aesthetic": "focal point regal stage framing"},
             ),
             DecorItemProposalSchema(
                 category="mandap",
@@ -533,7 +546,7 @@ class DeterministicStubVibeProvider(BaseVibeExtractionProvider, BaseThemeGenerat
                 quantity_formula="1 fixed",
                 cost_tier="high",
                 sourcing_type="rent",
-                reasoning={"aesthetic": "sacred ritual enclosure with fresh marigolds"}
+                reasoning={"aesthetic": "sacred ritual enclosure with fresh marigolds"},
             ),
             DecorItemProposalSchema(
                 category="entrance_arch",
@@ -541,7 +554,7 @@ class DeterministicStubVibeProvider(BaseVibeExtractionProvider, BaseThemeGenerat
                 quantity_formula="2 units",
                 cost_tier="medium",
                 sourcing_type="rent",
-                reasoning={"aesthetic": "welcoming royal gateway transition"}
+                reasoning={"aesthetic": "welcoming royal gateway transition"},
             ),
             DecorItemProposalSchema(
                 category="table_centerpiece",
@@ -549,7 +562,7 @@ class DeterministicStubVibeProvider(BaseVibeExtractionProvider, BaseThemeGenerat
                 quantity_formula="1 per table",
                 cost_tier="medium",
                 sourcing_type="rent",
-                reasoning={"aesthetic": "intimate fragrant dining table accents"}
+                reasoning={"aesthetic": "intimate fragrant dining table accents"},
             ),
             DecorItemProposalSchema(
                 category="lighting",
@@ -557,7 +570,7 @@ class DeterministicStubVibeProvider(BaseVibeExtractionProvider, BaseThemeGenerat
                 quantity_formula="1 per 10 guests",
                 cost_tier="low",
                 sourcing_type="rent",
-                reasoning={"aesthetic": "magical golden hour glow for evening rituals"}
+                reasoning={"aesthetic": "magical golden hour glow for evening rituals"},
             ),
             DecorItemProposalSchema(
                 category="photobooth",
@@ -565,7 +578,7 @@ class DeterministicStubVibeProvider(BaseVibeExtractionProvider, BaseThemeGenerat
                 quantity_formula="1 fixed",
                 cost_tier="medium",
                 sourcing_type="rent",
-                reasoning={"aesthetic": "interactive memories station for guests"}
+                reasoning={"aesthetic": "interactive memories station for guests"},
             ),
             DecorItemProposalSchema(
                 category="default",
@@ -573,7 +586,7 @@ class DeterministicStubVibeProvider(BaseVibeExtractionProvider, BaseThemeGenerat
                 quantity_formula="1 fixed",
                 cost_tier="low",
                 sourcing_type="rent",
-                reasoning={"aesthetic": "elegant arrival greeting"}
+                reasoning={"aesthetic": "elegant arrival greeting"},
             ),
             DecorItemProposalSchema(
                 category="seating_lounges",
@@ -581,7 +594,7 @@ class DeterministicStubVibeProvider(BaseVibeExtractionProvider, BaseThemeGenerat
                 quantity_formula="1 per 25 guests",
                 cost_tier="medium",
                 sourcing_type="rent",
-                reasoning={"aesthetic": "comfortable heritage lounge for family elders"}
+                reasoning={"aesthetic": "comfortable heritage lounge for family elders"},
             ),
             DecorItemProposalSchema(
                 category="default",
@@ -589,7 +602,7 @@ class DeterministicStubVibeProvider(BaseVibeExtractionProvider, BaseThemeGenerat
                 quantity_formula="1 fixed",
                 cost_tier="medium",
                 sourcing_type="buy",
-                reasoning={"aesthetic": "auspicious bridal walkway"}
+                reasoning={"aesthetic": "auspicious bridal walkway"},
             ),
             DecorItemProposalSchema(
                 category="default",
@@ -597,7 +610,7 @@ class DeterministicStubVibeProvider(BaseVibeExtractionProvider, BaseThemeGenerat
                 quantity_formula="1 per 15 guests",
                 cost_tier="low",
                 sourcing_type="diy",
-                reasoning={"aesthetic": "auspicious doorway blessings"}
+                reasoning={"aesthetic": "auspicious doorway blessings"},
             ),
             DecorItemProposalSchema(
                 category="default",
@@ -605,7 +618,7 @@ class DeterministicStubVibeProvider(BaseVibeExtractionProvider, BaseThemeGenerat
                 quantity_formula="4 units",
                 cost_tier="medium",
                 sourcing_type="rent",
-                reasoning={"aesthetic": "traditional devotional artistry on side walls"}
+                reasoning={"aesthetic": "traditional devotional artistry on side walls"},
             ),
         ]
 
@@ -613,10 +626,14 @@ class DeterministicStubVibeProvider(BaseVibeExtractionProvider, BaseThemeGenerat
             theme_name="Royal Marigold & Heritage Brass",
             palette=palette[:5],
             menu_direction="Heritage Rajasthani Royal Thali & live chaat counters, featuring Dal Baati Churma, Ker Sangri, and saffron Ghewar.",
-            playlist_genres=["Rajasthani Folk & Manganiyar", "Sufi Bollywood", "Acoustic Shehnai Fusion"],
+            playlist_genres=[
+                "Rajasthani Folk & Manganiyar",
+                "Sufi Bollywood",
+                "Acoustic Shehnai Fusion",
+            ],
             dress_code_suggestion="Royal Traditional (Bandhani, Leheriya, Sherwanis in Marigold Yellow, Rust, and Deep Crimson)",
             invitation_design_brief="Handmade raw-silk textured digital invites featuring gold foil Pichwai motifs, elephant borders, and royal devanagari typography.",
-            decor_items=decor_items
+            decor_items=decor_items,
         )
 
 
@@ -630,6 +647,7 @@ def get_vibe_extraction_provider() -> BaseVibeExtractionProvider:
             from backend.app.services.providers.gemini_provider import (
                 GeminiVibeProvider,
             )
+
             return GeminiVibeProvider(api_key=gemini_key)
         except (ImportError, AttributeError, TypeError, ValueError, RuntimeError, KeyError) as exc:
             logger.debug("GeminiVibeProvider initialization failed, falling back: %s", exc)
@@ -647,6 +665,7 @@ def get_theme_generation_provider() -> BaseThemeGenerationProvider:
             from backend.app.services.providers.gemini_provider import (
                 GeminiVibeProvider,
             )
+
             return GeminiVibeProvider(api_key=gemini_key)
         except (ImportError, AttributeError, TypeError, ValueError, RuntimeError, KeyError) as exc:
             logger.debug("GeminiVibeProvider (theme) initialization failed, falling back: %s", exc)

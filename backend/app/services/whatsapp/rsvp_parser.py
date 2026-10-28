@@ -22,19 +22,54 @@ class RSVPParser:
     """
 
     ATTENDING_TOKENS: ClassVar[set[str]] = {
-        "yes", "attending", "attend", "coming", "haan", "ha", "aayenge", "ayenge",
-        "pakka", "confirmed", "confirm", "joining", "be there", "looking forward",
-        "definitely", "present", "zaroor"
+        "yes",
+        "attending",
+        "attend",
+        "coming",
+        "haan",
+        "ha",
+        "aayenge",
+        "ayenge",
+        "pakka",
+        "confirmed",
+        "confirm",
+        "joining",
+        "be there",
+        "looking forward",
+        "definitely",
+        "present",
+        "zaroor",
     }
 
     DECLINED_TOKENS: ClassVar[set[str]] = {
-        "no", "declined", "decline", "sorry", "cannot", "cant", "can't", "unable",
-        "nahi", "na", "miss", "wont", "won't", "not able", "regret"
+        "no",
+        "declined",
+        "decline",
+        "sorry",
+        "cannot",
+        "cant",
+        "can't",
+        "unable",
+        "nahi",
+        "na",
+        "miss",
+        "wont",
+        "won't",
+        "not able",
+        "regret",
     }
 
     MAYBE_TOKENS: ClassVar[set[str]] = {
-        "maybe", "tentative", "not sure", "try", "trying", "koshish", "shayad",
-        "shyd", "let you know", "will update"
+        "maybe",
+        "tentative",
+        "not sure",
+        "try",
+        "trying",
+        "koshish",
+        "shayad",
+        "shyd",
+        "let you know",
+        "will update",
     }
 
     @classmethod
@@ -47,7 +82,7 @@ class RSVPParser:
                 headcount=1,
                 confidence=1.0,
                 needs_host_review=False,
-                parsing_method="quick_reply"
+                parsing_method="quick_reply",
             )
         elif "no" in bid or "decline" in bid or "reject" in bid:
             return ParsedRSVP(
@@ -55,7 +90,7 @@ class RSVPParser:
                 headcount=0,
                 confidence=1.0,
                 needs_host_review=False,
-                parsing_method="quick_reply"
+                parsing_method="quick_reply",
             )
         elif "maybe" in bid or "tentative" in bid:
             return ParsedRSVP(
@@ -63,7 +98,7 @@ class RSVPParser:
                 headcount=1,
                 confidence=1.0,
                 needs_host_review=False,
-                parsing_method="quick_reply"
+                parsing_method="quick_reply",
             )
 
         return ParsedRSVP(
@@ -71,7 +106,7 @@ class RSVPParser:
             headcount=1,
             confidence=0.4,
             needs_host_review=True,
-            parsing_method="quick_reply"
+            parsing_method="quick_reply",
         )
 
     @classmethod
@@ -127,7 +162,18 @@ class RSVPParser:
                     explicit_headcount_found = True
 
                 relatives = 0
-                for rel in ["wife", "husband", "spouse", "partner", "mother", "father", "brother", "sister", "bhabhi", "bhaiya"]:
+                for rel in [
+                    "wife",
+                    "husband",
+                    "spouse",
+                    "partner",
+                    "mother",
+                    "father",
+                    "brother",
+                    "sister",
+                    "bhabhi",
+                    "bhaiya",
+                ]:
                     if rel in lower:
                         relatives += 1
                 if relatives > 0:
@@ -139,7 +185,9 @@ class RSVPParser:
                     additional += int(plus_match.group(1))
                     explicit_headcount_found = True
 
-                num_people_match = re.search(r"\b(\d{1,2})\s*(?:people|persons|guests|members)\b", lower)
+                num_people_match = re.search(
+                    r"\b(\d{1,2})\s*(?:people|persons|guests|members)\b", lower
+                )
                 if num_people_match and additional == 0:
                     headcount = int(num_people_match.group(1))
                     explicit_headcount_found = True
@@ -152,7 +200,13 @@ class RSVPParser:
             diet = "jain"
         elif "vegan" in lower:
             diet = "vegan"
-        elif "non veg" in lower or "non-veg" in lower or "chicken" in lower or "mutton" in lower or "fish" in lower:
+        elif (
+            "non veg" in lower
+            or "non-veg" in lower
+            or "chicken" in lower
+            or "mutton" in lower
+            or "fish" in lower
+        ):
             diet = "non_veg"
         elif "pure veg" in lower or "vegetarian" in lower or "veg" in lower:
             diet = "veg"
@@ -180,11 +234,13 @@ class RSVPParser:
         needs_host_review = (confidence < 0.70) or (status == "unknown") or (headcount > 15)
 
         return ParsedRSVP(
-            rsvp_status=status if not needs_host_review else ("attending" if status == "attending" else "unknown"),
+            rsvp_status=status
+            if not needs_host_review
+            else ("attending" if status == "attending" else "unknown"),
             headcount=headcount,
             diet=diet,
             notes=raw if len(raw) <= 255 else raw[:252] + "...",
             confidence=confidence,
             needs_host_review=needs_host_review,
-            parsing_method="deterministic_nlp"
+            parsing_method="deterministic_nlp",
         )

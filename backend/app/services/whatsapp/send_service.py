@@ -69,7 +69,7 @@ class WhatsAppSendService:
         message_body: str,
         message_type: str = "freeform",
         template_name: str | None = None,
-        provider: WhatsAppProvider | None = None
+        provider: WhatsAppProvider | None = None,
     ) -> MessageLog:
         """
         Sends an individual message.
@@ -91,12 +91,14 @@ class WhatsAppSendService:
                 content_snapshot=message_body,
                 whatsapp_message_id=None,
                 delivery_status="failed",
-                failure_reason=f"recipient_opted_out at {opted_out.opted_out_at.isoformat()}"
+                failure_reason=f"recipient_opted_out at {opted_out.opted_out_at.isoformat()}",
             )
             db.add(log_entry)
             db.commit()
             db.refresh(log_entry)
-            raise OptOutBlockedError(f"Phone {norm_phone} has opted out (STOP) and cannot be contacted.")
+            raise OptOutBlockedError(
+                f"Phone {norm_phone} has opted out (STOP) and cannot be contacted."
+            )
 
         # 2. Transmit via Provider
         if template_name:
@@ -104,19 +106,17 @@ class WhatsAppSendService:
                 to_phone=norm_phone,
                 template_name=template_name,
                 language=guest.language if guest else "en",
-                parameters=[guest.name if guest else "Guest", event.name]
+                parameters=[guest.name if guest else "Guest", event.name],
             )
         else:
             # Interactive buttons or freeform
             buttons = [
                 {"id": "yes", "title": "Attending"},
                 {"id": "no", "title": "Decline"},
-                {"id": "maybe", "title": "Maybe"}
+                {"id": "maybe", "title": "Maybe"},
             ]
             res = active_provider.send_interactive_buttons(
-                to_phone=norm_phone,
-                body=message_body,
-                buttons=buttons
+                to_phone=norm_phone, body=message_body, buttons=buttons
             )
 
         # 3. Log Audit Trail
@@ -129,7 +129,7 @@ class WhatsAppSendService:
             content_snapshot=message_body,
             whatsapp_message_id=res.message_id if res.success else None,
             delivery_status=res.status if res.success else "failed",
-            failure_reason=res.error if not res.success else None
+            failure_reason=res.error if not res.success else None,
         )
         db.add(log_entry)
         db.commit()
@@ -143,7 +143,7 @@ class WhatsAppSendService:
         event_id: str,
         guest_ids: list[str] | None = None,
         provider: WhatsAppProvider | None = None,
-        rate_limit_delay_secs: float = 0.05
+        rate_limit_delay_secs: float = 0.05,
     ) -> BatchSendResult:
         """
         Sends invitations in batch to guests of an event.
@@ -175,7 +175,7 @@ class WhatsAppSendService:
                     to_phone=guest.phone,
                     message_body=msg_text,
                     message_type="interactive_button",
-                    provider=provider
+                    provider=provider,
                 )
                 if log.delivery_status in ("sent", "delivered", "read", "queued"):
                     sent += 1
@@ -183,7 +183,9 @@ class WhatsAppSendService:
                         msg_ids.append(log.whatsapp_message_id)
                 else:
                     failed += 1
-                    errors.append({"phone": guest.phone, "error": log.failure_reason or "Send failed"})
+                    errors.append(
+                        {"phone": guest.phone, "error": log.failure_reason or "Send failed"}
+                    )
             except OptOutBlockedError as e:
                 blocked += 1
                 errors.append({"phone": guest.phone, "error": str(e)})
@@ -201,5 +203,5 @@ class WhatsAppSendService:
             blocked_opt_out_count=blocked,
             failed_count=failed,
             message_ids=msg_ids,
-            errors=errors
+            errors=errors,
         )

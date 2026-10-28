@@ -26,14 +26,13 @@ from backend.app.services.llm_provider import get_replanning_explanation_provide
 
 
 class ReplanningService:
-
     @classmethod
     def create_change_proposal(
         cls,
         db: Session,
         event_id: str,
         change_req: ChangeRequestSchema,
-        actor_id: str | None = None
+        actor_id: str | None = None,
     ) -> ChangeProposalResponseSchema:
         event = db.query(Event).filter(Event.id == event_id).first()
         if not event:
@@ -49,7 +48,7 @@ class ReplanningService:
                 event_id=event_id,
                 change_type=change_type,
                 payload=payload,
-                status="blocked_infeasible"
+                status="blocked_infeasible",
             )
             db.add(change_event)
             db.flush()
@@ -69,8 +68,10 @@ class ReplanningService:
                 "capacity_warning": None,
                 "infeasibility_reason": infeasibility_reason,
                 "explanation": f"This change proposal cannot be applied because it is infeasible: {infeasibility_reason}",
-                "mitigation_suggestions": ["Revise parameters to valid ranges (e.g. valid future dates, positive guest counts, budget above committed costs)."],
-                "created_at": datetime.now(UTC).isoformat()
+                "mitigation_suggestions": [
+                    "Revise parameters to valid ranges (e.g. valid future dates, positive guest counts, budget above committed costs)."
+                ],
+                "created_at": datetime.now(UTC).isoformat(),
             }
 
             suggestion = AISuggestion(
@@ -79,7 +80,7 @@ class ReplanningService:
                 agent_name="replanning_agent_f1",
                 proposal_payload=proposal_payload,
                 reasoning={"infeasible": True, "reason": infeasibility_reason},
-                status="blocked_infeasible"
+                status="blocked_infeasible",
             )
             db.add(suggestion)
             db.commit()
@@ -100,7 +101,7 @@ class ReplanningService:
                 infeasibility_reason=infeasibility_reason,
                 explanation=proposal_payload["explanation"],
                 mitigation_suggestions=proposal_payload["mitigation_suggestions"],
-                created_at=change_event.created_at
+                created_at=change_event.created_at,
             )
 
         # 2. Determine initial status: queued if another change is pending, else pending
@@ -113,7 +114,11 @@ class ReplanningService:
 
         # 3. Dispatch deterministic math & scheduling handler
         budget_diffs: list[dict[str, Any]] = []
-        task_diff: dict[str, list[Any]] = {"added_tasks": [], "moved_tasks": [], "cancelled_tasks": []}
+        task_diff: dict[str, list[Any]] = {
+            "added_tasks": [],
+            "moved_tasks": [],
+            "cancelled_tasks": [],
+        }
         sub_event_diffs: list[dict[str, Any]] = []
         vendor_re_quote_cats: list[str] = []
         capacity_warning: str | None = None
@@ -128,7 +133,7 @@ class ReplanningService:
                 old_guest_count=from_g,
                 new_guest_count=to_g,
                 budget_items=event.budget_items,
-                venue_capacity=event.venue_capacity
+                venue_capacity=event.venue_capacity,
             )
             budget_diffs = [item.model_dump() for item in result.items]
             budget_old = result.total_old
@@ -137,32 +142,38 @@ class ReplanningService:
             capacity_warning = result.capacity_warning
             if to_g > from_g:
                 vendor_re_quote_cats = [
-                    d["category"] for d in budget_diffs if d["scaling_rule"] in ("per_guest", "tiered") and d["difference"] > 0
+                    d["category"]
+                    for d in budget_diffs
+                    if d["scaling_rule"] in ("per_guest", "tiered") and d["difference"] > 0
                 ]
 
         elif change_type == "vendor_cancelled":
             cat = payload.get("category", "vendor")
             v_name = payload.get("vendor_name", "Vendor")
             vendor_re_quote_cats = [cat]
-            task_diff["added_tasks"].append({
-                "title": f"Urgent: Settle replacement for {cat} ({v_name})",
-                "description": f"Vendor {v_name} cancelled. Procure replacement quotes for {cat} immediately.",
-                "assigned_role": "Procurement Lead",
-                "duration_minutes": 120
-            })
+            task_diff["added_tasks"].append(
+                {
+                    "title": f"Urgent: Settle replacement for {cat} ({v_name})",
+                    "description": f"Vendor {v_name} cancelled. Procure replacement quotes for {cat} immediately.",
+                    "assigned_role": "Procurement Lead",
+                    "duration_minutes": 120,
+                }
+            )
             for b in event.budget_items:
                 if (b.category or "").lower() == cat.lower():
                     b_amt = float(b.planned_amount or 0.0)
-                    budget_diffs.append({
-                        "budget_item_id": b.id,
-                        "category": b.category,
-                        "name": b.name,
-                        "scaling_rule": b.scaling_rule or "fixed",
-                        "old_amount": b_amt,
-                        "new_amount": b_amt,
-                        "difference": 0.0,
-                        "formula": f"{cat}: Replacement required — original planned allocation ₹{b_amt:,.2f} preserved for re-contracting"
-                    })
+                    budget_diffs.append(
+                        {
+                            "budget_item_id": b.id,
+                            "category": b.category,
+                            "name": b.name,
+                            "scaling_rule": b.scaling_rule or "fixed",
+                            "old_amount": b_amt,
+                            "new_amount": b_amt,
+                            "difference": 0.0,
+                            "formula": f"{cat}: Replacement required — original planned allocation ₹{b_amt:,.2f} preserved for re-contracting",
+                        }
+                    )
 
         elif change_type == "date_moved":
             from_d = date.fromisoformat(str(payload.get("from_date")))
@@ -170,16 +181,18 @@ class ReplanningService:
             days_delta = (to_d - from_d).days
             payload["days_shifted"] = days_delta
 
-            task_diff["moved_tasks"] = DAGScheduler.shift_tasks_for_date_moved(event.tasks, days_delta)
-            sub_event_diffs = DAGScheduler.shift_sub_events_for_date_moved(event.sub_events, days_delta)
+            task_diff["moved_tasks"] = DAGScheduler.shift_tasks_for_date_moved(
+                event.tasks, days_delta
+            )
+            sub_event_diffs = DAGScheduler.shift_sub_events_for_date_moved(
+                event.sub_events, days_delta
+            )
 
         elif change_type == "budget_cut":
             from_b = float(payload.get("from_budget", float(event.total_budget)))
             to_b = float(payload.get("to_budget") or float(event.total_budget))
             result = BudgetRescalingEngine.rescale_for_budget_cut(
-                from_budget=from_b,
-                to_budget=to_b,
-                budget_items=event.budget_items
+                from_budget=from_b, to_budget=to_b, budget_items=event.budget_items
             )
             budget_diffs = [item.model_dump() for item in result.items]
             budget_old = result.total_old
@@ -189,33 +202,37 @@ class ReplanningService:
         elif change_type == "venue_unavailable":
             v_name = payload.get("venue_name", "Primary Venue")
             vendor_re_quote_cats = ["venue"]
-            task_diff["added_tasks"].extend([
-                {
-                    "title": f"Emergency: Scout replacement venues for {v_name}",
-                    "description": f"Target capacity: {event.venue_capacity or event.guest_count} guests in {event.city}.",
-                    "assigned_role": "Host",
-                    "duration_minutes": 240
-                },
-                {
-                    "title": "Conduct emergency replacement venue site inspections",
-                    "description": "Verify acoustics, fire safety, and stage layout for muhurat timings.",
-                    "assigned_role": "Logistics Lead",
-                    "duration_minutes": 180
-                }
-            ])
+            task_diff["added_tasks"].extend(
+                [
+                    {
+                        "title": f"Emergency: Scout replacement venues for {v_name}",
+                        "description": f"Target capacity: {event.venue_capacity or event.guest_count} guests in {event.city}.",
+                        "assigned_role": "Host",
+                        "duration_minutes": 240,
+                    },
+                    {
+                        "title": "Conduct emergency replacement venue site inspections",
+                        "description": "Verify acoustics, fire safety, and stage layout for muhurat timings.",
+                        "assigned_role": "Logistics Lead",
+                        "duration_minutes": 180,
+                    },
+                ]
+            )
             for b in event.budget_items:
                 if (b.category or "").lower() == "venue":
                     b_amt = float(b.planned_amount or 0.0)
-                    budget_diffs.append({
-                        "budget_item_id": b.id,
-                        "category": b.category,
-                        "name": b.name,
-                        "scaling_rule": b.scaling_rule or "fixed",
-                        "old_amount": b_amt,
-                        "new_amount": b_amt,
-                        "difference": 0.0,
-                        "formula": f"venue: Replacement venue required — current budget allocation ₹{b_amt:,.2f} preserved for new contract"
-                    })
+                    budget_diffs.append(
+                        {
+                            "budget_item_id": b.id,
+                            "category": b.category,
+                            "name": b.name,
+                            "scaling_rule": b.scaling_rule or "fixed",
+                            "old_amount": b_amt,
+                            "new_amount": b_amt,
+                            "difference": 0.0,
+                            "formula": f"venue: Replacement venue required — current budget allocation ₹{b_amt:,.2f} preserved for new contract",
+                        }
+                    )
 
         # 4. Generate plain-language explanation and mitigation suggestions
         diff_summary = {
@@ -232,14 +249,14 @@ class ReplanningService:
             "vendor_category": payload.get("category"),
             "vendor_name": payload.get("vendor_name"),
             "cut_amount": abs(budget_delta) if change_type == "budget_cut" else 0.0,
-            "venue_name": payload.get("venue_name")
+            "venue_name": payload.get("venue_name"),
         }
 
         explanation_provider = get_replanning_explanation_provider()
         ai_resp = explanation_provider.generate_explanation_and_mitigations(
             change_type=change_type,
             diff_summary=diff_summary,
-            total_budget=float(event.total_budget)
+            total_budget=float(event.total_budget),
         )
 
         summary_text = f"Change proposal for {change_type.replace('_', ' ').title()}"
@@ -248,10 +265,7 @@ class ReplanningService:
 
         # 5. Persist ChangeEvent and AISuggestion
         change_event = ChangeEvent(
-            event_id=event_id,
-            change_type=change_type,
-            payload=payload,
-            status=current_status
+            event_id=event_id, change_type=change_type, payload=payload, status=current_status
         )
         db.add(change_event)
         db.flush()
@@ -275,7 +289,7 @@ class ReplanningService:
             "mitigation_suggestions": ai_resp.get("mitigation_suggestions", []),
             "provider_used": ai_resp.get("provider_used", "deterministic_stub"),
             "fallback_warning": ai_resp.get("fallback_warning"),
-            "created_at": change_event.created_at.isoformat()
+            "created_at": change_event.created_at.isoformat(),
         }
 
         suggestion = AISuggestion(
@@ -284,7 +298,7 @@ class ReplanningService:
             agent_name="replanning_agent_f1",
             proposal_payload=proposal_payload,
             reasoning=ai_resp.get("reasoning", {}),
-            status=current_status
+            status=current_status,
         )
         db.add(suggestion)
         db.commit()
@@ -308,11 +322,13 @@ class ReplanningService:
             mitigation_suggestions=proposal_payload["mitigation_suggestions"],
             provider_used=proposal_payload["provider_used"],
             fallback_warning=proposal_payload["fallback_warning"],
-            created_at=change_event.created_at
+            created_at=change_event.created_at,
         )
 
     @classmethod
-    def get_change_proposal(cls, db: Session, event_id: str, change_id: str) -> ChangeProposalResponseSchema:
+    def get_change_proposal(
+        cls, db: Session, event_id: str, change_id: str
+    ) -> ChangeProposalResponseSchema:
         change_event = (
             db.query(ChangeEvent)
             .filter(ChangeEvent.id == change_id, ChangeEvent.event_id == event_id)
@@ -321,11 +337,7 @@ class ReplanningService:
         if not change_event:
             raise ValueError(f"Change event '{change_id}' not found for event '{event_id}'.")
 
-        sugg = (
-            db.query(AISuggestion)
-            .filter(AISuggestion.change_event_id == change_id)
-            .first()
-        )
+        sugg = db.query(AISuggestion).filter(AISuggestion.change_event_id == change_id).first()
         if not sugg or not sugg.proposal_payload:
             raise ValueError(f"AI proposal not found for change event '{change_id}'.")
 
@@ -340,7 +352,9 @@ class ReplanningService:
             budget_total_old=float(p.get("budget_total_old", 0.0)),
             budget_total_new=float(p.get("budget_total_new", 0.0)),
             budget_total_delta=float(p.get("budget_total_delta", 0.0)),
-            task_diff=TaskDiffSchema(**p.get("task_diff", {"added_tasks": [], "moved_tasks": [], "cancelled_tasks": []})),
+            task_diff=TaskDiffSchema(
+                **p.get("task_diff", {"added_tasks": [], "moved_tasks": [], "cancelled_tasks": []})
+            ),
             vendor_re_quote_categories=p.get("vendor_re_quote_categories", []),
             capacity_warning=p.get("capacity_warning"),
             infeasibility_reason=p.get("infeasibility_reason"),
@@ -348,16 +362,12 @@ class ReplanningService:
             mitigation_suggestions=p.get("mitigation_suggestions", []),
             provider_used=p.get("provider_used", "deterministic_stub"),
             fallback_warning=p.get("fallback_warning"),
-            created_at=change_event.created_at
+            created_at=change_event.created_at,
         )
 
     @classmethod
     def accept_change(
-        cls,
-        db: Session,
-        event_id: str,
-        change_id: str,
-        actor_id: str | None = None
+        cls, db: Session, event_id: str, change_id: str, actor_id: str | None = None
     ) -> ChangeProposalResponseSchema:
         change_event = (
             db.query(ChangeEvent)
@@ -370,13 +380,11 @@ class ReplanningService:
         if change_event.status == "blocked_infeasible":
             raise ValueError("Cannot accept an infeasible change proposal.")
         if change_event.status != "pending":
-            raise ValueError(f"Cannot accept change event in status '{change_event.status}'. Must be 'pending'.")
+            raise ValueError(
+                f"Cannot accept change event in status '{change_event.status}'. Must be 'pending'."
+            )
 
-        sugg = (
-            db.query(AISuggestion)
-            .filter(AISuggestion.change_event_id == change_id)
-            .first()
-        )
+        sugg = db.query(AISuggestion).filter(AISuggestion.change_event_id == change_id).first()
         if not sugg or not sugg.proposal_payload:
             raise ValueError("Proposal payload missing.")
 
@@ -391,7 +399,11 @@ class ReplanningService:
             new_amt = item_diff.get("new_amount")
             rule = item_diff.get("scaling_rule")
             if b_id and new_amt is not None:
-                b_item = db.query(BudgetItem).filter(BudgetItem.id == b_id, BudgetItem.event_id == event_id).first()
+                b_item = (
+                    db.query(BudgetItem)
+                    .filter(BudgetItem.id == b_id, BudgetItem.event_id == event_id)
+                    .first()
+                )
                 if b_item:
                     b_item.planned_amount = new_amt
                     if rule and b_item.scaling_rule != rule:
@@ -416,14 +428,18 @@ class ReplanningService:
                 status="pending",
                 duration_minutes=added.get("duration_minutes", 60),
                 assigned_role=added.get("assigned_role", "Coordinator"),
-                dependency_task_ids=[]
+                dependency_task_ids=[],
             )
             db.add(new_t)
 
         # 3. Mutate SubEvents
         for se_diff in payload.get("sub_event_diffs", []):
             se_id = se_diff.get("sub_event_id")
-            se_record = db.query(SubEvent).filter(SubEvent.id == se_id, SubEvent.event_id == event_id).first()
+            se_record = (
+                db.query(SubEvent)
+                .filter(SubEvent.id == se_id, SubEvent.event_id == event_id)
+                .first()
+            )
             if se_record:
                 if se_diff.get("new_start"):
                     se_record.start_time = datetime.fromisoformat(se_diff["new_start"])
@@ -461,7 +477,7 @@ class ReplanningService:
             event_id=event_id,
             action_type=f"change_proposal_applied:{change_event.change_type}",
             diff_payload=payload,
-            actor_id=actor_id
+            actor_id=actor_id,
         )
         db.add(event_log)
 
@@ -491,11 +507,7 @@ class ReplanningService:
 
     @classmethod
     def reject_change(
-        cls,
-        db: Session,
-        event_id: str,
-        change_id: str,
-        actor_id: str | None = None
+        cls, db: Session, event_id: str, change_id: str, actor_id: str | None = None
     ) -> ChangeProposalResponseSchema:
         change_event = (
             db.query(ChangeEvent)
@@ -506,16 +518,14 @@ class ReplanningService:
             raise ValueError(f"Change event '{change_id}' not found for event '{event_id}'.")
 
         if change_event.status not in ("pending", "queued"):
-            raise ValueError(f"Cannot reject change event in status '{change_event.status}'. Must be pending or queued.")
+            raise ValueError(
+                f"Cannot reject change event in status '{change_event.status}'. Must be pending or queued."
+            )
 
         was_pending = change_event.status == "pending"
 
         change_event.status = "rejected"
-        sugg = (
-            db.query(AISuggestion)
-            .filter(AISuggestion.change_event_id == change_id)
-            .first()
-        )
+        sugg = db.query(AISuggestion).filter(AISuggestion.change_event_id == change_id).first()
         if sugg:
             sugg.status = "rejected"
             if sugg.proposal_payload:
@@ -526,7 +536,7 @@ class ReplanningService:
             event_id=event_id,
             action_type=f"change_proposal_rejected:{change_event.change_type}",
             diff_payload={"change_id": change_id, "status": "rejected"},
-            actor_id=actor_id
+            actor_id=actor_id,
         )
         db.add(event_log)
 
@@ -557,11 +567,7 @@ class ReplanningService:
 
     @classmethod
     def patch_change(
-        cls,
-        db: Session,
-        event_id: str,
-        change_id: str,
-        patch_data: PatchChangeProposalSchema
+        cls, db: Session, event_id: str, change_id: str, patch_data: PatchChangeProposalSchema
     ) -> ChangeProposalResponseSchema:
         change_event = (
             db.query(ChangeEvent)
@@ -572,13 +578,11 @@ class ReplanningService:
             raise ValueError(f"Change event '{change_id}' not found.")
 
         if change_event.status != "pending":
-            raise ValueError(f"Cannot edit proposal in status '{change_event.status}'. Must be pending.")
+            raise ValueError(
+                f"Cannot edit proposal in status '{change_event.status}'. Must be pending."
+            )
 
-        sugg = (
-            db.query(AISuggestion)
-            .filter(AISuggestion.change_event_id == change_id)
-            .first()
-        )
+        sugg = db.query(AISuggestion).filter(AISuggestion.change_event_id == change_id).first()
         if not sugg or not sugg.proposal_payload:
             raise ValueError("Proposal payload missing.")
 
@@ -593,7 +597,9 @@ class ReplanningService:
                     old_amt = item.get("old_amount", 0.0)
                     item["new_amount"] = overridden_amt
                     item["difference"] = round(overridden_amt - old_amt, 2)
-                    item["formula"] = f"{item.get('category')}: User manual override = {overridden_amt:.2f}"
+                    item["formula"] = (
+                        f"{item.get('category')}: User manual override = {overridden_amt:.2f}"
+                    )
 
             # Recalculate totals
             new_total = round(sum(i.get("new_amount", 0.0) for i in budget_diff), 2)
@@ -612,17 +618,23 @@ class ReplanningService:
         return cls.get_change_proposal(db, event_id, change_id)
 
     @classmethod
-    def _check_infeasibility(cls, event: Event, change_type: str, payload: dict[str, Any]) -> str | None:
+    def _check_infeasibility(
+        cls, event: Event, change_type: str, payload: dict[str, Any]
+    ) -> str | None:
         if change_type == "guest_count_changed":
             to_g = payload.get("to_guest_count")
             if to_g is None or not isinstance(to_g, (int, float)) or int(to_g) <= 0:
                 return f"Target guest count must be a positive integer (received {to_g})."
             if int(to_g) > 10000:
-                return f"Target guest count ({to_g}) exceeds maximum supported event scale (10,000)."
+                return (
+                    f"Target guest count ({to_g}) exceeds maximum supported event scale (10,000)."
+                )
 
         elif change_type == "date_moved":
             to_d_raw = payload.get("to_date")
-            from_d_raw = payload.get("from_date", event.start_date.isoformat() if event.start_date else None)
+            from_d_raw = payload.get(
+                "from_date", event.start_date.isoformat() if event.start_date else None
+            )
             if not to_d_raw:
                 return "Target date 'to_date' is required."
             try:
@@ -654,7 +666,8 @@ class ReplanningService:
             committed_total = sum(
                 float(b.planned_amount or 0.0)
                 for b in event.budget_items
-                if getattr(b, "is_paid", False) or float(getattr(b, "actual_amount", 0.0) or 0.0) > 0
+                if getattr(b, "is_paid", False)
+                or float(getattr(b, "actual_amount", 0.0) or 0.0) > 0
             )
             if to_b < committed_total:
                 return (

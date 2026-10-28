@@ -29,7 +29,10 @@ from backend.app.services.llm_provider import (
 
 logger = logging.getLogger(__name__)
 
-GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent"
+GEMINI_API_URL = (
+    "https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent"
+)
+
 
 class GeminiQuoteExtractionProvider(BaseQuoteExtractionProvider):
     """
@@ -42,15 +45,13 @@ class GeminiQuoteExtractionProvider(BaseQuoteExtractionProvider):
         self.fallback_stub = DeterministicStubQuoteExtractionProvider()
 
     def extract_quote_from_document(
-        self,
-        file_bytes: bytes,
-        file_name: str,
-        mime_type: str,
-        category_hint: str | None = None
+        self, file_bytes: bytes, file_name: str, mime_type: str, category_hint: str | None = None
     ) -> QuoteExtractionPayloadSchema:
         if not self.api_key:
             logger.warning("No GEMINI_API_KEY provided; falling back to deterministic stub.")
-            return self.fallback_stub.extract_quote_from_document(file_bytes, file_name, mime_type, category_hint)
+            return self.fallback_stub.extract_quote_from_document(
+                file_bytes, file_name, mime_type, category_hint
+            )
 
         prompt_system = (
             "You are an expert Indian wedding and cultural event vendor quote extraction specialist. "
@@ -71,7 +72,7 @@ class GeminiQuoteExtractionProvider(BaseQuoteExtractionProvider):
             '  "confidence_score": 0.95,\n'
             '  "terms_and_conditions": ["term 1", "term 2"],\n'
             '  "line_items": [\n'
-            '    {\n'
+            "    {\n"
             '      "name": "item description",\n'
             '      "qty": 1.0,\n'
             '      "unit": "plate/day/package/units",\n'
@@ -79,29 +80,30 @@ class GeminiQuoteExtractionProvider(BaseQuoteExtractionProvider):
             '      "total": 0.0,\n'
             '      "category_tag": "tag or null",\n'
             '      "notes": "string or null"\n'
-            '    }\n'
-            '  ]\n'
+            "    }\n"
+            "  ]\n"
             "}"
         )
 
         # Prepare request payload
         encoded_data = base64.b64encode(file_bytes).decode("utf-8")
         parts: list[dict[str, Any]] = [
-            {"text": f"Document category hint: {category_hint or 'unknown'}. File name: {file_name}.\n\n{prompt_system}"},
+            {
+                "text": f"Document category hint: {category_hint or 'unknown'}. File name: {file_name}.\n\n{prompt_system}"
+            },
             {
                 "inline_data": {
-                    "mime_type": mime_type if mime_type != "application/octet-stream" else "application/pdf",
-                    "data": encoded_data
+                    "mime_type": mime_type
+                    if mime_type != "application/octet-stream"
+                    else "application/pdf",
+                    "data": encoded_data,
                 }
-            }
+            },
         ]
 
         payload = {
             "contents": [{"parts": parts}],
-            "generationConfig": {
-                "response_mime_type": "application/json",
-                "temperature": 0.1
-            }
+            "generationConfig": {"response_mime_type": "application/json", "temperature": 0.1},
         }
 
         # Up to 2 retries on validation failure
@@ -111,10 +113,7 @@ class GeminiQuoteExtractionProvider(BaseQuoteExtractionProvider):
             attempts += 1
             try:
                 with httpx.Client(timeout=45.0) as client:
-                    resp = client.post(
-                        f"{GEMINI_API_URL}?key={self.api_key}",
-                        json=payload
-                    )
+                    resp = client.post(f"{GEMINI_API_URL}?key={self.api_key}", json=payload)
                     resp.raise_for_status()
                     data = resp.json()
 
@@ -141,7 +140,9 @@ class GeminiQuoteExtractionProvider(BaseQuoteExtractionProvider):
                     time.sleep(sleep_sec)
 
         logger.error(f"Gemini quote extraction failed after 2 retries ({last_error}).")
-        raise ExtractionValidationError(f"Schema validation failed after 2 retries (3 total attempts): {last_error}")
+        raise ExtractionValidationError(
+            f"Schema validation failed after 2 retries (3 total attempts): {last_error}"
+        )
 
 
 class GeminiNegotiationDraftProvider(BaseNegotiationDraftProvider):
@@ -161,15 +162,25 @@ class GeminiNegotiationDraftProvider(BaseNegotiationDraftProvider):
         target_discount_pct: float,
         leverage_points: list[str],
         competing_vendor_name: str | None = None,
-        competing_quote_total: float | None = None
+        competing_quote_total: float | None = None,
     ) -> dict[str, dict[str, str]]:
         if not self.api_key:
             return self.fallback_stub.generate_negotiation_drafts(
-                vendor_name, category, quoted_total, target_discount_pct, leverage_points, competing_vendor_name, competing_quote_total
+                vendor_name,
+                category,
+                quoted_total,
+                target_discount_pct,
+                leverage_points,
+                competing_vendor_name,
+                competing_quote_total,
             )
 
         target_amount = round(quoted_total * (1.0 - target_discount_pct / 100.0), 2)
-        leverage_desc = "\n".join(f"- {lp}" for lp in leverage_points) if leverage_points else "Standard seasonal benchmarks"
+        leverage_desc = (
+            "\n".join(f"- {lp}" for lp in leverage_points)
+            if leverage_points
+            else "Standard seasonal benchmarks"
+        )
 
         competing_info = ""
         if competing_vendor_name and competing_quote_total:
@@ -194,10 +205,7 @@ class GeminiNegotiationDraftProvider(BaseNegotiationDraftProvider):
 
         payload = {
             "contents": [{"parts": [{"text": prompt}]}],
-            "generationConfig": {
-                "response_mime_type": "application/json",
-                "temperature": 0.2
-            }
+            "generationConfig": {"response_mime_type": "application/json", "temperature": 0.2},
         }
 
         attempts = 0
@@ -205,10 +213,7 @@ class GeminiNegotiationDraftProvider(BaseNegotiationDraftProvider):
             attempts += 1
             try:
                 with httpx.Client(timeout=30.0) as client:
-                    resp = client.post(
-                        f"{GEMINI_API_URL}?key={self.api_key}",
-                        json=payload
-                    )
+                    resp = client.post(f"{GEMINI_API_URL}?key={self.api_key}", json=payload)
                     resp.raise_for_status()
                     data = resp.json()
                     parts = data["candidates"][0]["content"]["parts"]
@@ -219,14 +224,30 @@ class GeminiNegotiationDraftProvider(BaseNegotiationDraftProvider):
                     parsed = json.loads(text.strip())
                     if "polite" in parsed and "firm" in parsed and "bundle_ask" in parsed:
                         return cast(dict[str, dict[str, str]], parsed)
-            except (httpx.HTTPError, KeyError, IndexError, json.JSONDecodeError, ValidationError, TypeError, ValueError) as e:
+            except (
+                httpx.HTTPError,
+                KeyError,
+                IndexError,
+                json.JSONDecodeError,
+                ValidationError,
+                TypeError,
+                ValueError,
+            ) as e:
                 logger.warning(f"Gemini negotiation draft attempt {attempts} failed: {e}")
                 if attempts < 3:
                     time.sleep(2.0 * attempts)
 
-        logger.warning("All Gemini negotiation draft attempts failed; falling back to deterministic stub.")
+        logger.warning(
+            "All Gemini negotiation draft attempts failed; falling back to deterministic stub."
+        )
         return self.fallback_stub.generate_negotiation_drafts(
-            vendor_name, category, quoted_total, target_discount_pct, leverage_points, competing_vendor_name, competing_quote_total
+            vendor_name,
+            category,
+            quoted_total,
+            target_discount_pct,
+            leverage_points,
+            competing_vendor_name,
+            competing_quote_total,
         )
 
 
@@ -241,13 +262,12 @@ class GeminiReplanningExplanationProvider(BaseReplanningExplanationProvider):
         self.fallback_stub = DeterministicStubReplanningExplanationProvider()
 
     def generate_explanation_and_mitigations(
-        self,
-        change_type: str,
-        diff_summary: dict[str, Any],
-        total_budget: float
+        self, change_type: str, diff_summary: dict[str, Any], total_budget: float
     ) -> dict[str, Any]:
         if not self.api_key:
-            return self.fallback_stub.generate_explanation_and_mitigations(change_type, diff_summary, total_budget)
+            return self.fallback_stub.generate_explanation_and_mitigations(
+                change_type, diff_summary, total_budget
+            )
 
         delta = diff_summary.get("budget_total_delta", 0.0)
         new_total = diff_summary.get("budget_total_new", 0.0)
@@ -278,10 +298,7 @@ class GeminiReplanningExplanationProvider(BaseReplanningExplanationProvider):
 
         payload = {
             "contents": [{"parts": [{"text": prompt}]}],
-            "generationConfig": {
-                "response_mime_type": "application/json",
-                "temperature": 0.2
-            }
+            "generationConfig": {"response_mime_type": "application/json", "temperature": 0.2},
         }
 
         attempts = 0
@@ -289,10 +306,7 @@ class GeminiReplanningExplanationProvider(BaseReplanningExplanationProvider):
             attempts += 1
             try:
                 with httpx.Client(timeout=30.0) as client:
-                    resp = client.post(
-                        f"{GEMINI_API_URL}?key={self.api_key}",
-                        json=payload
-                    )
+                    resp = client.post(f"{GEMINI_API_URL}?key={self.api_key}", json=payload)
                     resp.raise_for_status()
                     data = resp.json()
                     parts = data["candidates"][0]["content"]["parts"]
@@ -312,12 +326,22 @@ class GeminiReplanningExplanationProvider(BaseReplanningExplanationProvider):
                                 "change_type": change_type,
                                 "budget_total_delta": delta,
                                 "is_over_budget": over_budget,
-                                "overage_amount": over_amount
-                            }
+                                "overage_amount": over_amount,
+                            },
                         }
-            except (httpx.HTTPError, KeyError, IndexError, json.JSONDecodeError, ValidationError, TypeError, ValueError) as e:
+            except (
+                httpx.HTTPError,
+                KeyError,
+                IndexError,
+                json.JSONDecodeError,
+                ValidationError,
+                TypeError,
+                ValueError,
+            ) as e:
                 last_err = e
-                is_429 = "429" in str(e) or (hasattr(e, "response") and getattr(e.response, "status_code", None) == 429)
+                is_429 = "429" in str(e) or (
+                    hasattr(e, "response") and getattr(e.response, "status_code", None) == 429
+                )
                 logger.error(
                     f"CRITICAL: Gemini replanning explanation attempt {attempts} failed with {type(e).__name__}: {e}. "
                     f"Quota exhausted: {is_429}."
@@ -325,13 +349,19 @@ class GeminiReplanningExplanationProvider(BaseReplanningExplanationProvider):
                 if attempts < 3:
                     time.sleep(2.0 * attempts)
 
-        fallback_reason = "stub_fallback_quota_exhausted (HTTP 429)" if ("429" in str(last_err)) else f"stub_fallback_error ({type(last_err).__name__})"
+        fallback_reason = (
+            "stub_fallback_quota_exhausted (HTTP 429)"
+            if ("429" in str(last_err))
+            else f"stub_fallback_error ({type(last_err).__name__})"
+        )
         warning_msg = (
             f"LOUD ALERT: Live LLM explanation failed after 3 attempts due to {last_err}. "
             f"Output safely degraded to deterministic rule-based template ({fallback_reason})."
         )
         logger.error(warning_msg)
-        stub_res = self.fallback_stub.generate_explanation_and_mitigations(change_type, diff_summary, total_budget)
+        stub_res = self.fallback_stub.generate_explanation_and_mitigations(
+            change_type, diff_summary, total_budget
+        )
         stub_res["provider_used"] = fallback_reason
         stub_res["fallback_warning"] = warning_msg
         return stub_res
@@ -351,12 +381,12 @@ class GeminiVibeProvider(BaseVibeExtractionProvider, BaseThemeGenerationProvider
         self.last_fallback_warning: str | None = None
 
     def extract_vibe_from_images(
-        self,
-        images: list[dict[str, Any]],
-        text_description: str | None = None
+        self, images: list[dict[str, Any]], text_description: str | None = None
     ) -> VibeExtractionPayloadSchema:
         if not self.api_key:
-            logger.warning("No GEMINI_API_KEY provided; falling back to deterministic stub for vibe extraction.")
+            logger.warning(
+                "No GEMINI_API_KEY provided; falling back to deterministic stub for vibe extraction."
+            )
             self.last_provider_used = "deterministic_stub"
             return self.fallback_stub.extract_vibe_from_images(images, text_description)
 
@@ -366,14 +396,14 @@ class GeminiVibeProvider(BaseVibeExtractionProvider, BaseThemeGenerationProvider
             "Extract the visual and cultural essence into structured JSON with:\n"
             "{\n"
             '  "images": [\n'
-            '    {\n'
+            "    {\n"
             '      "palette": ["#FF9933", "#800020", "#FFD700", "#2E8B57", "#FFF8DC"],\n'
             '      "style_tags": ["royal_rajasthani", "heritage_palace", "traditional"],\n'
             '      "materials": ["brass", "raw_silk", "marigold", "terracotta"],\n'
             '      "lighting_mood": "warm_candlelight_ambient",\n'
             '      "flower_types": ["genda_marigold", "rajnigandha", "rose"]\n'
-            '    }\n'
-            '  ],\n'
+            "    }\n"
+            "  ],\n"
             '  "overall_mood_words": ["regal", "vibrant", "traditional", "festive", "auspicious"]\n'
             "}\n\n"
             "CRITICAL RULES:\n"
@@ -384,7 +414,9 @@ class GeminiVibeProvider(BaseVibeExtractionProvider, BaseThemeGenerationProvider
         )
 
         parts: list[dict[str, Any]] = [
-            {"text": f"{system_instruction}\n\nUser Vision Description: {text_description or 'None provided'}"}
+            {
+                "text": f"{system_instruction}\n\nUser Vision Description: {text_description or 'None provided'}"
+            }
         ]
 
         # Batched multi-image inlineData injection (DEC-023)
@@ -394,19 +426,11 @@ class GeminiVibeProvider(BaseVibeExtractionProvider, BaseThemeGenerationProvider
             if m_type == "application/octet-stream":
                 m_type = "image/jpeg"
             encoded = base64.b64encode(raw_bytes).decode("utf-8")
-            parts.append({
-                "inline_data": {
-                    "mime_type": m_type,
-                    "data": encoded
-                }
-            })
+            parts.append({"inline_data": {"mime_type": m_type, "data": encoded}})
 
         payload = {
             "contents": [{"parts": parts}],
-            "generationConfig": {
-                "response_mime_type": "application/json",
-                "temperature": 0.2
-            }
+            "generationConfig": {"response_mime_type": "application/json", "temperature": 0.2},
         }
 
         attempts = 0
@@ -415,10 +439,7 @@ class GeminiVibeProvider(BaseVibeExtractionProvider, BaseThemeGenerationProvider
             attempts += 1
             try:
                 with httpx.Client(timeout=45.0) as client:
-                    resp = client.post(
-                        f"{GEMINI_API_URL}?key={self.api_key}",
-                        json=payload
-                    )
+                    resp = client.post(f"{GEMINI_API_URL}?key={self.api_key}", json=payload)
                     resp.raise_for_status()
                     data = resp.json()
                     res_parts = data["candidates"][0]["content"]["parts"]
@@ -431,9 +452,19 @@ class GeminiVibeProvider(BaseVibeExtractionProvider, BaseThemeGenerationProvider
                     self.last_provider_used = "gemini-3-flash-preview"
                     self.last_fallback_warning = None
                     return validated
-            except (httpx.HTTPError, KeyError, IndexError, json.JSONDecodeError, ValidationError, TypeError, ValueError) as e:
+            except (
+                httpx.HTTPError,
+                KeyError,
+                IndexError,
+                json.JSONDecodeError,
+                ValidationError,
+                TypeError,
+                ValueError,
+            ) as e:
                 last_err = e
-                is_429 = "429" in str(e) or (hasattr(e, "response") and getattr(e.response, "status_code", None) == 429)
+                is_429 = "429" in str(e) or (
+                    hasattr(e, "response") and getattr(e.response, "status_code", None) == 429
+                )
                 logger.error(
                     f"CRITICAL: Gemini vibe extraction attempt {attempts} failed with {type(e).__name__}: {e}. "
                     f"Quota exhausted: {is_429}."
@@ -441,7 +472,11 @@ class GeminiVibeProvider(BaseVibeExtractionProvider, BaseThemeGenerationProvider
                 if attempts < 3:
                     time.sleep(2.0 * attempts)
 
-        fallback_reason = "stub_fallback_quota_exhausted (HTTP 429)" if ("429" in str(last_err)) else f"stub_fallback_error ({type(last_err).__name__})"
+        fallback_reason = (
+            "stub_fallback_quota_exhausted (HTTP 429)"
+            if ("429" in str(last_err))
+            else f"stub_fallback_error ({type(last_err).__name__})"
+        )
         warning_msg = (
             f"LOUD ALERT: Live LLM vibe extraction failed after 3 attempts due to {last_err}. "
             f"Output safely degraded to deterministic fixture ({fallback_reason})."
@@ -452,12 +487,12 @@ class GeminiVibeProvider(BaseVibeExtractionProvider, BaseThemeGenerationProvider
         return self.fallback_stub.extract_vibe_from_images(images, text_description)
 
     def generate_theme_proposal(
-        self,
-        style_profile: dict[str, Any],
-        event_details: dict[str, Any]
+        self, style_profile: dict[str, Any], event_details: dict[str, Any]
     ) -> ThemeGenerationPayloadSchema:
         if not self.api_key:
-            logger.warning("No GEMINI_API_KEY provided; falling back to deterministic stub for theme generation.")
+            logger.warning(
+                "No GEMINI_API_KEY provided; falling back to deterministic stub for theme generation."
+            )
             self.last_provider_used = "deterministic_stub"
             return self.fallback_stub.generate_theme_proposal(style_profile, event_details)
 
@@ -498,24 +533,21 @@ class GeminiVibeProvider(BaseVibeExtractionProvider, BaseThemeGenerationProvider
             '  "dress_code_suggestion": "string",\n'
             '  "invitation_design_brief": "string",\n'
             '  "decor_items": [\n'
-            '    {\n'
+            "    {\n"
             '      "category": "stage_backdrop | entrance_arch | table_centerpiece | lighting | photobooth | seating_lounges | mandap | ceiling_drapes | cultural_performance | default",\n'
             '      "name": "item title",\n'
             '      "quantity_formula": "1 fixed | 1 per table | 1 per 10 guests | 2 units",\n'
             '      "cost_tier": "low | medium | high",\n'
             '      "sourcing_type": "rent | diy | buy",\n'
             '      "reasoning": {"aesthetic": "brief reason"}\n'
-            '    }\n'
-            '  ]\n'
+            "    }\n"
+            "  ]\n"
             "}"
         )
 
         payload = {
             "contents": [{"parts": [{"text": prompt}]}],
-            "generationConfig": {
-                "response_mime_type": "application/json",
-                "temperature": 0.2
-            }
+            "generationConfig": {"response_mime_type": "application/json", "temperature": 0.2},
         }
 
         attempts = 0
@@ -524,10 +556,7 @@ class GeminiVibeProvider(BaseVibeExtractionProvider, BaseThemeGenerationProvider
             attempts += 1
             try:
                 with httpx.Client(timeout=45.0) as client:
-                    resp = client.post(
-                        f"{GEMINI_API_URL}?key={self.api_key}",
-                        json=payload
-                    )
+                    resp = client.post(f"{GEMINI_API_URL}?key={self.api_key}", json=payload)
                     resp.raise_for_status()
                     data = resp.json()
                     res_parts = data["candidates"][0]["content"]["parts"]
@@ -542,10 +571,22 @@ class GeminiVibeProvider(BaseVibeExtractionProvider, BaseThemeGenerationProvider
                         self.last_fallback_warning = None
                         return validated
                     else:
-                        logger.warning(f"Gemini returned only {len(validated.decor_items)} decor items (< 10). Retrying...")
-            except (httpx.HTTPError, KeyError, IndexError, json.JSONDecodeError, ValidationError, TypeError, ValueError) as e:
+                        logger.warning(
+                            f"Gemini returned only {len(validated.decor_items)} decor items (< 10). Retrying..."
+                        )
+            except (
+                httpx.HTTPError,
+                KeyError,
+                IndexError,
+                json.JSONDecodeError,
+                ValidationError,
+                TypeError,
+                ValueError,
+            ) as e:
                 last_err = e
-                is_429 = "429" in str(e) or (hasattr(e, "response") and getattr(e.response, "status_code", None) == 429)
+                is_429 = "429" in str(e) or (
+                    hasattr(e, "response") and getattr(e.response, "status_code", None) == 429
+                )
                 logger.error(
                     f"CRITICAL: Gemini theme generation attempt {attempts} failed with {type(e).__name__}: {e}. "
                     f"Quota exhausted: {is_429}."
@@ -553,7 +594,11 @@ class GeminiVibeProvider(BaseVibeExtractionProvider, BaseThemeGenerationProvider
                 if attempts < 3:
                     time.sleep(2.0 * attempts)
 
-        fallback_reason = "stub_fallback_quota_exhausted (HTTP 429)" if ("429" in str(last_err)) else f"stub_fallback_error ({type(last_err).__name__})"
+        fallback_reason = (
+            "stub_fallback_quota_exhausted (HTTP 429)"
+            if ("429" in str(last_err))
+            else f"stub_fallback_error ({type(last_err).__name__})"
+        )
         warning_msg = (
             f"LOUD ALERT: Live LLM theme generation failed after 3 attempts due to {last_err}. "
             f"Output safely degraded to deterministic fixture ({fallback_reason})."
