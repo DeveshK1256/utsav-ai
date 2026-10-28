@@ -898,30 +898,24 @@ class DAGScheduler:
     ]
 
     @classmethod
-    def get_sub_events_for_tradition(
-        cls, tradition_code: str, start_date_val: date, event_type: str = "wedding"
-    ) -> list[dict[str, Any]]:
+    def _resolve_sub_event_template(cls, tradition_code: str, event_type: str) -> list[dict[str, Any]]:
         t_key = (tradition_code or "").lower()
         e_key = (event_type or "").lower()
 
         if t_key in cls.SUB_EVENT_TEMPLATES:
-            template = cls.SUB_EVENT_TEMPLATES[t_key]
-        elif "birthday" in e_key or "birthday" in t_key:
-            template = (
-                cls.SUB_EVENT_TEMPLATES.get("birthday_kids_carnival")
-                or cls.SUB_EVENT_TEMPLATES["default"]
-            )
-        elif any(
-            k in e_key or k in t_key
-            for k in ("community", "festival", "mela", "society", "ganesh", "navratri")
-        ):
-            template = (
-                cls.SUB_EVENT_TEMPLATES.get("community_sarvajanik")
-                or cls.SUB_EVENT_TEMPLATES["default"]
-            )
-        else:
-            template = cls.SUB_EVENT_TEMPLATES.get(e_key, cls.SUB_EVENT_TEMPLATES["default"])
+            return cls.SUB_EVENT_TEMPLATES[t_key]
+        if "birthday" in e_key or "birthday" in t_key:
+            return cls.SUB_EVENT_TEMPLATES.get("birthday_kids_carnival", cls.SUB_EVENT_TEMPLATES["default"])
+        fest_keys = ("community", "festival", "mela", "society", "ganesh", "navratri")
+        if any(k in e_key or k in t_key for k in fest_keys):
+            return cls.SUB_EVENT_TEMPLATES.get("community_sarvajanik", cls.SUB_EVENT_TEMPLATES["default"])
+        return cls.SUB_EVENT_TEMPLATES.get(e_key, cls.SUB_EVENT_TEMPLATES["default"])
 
+    @classmethod
+    def get_sub_events_for_tradition(
+        cls, tradition_code: str, start_date_val: date, event_type: str = "wedding"
+    ) -> list[dict[str, Any]]:
+        template = cls._resolve_sub_event_template(tradition_code, event_type)
         result = []
         for idx, item in enumerate(template):
             sub_date = start_date_val + timedelta(days=int(str(item["day_offset"])))
@@ -1071,6 +1065,92 @@ class DAGScheduler:
         return diffs
 
     @classmethod
+    def _load_samagri_from_db(cls, codes: list[str], db: Any) -> list[dict[str, Any]]:
+        from backend.app.models.models import RitualItem
+
+        items = []
+        db_items = db.query(RitualItem).filter(RitualItem.tradition_code.in_(codes)).all()
+        for i in db_items:
+            items.append(
+                {
+                    "item_name": i.item_name,
+                    "regional_name": i.regional_name,
+                    "standard_quantity": i.standard_quantity,
+                    "ritual_name": i.ritual_name or "Puja Vidhi",
+                    "category": i.category or "puja_samagri",
+                    "spiritual_purpose": i.spiritual_purpose or "Sacred ceremonial element",
+                    "tradition_code": i.tradition_code,
+                }
+            )
+        return items
+
+    @classmethod
+    def _load_samagri_from_curated(cls, tradition_set: set[str]) -> list[dict[str, Any]]:
+        from backend.app.db.seed_traditions import CURATED_TRADITIONS
+
+        items = []
+        for t in CURATED_TRADITIONS:
+            if t["code"] in tradition_set:
+                for name, reg, qty, cat, purp, rit in t["items"]:
+                    items.append(
+                        {
+                            "item_name": name,
+                            "regional_name": reg,
+                            "standard_quantity": qty,
+                            "ritual_name": rit,
+                            "category": cat,
+                            "spiritual_purpose": purp,
+                            "tradition_code": t["code"],
+                        }
+                    )
+        return items
+
+    @classmethod
+    def _load_samagri_items(
+        cls, tradition_code: str, secondary_tradition_code: str | None, db: Any | None
+    ) -> list[dict[str, Any]]:
+        if db:
+            codes = [c for c in [tradition_code, secondary_tradition_code] if c]
+            items = cls._load_samagri_from_db(codes, db)
+            if items:
+                return items
+
+        tradition_set = {tradition_code}
+        if secondary_tradition_code:
+            tradition_set.add(secondary_tradition_code)
+        return cls._load_samagri_from_curated(tradition_set)
+
+    @classmethod
+    def _build_ritual_task(
+        cls, rit_name: str, group_items: list[dict[str, Any]], idx: int, start_date_val: date
+    ) -> dict[str, Any]:
+        offset = -1 if idx % 2 == 0 else -2
+        task_date = start_date_val + timedelta(days=offset)
+        task_start = datetime.combine(task_date, time(9 + (idx % 4), 0), tzinfo=UTC)
+        task_end = task_start + timedelta(minutes=90)
+
+        item_list_str = "; ".join(
+            [f"{it['item_name']} ({it['standard_quantity']})" for it in group_items[:4]]
+        )
+        if len(group_items) > 4:
+            item_list_str += f"; and {len(group_items) - 4} more items"
+
+        return {
+            "title": f"Procure Ritual Samagri: {rit_name}",
+            "description": (
+                f"Checklist verification and procurement for {rit_name}. "
+                f"Items include: {item_list_str}. "
+                f"Review quantities with family Panditji / priest before final purchase."
+            ),
+            "status": "pending",
+            "scheduled_start": task_start,
+            "scheduled_end": task_end,
+            "duration_minutes": 90,
+            "dependency_task_ids": ["task-vendor-intake"],
+            "assigned_role": "Family Elder / Ritual Lead",
+        }
+
+    @classmethod
     def generate_ritual_samagri_tasks(
         cls,
         start_date_val: date,
@@ -1082,47 +1162,8 @@ class DAGScheduler:
         Generates structured preparation and procurement tasks for ritual samagri,
         anchored into the DAG schedule prior to event start.
         """
-        items = []
-        if db:
-            from backend.app.models.models import RitualItem
+        items = cls._load_samagri_items(tradition_code, secondary_tradition_code, db)
 
-            codes = [c for c in [tradition_code, secondary_tradition_code] if c]
-            db_items = db.query(RitualItem).filter(RitualItem.tradition_code.in_(codes)).all()
-            for i in db_items:
-                items.append(
-                    {
-                        "item_name": i.item_name,
-                        "regional_name": i.regional_name,
-                        "standard_quantity": i.standard_quantity,
-                        "ritual_name": i.ritual_name or "Puja Vidhi",
-                        "category": i.category or "puja_samagri",
-                        "spiritual_purpose": i.spiritual_purpose or "Sacred ceremonial element",
-                        "tradition_code": i.tradition_code,
-                    }
-                )
-
-        if not items:
-            from backend.app.db.seed_traditions import CURATED_TRADITIONS
-
-            tradition_set = {tradition_code}
-            if secondary_tradition_code:
-                tradition_set.add(secondary_tradition_code)
-            for t in CURATED_TRADITIONS:
-                if t["code"] in tradition_set:
-                    for name, reg, qty, cat, purp, rit in t["items"]:
-                        items.append(
-                            {
-                                "item_name": name,
-                                "regional_name": reg,
-                                "standard_quantity": qty,
-                                "ritual_name": rit,
-                                "category": cat,
-                                "spiritual_purpose": purp,
-                                "tradition_code": t["code"],
-                            }
-                        )
-
-        tasks = []
         rituals_grouped: dict[str, list[dict[str, Any]]] = {}
         for it in items:
             rit = it.get("ritual_name") or "Main Sacred Ceremony"
@@ -1130,33 +1171,7 @@ class DAGScheduler:
                 rituals_grouped[rit] = []
             rituals_grouped[rit].append(it)
 
-        for idx, (rit_name, group_items) in enumerate(rituals_grouped.items()):
-            offset = -1 if idx % 2 == 0 else -2
-            task_date = start_date_val + timedelta(days=offset)
-            task_start = datetime.combine(task_date, time(9 + (idx % 4), 0), tzinfo=UTC)
-            task_end = task_start + timedelta(minutes=90)
-
-            item_list_str = "; ".join(
-                [f"{it['item_name']} ({it['standard_quantity']})" for it in group_items[:4]]
-            )
-            if len(group_items) > 4:
-                item_list_str += f"; and {len(group_items) - 4} more items"
-
-            tasks.append(
-                {
-                    "title": f"Procure Ritual Samagri: {rit_name}",
-                    "description": (
-                        f"Checklist verification and procurement for {rit_name}. "
-                        f"Items include: {item_list_str}. "
-                        f"Review quantities with family Panditji / priest before final purchase."
-                    ),
-                    "status": "pending",
-                    "scheduled_start": task_start,
-                    "scheduled_end": task_end,
-                    "duration_minutes": 90,
-                    "dependency_task_ids": ["task-vendor-intake"],
-                    "assigned_role": "Family Elder / Ritual Lead",
-                }
-            )
-
-        return tasks
+        return [
+            cls._build_ritual_task(rit_name, group_items, idx, start_date_val)
+            for idx, (rit_name, group_items) in enumerate(rituals_grouped.items())
+        ]

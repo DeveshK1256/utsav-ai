@@ -155,6 +155,35 @@ class DecorCostEngine:
         return 1
 
     @classmethod
+    def _get_unit_cost_range(
+        cls, cat_clean: str, tier_clean: str, is_fixed: bool, formula_lower: str
+    ) -> tuple[float, float]:
+        if (
+            cat_clean == "lighting"
+            and is_fixed
+            and any(w in formula_lower for w in ("package", "venue", "full"))
+        ):
+            cat_costs = cls.LIGHTING_PACKAGE_COSTS
+            return cat_costs.get(tier_clean, cat_costs["medium"])
+        if cat_clean == "default" and is_fixed:
+            return cls.STANDALONE_DEFAULT_COSTS.get(
+                tier_clean, cls.STANDALONE_DEFAULT_COSTS["medium"]
+            )
+        cat_costs = cls.BASE_UNIT_COSTS.get(cat_clean, cls.BASE_UNIT_COSTS["default"])
+        return cat_costs.get(tier_clean, cat_costs["medium"])
+
+    @classmethod
+    def _apply_standalone_floor(
+        cls, total_low: float, total_high: float, tier_clean: str, city_mult: float
+    ) -> tuple[float, float]:
+        min_floor_low, min_floor_high = cls.MIN_STANDALONE_FLOOR.get(
+            tier_clean, cls.MIN_STANDALONE_FLOOR["medium"]
+        )
+        scaled_floor_low = round(min_floor_low * city_mult, 2)
+        scaled_floor_high = round(min_floor_high * city_mult, 2)
+        return max(total_low, scaled_floor_low), max(total_high, scaled_floor_high)
+
+    @classmethod
     def resolve_cost_range(
         cls,
         category: str,
@@ -178,38 +207,18 @@ class DecorCostEngine:
         formula_lower = (formula_str or "").lower().strip()
         is_fixed = (qty == 1) or ("fixed" in formula_lower)
 
-        # 1. Package lighting
-        if (
-            cat_clean == "lighting"
-            and is_fixed
-            and any(w in formula_lower for w in ("package", "venue", "full"))
-        ):
-            cat_costs = cls.LIGHTING_PACKAGE_COSTS
-            low_unit, high_unit = cat_costs.get(tier_clean, cat_costs["medium"])
-        # 2. Standalone fixed default items (focal displays, welcome accents)
-        elif cat_clean == "default" and is_fixed:
-            low_unit, high_unit = cls.STANDALONE_DEFAULT_COSTS.get(
-                tier_clean, cls.STANDALONE_DEFAULT_COSTS["medium"]
-            )
-        # 3. Standard category resolution
-        else:
-            cat_costs = cls.BASE_UNIT_COSTS.get(cat_clean, cls.BASE_UNIT_COSTS["default"])
-            low_unit, high_unit = cat_costs.get(tier_clean, cat_costs["medium"])
-
+        low_unit, high_unit = cls._get_unit_cost_range(
+            cat_clean, tier_clean, is_fixed, formula_lower
+        )
         city_mult = get_city_multiplier(city)
 
         total_low = round(low_unit * city_mult * qty, 2)
         total_high = round(high_unit * city_mult * qty, 2)
 
-        # 4. Defensive floor guard: ensure fixed/standalone items never collapse below viable vendor cost
         if is_fixed:
-            min_floor_low, min_floor_high = cls.MIN_STANDALONE_FLOOR.get(
-                tier_clean, cls.MIN_STANDALONE_FLOOR["medium"]
+            total_low, total_high = cls._apply_standalone_floor(
+                total_low, total_high, tier_clean, city_mult
             )
-            scaled_floor_low = round(min_floor_low * city_mult, 2)
-            scaled_floor_high = round(min_floor_high * city_mult, 2)
-            total_low = max(total_low, scaled_floor_low)
-            total_high = max(total_high, scaled_floor_high)
 
         return (total_low, total_high)
 

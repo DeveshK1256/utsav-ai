@@ -37,6 +37,43 @@ class QuoteExtractionPayloadSchema(BaseModel):
     )
     confidence_score: float = Field(default=0.95, ge=0.0, le=1.0)
 
+    def _check_essential_identity(self) -> float:
+        v_clean = (self.vendor_name or "").strip().lower()
+        invalid_names = {"unknown", "unassigned", "none", "n/a", "extraction failed"}
+        return 0.10 if (v_clean and v_clean not in invalid_names) else 0.0
+
+    def _check_item_arithmetic(self) -> float:
+        if not self.line_items:
+            return 0.0
+        for it in self.line_items:
+            qty = it.qty or 1.0
+            price = it.unit_price or 0.0
+            item_tot = it.total or 0.0
+            if abs((qty * price) - item_tot) > 1.5:
+                return 0.0
+        return 0.10
+
+    def _check_math_consistency(self) -> float:
+        if not self.line_items:
+            return 0.0
+        items_sum = sum(it.total for it in self.line_items)
+        sub_match = self.subtotal > 0 and abs(items_sum - self.subtotal) <= 2.0
+        tot_match = self.total_amount > 0 and abs(items_sum - self.total_amount) <= 2.0
+        tax_tot_match = (
+            self.total_amount > 0
+            and abs((items_sum + self.tax_amount) - self.total_amount) <= 2.0
+        )
+        return 0.45 if (sub_match or tot_match or tax_tot_match) else 0.0
+
+    def _check_tax_and_total_integrity(self) -> float:
+        if self.total_amount <= 0:
+            return 0.0
+        if self.subtotal > 0:
+            exact_match = abs((self.subtotal + self.tax_amount) - self.total_amount) <= 2.0
+            gst_match = self.is_gst_included and abs(self.subtotal - self.total_amount) <= 2.0
+            return 0.15 if (exact_match or gst_match) else 0.0
+        return 0.15 if self.tax_amount == 0.0 else 0.0
+
     def compute_deterministic_confidence(self) -> float:
         """
         Deterministic factual and mathematical validation of extracted quote payloads in Python.
@@ -49,58 +86,15 @@ class QuoteExtractionPayloadSchema(BaseModel):
           6. Tax & Grand Total Integrity (0.15): subtotal + tax_amount == total or GST included (within 2.0 INR)
         Guarantees that any quote failing Macro-Math Consistency cannot exceed 0.55 (< 0.60 gate).
         """
-        score = 0.0
-
-        # 1. Essential Identity (0.10)
-        v_clean = (self.vendor_name or "").strip().lower()
-        if v_clean and v_clean not in {"unknown", "unassigned", "none", "n/a", "extraction failed"}:
-            score += 0.10
-
-        # 2. Financial Non-Zero (0.10)
-        if self.total_amount > 0:
-            score += 0.10
-
-        # 3. Completeness (0.10)
-        if self.line_items and len(self.line_items) >= 1:
-            score += 0.10
-
-        # 4. Per-Item Arithmetic (0.10)
-        if self.line_items and len(self.line_items) >= 1:
-            all_items_arithmetic_valid = True
-            for it in self.line_items:
-                qty = it.qty or 1.0
-                price = it.unit_price or 0.0
-                item_tot = it.total or 0.0
-                if abs((qty * price) - item_tot) > 1.5:
-                    all_items_arithmetic_valid = False
-                    break
-            if all_items_arithmetic_valid:
-                score += 0.10
-
-        # 5. Math Consistency: sum(line_items) vs Subtotal / Total (0.45)
-        if self.line_items and len(self.line_items) >= 1:
-            items_sum = sum(it.total for it in self.line_items)
-            if (
-                (self.subtotal > 0 and abs(items_sum - self.subtotal) <= 2.0)
-                or (self.total_amount > 0 and abs(items_sum - self.total_amount) <= 2.0)
-                or (
-                    self.total_amount > 0
-                    and abs((items_sum + self.tax_amount) - self.total_amount) <= 2.0
-                )
-            ):
-                score += 0.45
-
-        # 6. Tax & Grand Total Integrity (0.15)
-        if self.total_amount > 0:
-            if self.subtotal > 0:
-                if abs((self.subtotal + self.tax_amount) - self.total_amount) <= 2.0 or (
-                    self.is_gst_included and abs(self.subtotal - self.total_amount) <= 2.0
-                ):
-                    score += 0.15
-            elif self.tax_amount == 0.0:
-                score += 0.15
-
-        return round(min(max(score, 0.0), 1.0), 2)
+        scores = [
+            self._check_essential_identity(),
+            0.10 if self.total_amount > 0 else 0.0,
+            0.10 if (self.line_items and len(self.line_items) >= 1) else 0.0,
+            self._check_item_arithmetic(),
+            self._check_math_consistency(),
+            self._check_tax_and_total_integrity(),
+        ]
+        return round(min(max(sum(scores), 0.0), 1.0), 2)
 
 
 class HiddenCostAlertSchema(BaseModel):

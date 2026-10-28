@@ -96,6 +96,23 @@ class BudgetScalingEngine:
         return Decimal(str(val))
 
     @classmethod
+    def _resolve_model_key(cls, event_type: str) -> str:
+        raw_key = (event_type or "").lower().strip()
+        if raw_key in cls.ALLOCATION_MODELS:
+            return raw_key
+        if "birthday" in raw_key:
+            return "birthday"
+        if any(
+            k in raw_key for k in ("community", "festival", "mela", "society", "ganesh", "navratri")
+        ):
+            return "community_festival"
+        if "anniversary" in raw_key:
+            return "milestone_anniversary"
+        if any(k in raw_key for k in ("puja", "pooja", "havan", "vrat", "griha")):
+            return "puja"
+        return "wedding"
+
+    @classmethod
     def compute_budget_allocation(
         cls,
         total_envelope: float,
@@ -110,23 +127,7 @@ class BudgetScalingEngine:
 
         tier = cls.resolve_city_tier(city)
         multiplier = cls.get_tier_multiplier(tier)
-
-        raw_key = (event_type or "").lower().strip()
-        if raw_key in cls.ALLOCATION_MODELS:
-            model_key = raw_key
-        elif "birthday" in raw_key:
-            model_key = "birthday"
-        elif any(
-            k in raw_key for k in ("community", "festival", "mela", "society", "ganesh", "navratri")
-        ):
-            model_key = "community_festival"
-        elif "anniversary" in raw_key:
-            model_key = "milestone_anniversary"
-        elif any(k in raw_key for k in ("puja", "pooja", "havan", "vrat", "griha")):
-            model_key = "puja"
-        else:
-            model_key = "wedding"
-
+        model_key = cls._resolve_model_key(event_type)
         allocation_spec = cls.ALLOCATION_MODELS[model_key]
 
         envelope_dec = Decimal(str(total_envelope))
