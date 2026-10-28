@@ -1,3 +1,4 @@
+from typing import Any
 """
 Ritual & Cultural Intelligence API Endpoints (M5 - F2).
 Exposes astronomical panchang calculations (DEC-027), curated tradition samagri,
@@ -49,7 +50,7 @@ def get_panchang_for_date(
     latitude: float = Query(28.6139, description="Venue latitude (-90 to 90)"),
     longitude: float = Query(77.2090, description="Venue longitude (-180 to 180)"),
     elevation_meters: float = Query(216.0, description="Venue elevation above sea level in meters"),
-):
+) -> PanchangResponseSchema:
     """
     Computes rigorous astronomical panchang parameters for a given date and venue coordinates.
     DEC-027: Deterministic ephemeris math using Chitrapaksha (Lahiri) Ayanamsha.
@@ -70,7 +71,7 @@ def get_panchang_for_date(
 
 
 @router.get("/traditions")
-def list_curated_traditions(db: Session = Depends(get_db)):
+def list_curated_traditions(db: Session = Depends(get_db)) -> list[dict[str, Any]]:
     """Lists all available cultural traditions with verification status and sources."""
     traditions = db.query(Tradition).all()
     return [
@@ -88,7 +89,7 @@ def list_curated_traditions(db: Session = Depends(get_db)):
 
 
 @router.get("/traditions/{code}/samagri")
-def get_tradition_samagri(code: str, db: Session = Depends(get_db)):
+def get_tradition_samagri(code: str, db: Session = Depends(get_db)) -> dict[str, Any]:
     """Retrieves full itemized samagri checklist for a given cultural tradition."""
     tradition = db.query(Tradition).filter(Tradition.code == code).first()
     if not tradition:
@@ -126,7 +127,7 @@ def get_tradition_samagri(code: str, db: Session = Depends(get_db)):
 
 
 @router.post("/merge-traditions")
-def merge_dual_traditions(payload: MergeTraditionsRequest, db: Session = Depends(get_db)):
+def merge_dual_traditions(payload: MergeTraditionsRequest, db: Session = Depends(get_db)) -> dict[str, Any]:
     """
     Reconciles two distinct cultural traditions into an integrated schedule and samagri list.
     Tags source traditions, combines shared sacred items, detects conflicts, and creates elder alignment points.
@@ -160,7 +161,7 @@ def generate_ritual_tasks_for_event(
     event_id: str,
     event: Event = Depends(verify_event_owner_token),
     db: Session = Depends(get_db)
-):
+) -> dict[str, Any]:
     """
     Generates structured preparation and procurement tasks for ritual samagri,
     inserting them into the event's DAG task graph.
@@ -216,7 +217,7 @@ def get_muhurat_candidates(
     latitude: float = Query(28.6139, description="Venue latitude"),
     longitude: float = Query(77.2090, description="Venue longitude"),
     elevation_meters: float = Query(216.0, description="Elevation in meters")
-):
+) -> dict[str, Any]:
     """
     Calculates 3 auspicious candidate muhurat windows (Morning Brahma/Pratah, Midday Abhijit, Evening Godhuli/Twilight)
     alongside inauspicious Rahu Kaal prohibitions and mandatory priest verification disclaimer.
@@ -280,7 +281,7 @@ def get_muhurat_candidates(
 
 
 @router.get("/events/{event_id}/pandit-guide")
-def generate_pandit_guide(event_id: str, db: Session = Depends(get_db)):
+def generate_pandit_guide(event_id: str, db: Session = Depends(get_db)) -> dict[str, Any]:
     """
     Generates a print-ready, priest-tailored ceremonial guide for an event.
     Includes date, local panchang & muhurat calculations, ritual sequence, and itemized samagri.
