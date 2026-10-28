@@ -51,13 +51,23 @@ extend-immutable-calls = [
 [tool.mypy]
 python_version = "3.12"
 explicit_package_bases = true
-ignore_missing_imports = true
 warn_unused_configs = true
 check_untyped_defs = true
-disallow_untyped_defs = false
-disallow_incomplete_defs = false
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+warn_return_any = true
+no_implicit_optional = true
+strict_equality = true
+
+[[tool.mypy.overrides]]
+module = [
+    "ephem",
+    "backend.app.services.providers.openai_provider",
+]
+ignore_missing_imports = true
 
 [tool.pytest.ini_options]
+testpaths = ["tests"]
 markers = [
     "live: marks tests as requiring real live external API credentials (deselect with '-m \"not live\"')",
 ]
@@ -67,5 +77,5 @@ branch = true
 source = ["backend/app"]
 
 [tool.coverage.report]
-fail_under = 85
+fail_under = 90
 show_missing = true
