@@ -88,3 +88,7 @@ tools/
 lh-*.json
 cov.json
 
+video_pipeline/clips_detailed/
+video_pipeline/trimmed_detailed/
+video_pipeline/detailed_vo/
+video_pipeline/detailed_video_concat.mp4
