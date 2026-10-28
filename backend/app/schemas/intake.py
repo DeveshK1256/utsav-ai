@@ -1,7 +1,7 @@
 from datetime import date, datetime
 from typing import Any
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, ValidationInfo, field_validator
 
 
 class BudgetCalculationRequestSchema(BaseModel):
@@ -50,7 +50,7 @@ class IntakeRequestSchema(BaseModel):
 
     @field_validator("end_date")
     @classmethod
-    def validate_dates(cls, end_date_val: date, info):
+    def validate_dates(cls, end_date_val: date, info: ValidationInfo) -> date:
         start_date_val = info.data.get("start_date")
         if start_date_val and end_date_val < start_date_val:
             raise ValueError("end_date cannot be earlier than start_date")
@@ -107,3 +107,9 @@ class MasterPlanResponseSchema(BaseModel):
     budget_breakdown: list[BudgetItemResponseSchema]
     tasks: list[TaskResponseSchema]
     created_at: datetime
+
+
+class TraditionOptionSchema(BaseModel):
+    code: str
+    name: str
+    description: str | None = None

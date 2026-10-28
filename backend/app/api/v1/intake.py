@@ -1,4 +1,7 @@
+import logging
+
 from fastapi import APIRouter, Depends, HTTPException, Request, status
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from backend.app.core.limiter import limiter
@@ -10,16 +13,22 @@ from backend.app.schemas.intake import (
     BudgetItemCalculationSchema,
     IntakeRequestSchema,
     MasterPlanResponseSchema,
+    TraditionOptionSchema,
 )
 from backend.app.services.budget_engine import BudgetScalingEngine
 from backend.app.services.intake_service import IntakeService
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/intake", tags=["Intake"])
 
 
 @router.post("/calculate-budget", response_model=BudgetCalculationResponseSchema)
 @limiter.limit("60/minute")
-def calculate_budget(request: Request, payload: BudgetCalculationRequestSchema):
+def calculate_budget(
+    request: Request,
+    payload: BudgetCalculationRequestSchema
+) -> BudgetCalculationResponseSchema:
     """
     Computes deterministic city-tier scaled budget allocation.
     Single authoritative backend calculation engine called by frontend clients.
@@ -53,14 +62,22 @@ def calculate_budget(request: Request, payload: BudgetCalculationRequestSchema):
             ]
         )
     except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
-    except Exception as e:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Budget calculation failed: {e!s}")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
+    except (KeyError, RuntimeError, SQLAlchemyError) as e:
+        logger.error("Budget calculation failed: %s", e)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Budget calculation failed: {e!s}"
+        ) from e
 
 
 @router.post("/generate", response_model=MasterPlanResponseSchema, status_code=status.HTTP_201_CREATED)
 @limiter.limit("20/minute")
-def generate_plan(request: Request, payload: IntakeRequestSchema, db: Session = Depends(get_db)):
+def generate_plan(
+    request: Request,
+    payload: IntakeRequestSchema,
+    db: Session = Depends(get_db)
+) -> MasterPlanResponseSchema:
     """
     Submits conversational intake questionnaire and deterministically generates
     the multi-day master itinerary, itemized budget, and scheduled task dependencies.
@@ -68,23 +85,27 @@ def generate_plan(request: Request, payload: IntakeRequestSchema, db: Session = 
     try:
         return IntakeService.generate_master_plan(db, payload)
     except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
-    except Exception as e:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Plan generation failed: {e!s}")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
+    except (KeyError, RuntimeError, SQLAlchemyError) as e:
+        logger.error("Plan generation failed: %s", e)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Plan generation failed: {e!s}"
+        ) from e
 
 
-@router.get("/traditions")
-def list_traditions(db: Session = Depends(get_db)):
+@router.get("/traditions", response_model=list[TraditionOptionSchema])
+def list_traditions(db: Session = Depends(get_db)) -> list[TraditionOptionSchema]:
     """
     Lists available cultural traditions and ritual frameworks.
     """
     IntakeService.ensure_default_traditions(db)
     traditions = db.query(Tradition).all()
     return [
-        {
-            "code": t.code,
-            "name": t.regional_name,
-            "description": t.description
-        }
+        TraditionOptionSchema(
+            code=t.code,
+            name=t.regional_name,
+            description=t.description
+        )
         for t in traditions
     ]

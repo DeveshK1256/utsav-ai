@@ -1,17 +1,21 @@
 import contextlib
+import logging
 
 from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from backend.app.core.security import verify_event_owner_token
 from backend.app.db.session import get_db
-from backend.app.models.models import Event
+from backend.app.models.models import ChangeEvent, Event
 from backend.app.schemas.replanning import (
     ChangeProposalResponseSchema,
     ChangeRequestSchema,
     PatchChangeProposalSchema,
 )
 from backend.app.services.replanning_service import ReplanningService
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/events/{id}/changes", tags=["Replanning (Plan B)"])
 
@@ -20,15 +24,14 @@ router = APIRouter(prefix="/events/{id}/changes", tags=["Replanning (Plan B)"])
 def list_change_proposals(
     id: str,
     db: Session = Depends(get_db)
-):
+) -> list[ChangeProposalResponseSchema]:
     """
     Lists all change proposals for the specified event.
     """
-    from backend.app.models.models import ChangeEvent
     changes = db.query(ChangeEvent).filter(ChangeEvent.event_id == id).order_by(ChangeEvent.created_at.desc()).all()
-    results = []
+    results: list[ChangeProposalResponseSchema] = []
     for c in changes:
-        with contextlib.suppress(Exception):
+        with contextlib.suppress(ValueError, KeyError):
             results.append(ReplanningService.get_change_proposal(db, event_id=id, change_id=c.id))
     return results
 
@@ -39,7 +42,7 @@ def submit_change_event(
     payload: ChangeRequestSchema,
     event: Event = Depends(verify_event_owner_token),
     db: Session = Depends(get_db)
-):
+) -> ChangeProposalResponseSchema:
     """
     Submits a change event (guest count, vendor cancel, date move, budget cut, venue unavailable).
     Computes deterministic diffs and returns proposal without mutating database (unless later accepted).
@@ -48,9 +51,13 @@ def submit_change_event(
         proposal = ReplanningService.create_change_proposal(db, event_id=id, change_req=payload)
         return proposal
     except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
-    except Exception as e:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Replanning error: {e!s}")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
+    except (KeyError, RuntimeError, SQLAlchemyError) as e:
+        logger.error("Replanning error for event %s: %s", id, e)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Replanning error: {e!s}"
+        ) from e
 
 
 @router.get("/{change_id}", response_model=ChangeProposalResponseSchema)
@@ -58,14 +65,14 @@ def get_change_proposal(
     id: str,
     change_id: str,
     db: Session = Depends(get_db)
-):
+) -> ChangeProposalResponseSchema:
     """
     Retrieves an existing change proposal diff and explanation.
     """
     try:
         return ReplanningService.get_change_proposal(db, event_id=id, change_id=change_id)
     except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e)) from e
 
 
 @router.post("/{change_id}/accept", response_model=ChangeProposalResponseSchema)
@@ -74,7 +81,7 @@ def accept_change_proposal(
     change_id: str,
     event: Event = Depends(verify_event_owner_token),
     db: Session = Depends(get_db)
-):
+) -> ChangeProposalResponseSchema:
     """
     Explicit user confirmation to accept and atomically apply the proposal to the database.
     Mutates budget, tasks, sub-events, logs event, and promotes next queued change.
@@ -82,9 +89,13 @@ def accept_change_proposal(
     try:
         return ReplanningService.accept_change(db, event_id=id, change_id=change_id)
     except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
-    except Exception as e:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Accept error: {e!s}")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
+    except (KeyError, RuntimeError, SQLAlchemyError) as e:
+        logger.error("Failed to accept proposal %s: %s", change_id, e)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Accept error: {e!s}"
+        ) from e
 
 
 @router.post("/{change_id}/reject", response_model=ChangeProposalResponseSchema)
@@ -93,16 +104,20 @@ def reject_change_proposal(
     change_id: str,
     event: Event = Depends(verify_event_owner_token),
     db: Session = Depends(get_db)
-):
+) -> ChangeProposalResponseSchema:
     """
     Explicit user rejection of a change proposal. Database remains untouched.
     """
     try:
         return ReplanningService.reject_change(db, event_id=id, change_id=change_id)
     except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
-    except Exception as e:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Reject error: {e!s}")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
+    except (KeyError, RuntimeError, SQLAlchemyError) as e:
+        logger.error("Failed to reject proposal %s: %s", change_id, e)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Reject error: {e!s}"
+        ) from e
 
 
 @router.patch("/{change_id}", response_model=ChangeProposalResponseSchema)
@@ -112,13 +127,17 @@ def patch_change_proposal(
     payload: PatchChangeProposalSchema,
     event: Event = Depends(verify_event_owner_token),
     db: Session = Depends(get_db)
-):
+) -> ChangeProposalResponseSchema:
     """
     Allows user manual edits/overrides to proposal diffs prior to acceptance.
     """
     try:
         return ReplanningService.patch_change(db, event_id=id, change_id=change_id, patch_data=payload)
     except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
-    except Exception as e:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Patch error: {e!s}")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
+    except (KeyError, RuntimeError, SQLAlchemyError) as e:
+        logger.error("Failed to patch proposal %s: %s", change_id, e)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Patch error: {e!s}"
+        ) from e
