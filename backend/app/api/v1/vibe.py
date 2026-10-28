@@ -103,7 +103,7 @@ def upload_vibe_and_extract(
     text_description: str | None = Form(None),
     event: Event = Depends(verify_event_owner_token),
     db: Session = Depends(get_db)
-):
+) -> AggregatedStyleProfileSchema:
     """
     Uploads up to 10 inspiration images + text description.
     Batches images into a single multimodal Gemini call (DEC-023) or deterministic stub.
@@ -126,7 +126,7 @@ def generate_theme(
     profile_id: str,
     event: Event = Depends(verify_event_owner_token),
     db: Session = Depends(get_db)
-):
+) -> ThemeProposalResponseSchema:
     """
     Generates a concrete theme proposal with >=10 decor items with formulas, menu direction,
     playlist genres, dress codes, and invitation briefs.
@@ -145,7 +145,7 @@ def get_moodboard(
     event_id: str,
     profile_id: str,
     db: Session = Depends(get_db)
-):
+) -> Response:
     """
     Returns code-side generated Pillow mood board collage JPEG (DEC-022).
     """
@@ -159,7 +159,7 @@ def accept_decor_item(
     item_id: str,
     event: Event = Depends(verify_event_owner_token),
     db: Session = Depends(get_db)
-):
+) -> DecorItemProposalSchema:
     """
     Accepts an individual decor item, automatically creating a corresponding BudgetItem and Task.
     """
@@ -173,7 +173,7 @@ def reject_decor_item(
     item_id: str,
     event: Event = Depends(verify_event_owner_token),
     db: Session = Depends(get_db)
-):
+) -> DecorItemProposalSchema:
     """
     Rejects an individual decor item.
     """
@@ -185,7 +185,7 @@ def reject_decor_item(
 def list_style_profiles(
     event_id: str,
     db: Session = Depends(get_db)
-):
+) -> list[AggregatedStyleProfileSchema]:
     """
     Lists all style profiles created for an event.
     """
@@ -198,7 +198,7 @@ def list_themes_for_profile(
     event_id: str,
     profile_id: str,
     db: Session = Depends(get_db)
-):
+) -> list[ThemeProposalResponseSchema]:
     """
     Lists theme proposals generated for a given style profile.
     """
