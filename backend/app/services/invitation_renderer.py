@@ -301,7 +301,7 @@ class InvitationCardRenderer:
         draw.text(((cls.WIDTH - (b[2] - b[0])) // 2, box_y1 + 18), date_display, fill=primary, font=font_badge)
 
         if muhurat:
-            muhurat_text = f"★ Shubh Muhurat: {muhurat}"
+            muhurat_text = f"Shubh Muhurat: {muhurat}"
             b = draw.textbbox((0, 0), muhurat_text, font=font_sub)
             draw.text(((cls.WIDTH - (b[2] - b[0])) // 2, box_y1 + 68), muhurat_text, fill=secondary, font=font_sub)
 
@@ -309,7 +309,7 @@ class InvitationCardRenderer:
 
         # 7. Ceremonies / Sub-events if provided
         if ceremonies and len(ceremonies) > 0:
-            c_text = " • ".join(ceremonies[:4])
+            c_text = " | ".join(ceremonies[:4])
             c_disp = truncate_with_ellipsis(c_text, font_sub, cls.WIDTH - 200, draw)
             b = draw.textbbox((0, 0), c_disp, font=font_sub)
             draw.text(((cls.WIDTH - (b[2] - b[0])) // 2, cur_y), c_disp, fill=accent, font=font_sub)
@@ -463,7 +463,7 @@ class InvitationCardRenderer:
         # Top decorative banner
         draw.rectangle([(150, 40), (cls.WIDTH - 150, 110)], fill=primary)
         font_badge = get_font(FONT_BOLD_PATH, 30)
-        festive_banner = "UTSAHAM • CELEBRATION"
+        festive_banner = "UTSAHAM — CELEBRATION"
         bbox = draw.textbbox((0, 0), festive_banner, font=font_badge)
         draw.text(((cls.WIDTH - (bbox[2] - bbox[0])) // 2, 58), festive_banner, fill=(255, 255, 255), font=font_badge)
 
