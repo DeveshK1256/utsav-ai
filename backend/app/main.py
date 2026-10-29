@@ -244,7 +244,7 @@ def run_db_backfill_on_startup() -> None:
     logger.info("Launched background DB initialization thread. Web server is ready to bind port.")
 
 
-@app.get("/health")
+@app.api_route("/health", methods=["GET", "HEAD"])
 def health_check() -> dict[str, Any]:
     gemini_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
     return {
