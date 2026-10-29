@@ -113,11 +113,15 @@ disallow_incomplete_defs = true
 warn_return_any = true
 no_implicit_optional = true
 strict_equality = true
+ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
 module = [
     "ephem",
     "slowapi.*",
+    "google.*",
+    "google.generativeai.*",
+    "PIL.*",
 ]
 ignore_missing_imports = true
 
