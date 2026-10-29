@@ -302,9 +302,7 @@ SUB_EVENT_TEMPLATES: dict[str, list[dict[str, Any]]] = {
             "duration_hours": 2,
             "is_outdoor": False,
             "is_muhurat_locked": True,
-            "muhurat_notes": (
-                "Auspicious evening Waqt for Nikahnama signing and Mehr settlement"
-            ),
+            "muhurat_notes": ("Auspicious evening Waqt for Nikahnama signing and Mehr settlement"),
             "venue_type": "Draped Nikah Diwan Hall",
         },
         {
@@ -682,9 +680,7 @@ SUB_EVENT_TEMPLATES: dict[str, list[dict[str, Any]]] = {
 }
 
 FOUNDATION_TASKS: list[TaskNode] = [
-    TaskNode(
-        "venue_lock", "Contract and Lock Primary Venue", 120, -60, "Host", dependencies=[]
-    ),
+    TaskNode("venue_lock", "Contract and Lock Primary Venue", 120, -60, "Host", dependencies=[]),
     TaskNode(
         "caterer_menu",
         "Finalize Catering Menu & Per-Plate Contract",

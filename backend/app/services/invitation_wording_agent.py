@@ -115,6 +115,7 @@ class InvitationWordingAgent:
         ceremony_names: list[str] | None = None,
     ) -> InvitationWordingResponse:
         """Deterministic non-LLM template options conforming strictly to facts."""
+        _ = event_type
         clean_event = event_name.strip() or "Celebration"
         clean_date = date_str.strip() or "Date to be confirmed"
         clean_venue = venue_str.strip() if venue_str else "Venue to be confirmed"
@@ -191,7 +192,6 @@ class InvitationWordingAgent:
         ceremony_names: list[str] | None,
         design_brief: str | None,
     ) -> InvitationWordingResponse:
-        import httpx
 
         prompt = f"""
 You are the Utsav Invitation Text Composer Agent.
@@ -261,7 +261,8 @@ OUTPUT JSON FORMAT ONLY:
             ]
 
             if not variants:
-                raise ValueError("Empty variants from Gemini")
+                err_msg = "Empty variants from Gemini"
+                raise ValueError(err_msg)
 
             return InvitationWordingResponse(
                 variants=variants, provider_used="gemini", fallback_warning=None

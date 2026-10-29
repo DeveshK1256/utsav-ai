@@ -50,18 +50,18 @@ class WhatsAppSendService:
                 f"on {date_str} in {city}. Please RSVP to help us plan the party! "
                 "Reply 'Yes', 'No', or 'Maybe'."
             )
-        elif event.event_type in ("community_festival", "puja"):
+        if event.event_type in ("community_festival", "puja"):
             return (
                 f"Namaste {guest_name}! 🙏 {host_name} warmly invites you and your family "
                 f"to {event_name} on {date_str} in {city}. "
                 "Please confirm your attendance for prasad/seating arrangements."
             )
-        else:  # Wedding / general
-            return (
-                f"Namaste {guest_name}! 🌸 With the blessings of our elders, {host_name} "
-                f"joyfully invites you to celebrate {event_name} on {date_str} in {city}. "
-                "Please reply 'Yes' or 'No' to RSVP."
-            )
+        # Wedding / general
+        return (
+            f"Namaste {guest_name}! 🌸 With the blessings of our elders, {host_name} "
+            f"joyfully invites you to celebrate {event_name} on {date_str} in {city}. "
+            "Please reply 'Yes' or 'No' to RSVP."
+        )
 
     @classmethod
     def _enforce_opt_out(
@@ -91,9 +91,8 @@ class WhatsAppSendService:
         db.add(log_entry)
         db.commit()
         db.refresh(log_entry)
-        raise OptOutBlockedError(
-            f"Phone {norm_phone} has opted out (STOP) and cannot be contacted."
-        )
+        err_msg = f"Phone {norm_phone} has opted out (STOP) and cannot be contacted."
+        raise OptOutBlockedError(err_msg)
 
     @classmethod
     def _dispatch_provider_message(
@@ -181,7 +180,8 @@ class WhatsAppSendService:
         """
         event = db.query(Event).filter(Event.id == event_id).first()
         if not event:
-            raise ValueError(f"Event {event_id} not found")
+            err_msg = f"Event {event_id} not found"
+            raise ValueError(err_msg)
 
         query = db.query(Guest).filter(Guest.event_id == event_id)
         if guest_ids:

@@ -1,6 +1,11 @@
 "use client";
 
-import React, { createContext, useContext, useEffect, useState } from "react";
+import React, {
+  createContext,
+  useContext,
+  useEffect,
+  useSyncExternalStore,
+} from "react";
 
 type Theme = "light" | "dark";
 
@@ -26,42 +31,62 @@ function applyThemeClass(t: Theme) {
   }
 }
 
+function subscribeTheme(callback: () => void) {
+  if (typeof window === "undefined") return () => {};
+  const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
+  const handleSystemChange = () => {
+    if (!localStorage.getItem("utsav-theme")) {
+      callback();
+    }
+  };
+  mediaQuery.addEventListener("change", handleSystemChange);
+  window.addEventListener("utsav_theme_change", callback);
+  window.addEventListener("storage", callback);
+  return () => {
+    mediaQuery.removeEventListener("change", handleSystemChange);
+    window.removeEventListener("utsav_theme_change", callback);
+    window.removeEventListener("storage", callback);
+  };
+}
+
+function getThemeSnapshot(): Theme {
+  if (typeof window === "undefined") return "light";
+  try {
+    const savedTheme = localStorage.getItem("utsav-theme");
+    if (savedTheme === "dark" || savedTheme === "light") {
+      return savedTheme;
+    }
+    const prefersDark = window.matchMedia(
+      "(prefers-color-scheme: dark)",
+    ).matches;
+    return prefersDark ? "dark" : "light";
+  } catch {
+    return "light";
+  }
+}
+
+function getServerSnapshot(): Theme {
+  return "light";
+}
+
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setThemeState] = useState<Theme>("light");
-  const [mounted, setMounted] = useState(false);
+  const theme: Theme = useSyncExternalStore<Theme>(
+    subscribeTheme,
+    getThemeSnapshot,
+    getServerSnapshot,
+  );
 
   useEffect(() => {
-    // Determine initial theme: localStorage > system preference
-    const savedTheme = localStorage.getItem("utsav-theme") as Theme | null;
-    if (savedTheme === "dark" || savedTheme === "light") {
-      setThemeState(savedTheme);
-      applyThemeClass(savedTheme);
-    } else {
-      const prefersDark = window.matchMedia(
-        "(prefers-color-scheme: dark)",
-      ).matches;
-      const initialTheme: Theme = prefersDark ? "dark" : "light";
-      setThemeState(initialTheme);
-      applyThemeClass(initialTheme);
-    }
-    setMounted(true);
-
-    // Listen for OS system theme changes
-    const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
-    const handleSystemChange = (e: MediaQueryListEvent) => {
-      if (!localStorage.getItem("utsav-theme")) {
-        const nextTheme: Theme = e.matches ? "dark" : "light";
-        setThemeState(nextTheme);
-        applyThemeClass(nextTheme);
-      }
-    };
-    mediaQuery.addEventListener("change", handleSystemChange);
-    return () => mediaQuery.removeEventListener("change", handleSystemChange);
-  }, []);
+    applyThemeClass(theme);
+  }, [theme]);
 
   const setTheme = (nextTheme: Theme) => {
-    setThemeState(nextTheme);
-    localStorage.setItem("utsav-theme", nextTheme);
+    try {
+      localStorage.setItem("utsav-theme", nextTheme);
+      window.dispatchEvent(new Event("utsav_theme_change"));
+    } catch {
+      // storage quota or private mode
+    }
     applyThemeClass(nextTheme);
   };
 

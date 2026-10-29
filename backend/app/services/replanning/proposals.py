@@ -3,7 +3,7 @@ from typing import Any
 
 from backend.app.models.models import Event
 from backend.app.services.budget_rescaling_engine import BudgetRescalingEngine
-from backend.app.services.dag_scheduler import DAGScheduler
+from backend.app.services.dag import DAGScheduler
 
 
 class ProposalBuilders:

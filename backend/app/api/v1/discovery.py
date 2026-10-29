@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 from backend.app.core.limiter import limiter
 from backend.app.db.session import get_db
 from backend.app.schemas.discovery import VendorDiscoveryResponse
-from backend.app.services.discovery_service import VendorDiscoveryService
+from backend.app.services.discovery import VendorDiscoveryService
 
 router = APIRouter(prefix="/discovery", tags=["Vendor & Venue Discovery (F15-Lite)"])
 
@@ -36,6 +36,7 @@ def get_nearby_vendors(
     - Zero fabricated cost: cost_estimate returns {is_estimate: true, limited_data: true}.
     - If lat/lng are omitted, falls back to city center coordinates or city-name matching.
     """
+    _ = (request,)
     if lat is None and lng is None and not city:
         raise HTTPException(
             status_code=400,
@@ -61,6 +62,7 @@ def geocode_location(
     Converts a manual city name or 6-digit pincode to coordinates using OpenStreetMap Nominatim.
     Free, no API key, zero-billing, strictly respects 1 req/sec policy with identification header.
     """
+    _ = (request,)
     res = VendorDiscoveryService.geocode_query(q)
     if not res:
         raise HTTPException(

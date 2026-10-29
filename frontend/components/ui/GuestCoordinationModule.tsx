@@ -233,9 +233,17 @@ export function GuestCoordinationModule({
   }, [apiBase, eventId]);
 
   useEffect(() => {
-    if (eventId && eventId !== "default") {
-      fetchData();
-    }
+    let ignore = false;
+    const init = async () => {
+      await Promise.resolve();
+      if (!ignore && eventId && eventId !== "default") {
+        fetchData();
+      }
+    };
+    init();
+    return () => {
+      ignore = true;
+    };
   }, [fetchData, eventId]);
 
   // Handle Send Batch Invitations

@@ -272,7 +272,7 @@ from unittest.mock import MagicMock, patch
 
 
 def test_tradition_merge_service_branches(db, monkeypatch):
-    from backend.app.services.tradition_merge_service import TraditionMergeService, get_tradition_merge_agent, GeminiTraditionMergeAgent, DeterministicStubTraditionMergeAgent
+    from backend.app.services.tradition_merge import TraditionMergeService, get_tradition_merge_agent, GeminiTraditionMergeAgent, DeterministicStubTraditionMergeAgent
 
     # 1. get_tradition_merge_agent with and without GEMINI_API_KEY
     monkeypatch.setenv("GEMINI_API_KEY", "test_gemini_key_abc")

@@ -34,20 +34,20 @@ from backend.app.services.budget_rescaling_engine import (
     BudgetItemDiff,
 )
 from backend.app.services.whatsapp.faq_bot import FAQBotService, HARD_FALLBACK_REFUSAL
-from backend.app.services.invitation_renderer import (
+from backend.app.services.invitation import (
     hex_to_rgb,
     get_font,
     wrap_text,
     truncate_with_ellipsis,
     InvitationCardRenderer,
 )
-from backend.app.services.dag_scheduler import DAGScheduler, TaskNode
-from backend.app.services.replanning_service import ReplanningService
+from backend.app.services.dag import DAGScheduler, TaskNode
+from backend.app.services.replanning import ReplanningService
 from backend.app.schemas.replanning import (
     ChangeRequestSchema,
     PatchChangeProposalSchema,
 )
-from backend.app.services.discovery_service import VendorDiscoveryService
+from backend.app.services.discovery import VendorDiscoveryService
 from backend.app.services.vibe_service import VibeService
 from backend.app.services.whatsapp.webhook_service import WhatsAppWebhookService
 

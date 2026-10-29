@@ -6,7 +6,7 @@ import { Play, Pause, Volume2, VolumeX, Subtitles } from "lucide-react";
 export function WalkthroughVideoPlayer() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [isMuted, setIsMuted] = useState(false);
+  const [isMuted, setIsMuted] = useState(true);
   const [captionsEnabled, setCaptionsEnabled] = useState(true);
   const [hasInteracted, setHasInteracted] = useState(false);
   const [hasError, setHasError] = useState(false);
@@ -26,7 +26,6 @@ export function WalkthroughVideoPlayer() {
     } else {
       // Autoplay muted by default for smooth experience if user hasn't requested reduced motion
       video.muted = true;
-      setIsMuted(true);
       const playPromise = video.play();
       if (playPromise !== undefined) {
         playPromise

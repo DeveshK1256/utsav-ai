@@ -95,6 +95,7 @@ def generate_invitation_cards(
     and exports both PNG and PDF from single composition pipeline (DEC-030).
     Per-guest errors are isolated and returned in failed_guests without failing the entire batch.
     """
+    _ = (request,)
     host_name, date_str, venue_str, muhurat_time, ceremonies = resolve_event_logistics(event, db)
     t_id, palette, brief, _ = resolve_theme_and_palette(payload.theme_proposal_id, db)
     wording_text = resolve_card_wording(
@@ -216,12 +217,12 @@ def download_invitation_card(
             media_type="application/pdf",
             headers={"Content-Disposition": f'inline; filename="{filename}"'},
         )
-    else:  # PNG default
-        if not card.rendered_png:
-            raise HTTPException(status_code=404, detail="PNG format not available for this card")
-        filename = f"utsav_invitation_{card.guest_id or 'generic'}.png"
-        return Response(
-            content=card.rendered_png,
-            media_type="image/png",
-            headers={"Content-Disposition": f'inline; filename="{filename}"'},
-        )
+    # PNG default
+    if not card.rendered_png:
+        raise HTTPException(status_code=404, detail="PNG format not available for this card")
+    filename = f"utsav_invitation_{card.guest_id or 'generic'}.png"
+    return Response(
+        content=card.rendered_png,
+        media_type="image/png",
+        headers={"Content-Disposition": f'inline; filename="{filename}"'},
+    )

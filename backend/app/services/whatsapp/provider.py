@@ -123,7 +123,7 @@ class MetaCloudWhatsAppProvider(WhatsAppProvider):
     Communicates with graph.facebook.com/v21.0 using bearer authentication.
     """
 
-    def __init__(self, phone_number_id: str, api_token: str):
+    def __init__(self, phone_number_id: str, api_token: str) -> None:
         self.phone_number_id = phone_number_id
         self.api_token = api_token
         self.base_url = f"https://graph.facebook.com/v21.0/{phone_number_id}/messages"
@@ -165,15 +165,14 @@ class MetaCloudWhatsAppProvider(WhatsAppProvider):
                 return WhatsAppSendResult(
                     success=True, message_id=msg_id, status="sent", provider_used="meta_cloud_api"
                 )
-            else:
-                err_msg = data.get("error", {}).get("message", res.text)
-                return WhatsAppSendResult(
-                    success=False,
-                    message_id="",
-                    status="failed",
-                    provider_used="meta_cloud_api",
-                    error=err_msg,
-                )
+            err_msg = data.get("error", {}).get("message", res.text)
+            return WhatsAppSendResult(
+                success=False,
+                message_id="",
+                status="failed",
+                provider_used="meta_cloud_api",
+                error=err_msg,
+            )
         except (
             httpx.HTTPError,
             RuntimeError,
@@ -211,15 +210,14 @@ class MetaCloudWhatsAppProvider(WhatsAppProvider):
                     status="sent",
                     provider_used="meta_cloud_api",
                 )
-            else:
-                err_msg = data.get("error", {}).get("message", res.text)
-                return WhatsAppSendResult(
-                    success=False,
-                    message_id="",
-                    status="failed",
-                    provider_used="meta_cloud_api",
-                    error=err_msg,
-                )
+            err_msg = data.get("error", {}).get("message", res.text)
+            return WhatsAppSendResult(
+                success=False,
+                message_id="",
+                status="failed",
+                provider_used="meta_cloud_api",
+                error=err_msg,
+            )
         except (
             httpx.HTTPError,
             RuntimeError,
@@ -275,15 +273,14 @@ class MetaCloudWhatsAppProvider(WhatsAppProvider):
                     status="sent",
                     provider_used="meta_cloud_api",
                 )
-            else:
-                err_msg = data.get("error", {}).get("message", res.text)
-                return WhatsAppSendResult(
-                    success=False,
-                    message_id="",
-                    status="failed",
-                    provider_used="meta_cloud_api",
-                    error=err_msg,
-                )
+            err_msg = data.get("error", {}).get("message", res.text)
+            return WhatsAppSendResult(
+                success=False,
+                message_id="",
+                status="failed",
+                provider_used="meta_cloud_api",
+                error=err_msg,
+            )
         except (
             httpx.HTTPError,
             RuntimeError,

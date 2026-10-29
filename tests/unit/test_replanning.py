@@ -605,7 +605,7 @@ import uuid
 from unittest.mock import MagicMock, patch
 from backend.app.models.models import AISuggestion, BudgetItem, ChangeEvent, SubEvent, Task
 from backend.app.schemas.replanning import ChangeRequestSchema
-from backend.app.services.replanning_service import ReplanningService
+from backend.app.services.replanning import ReplanningService
 
 
 def test_replanning_reject_and_error_branches():

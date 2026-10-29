@@ -2,12 +2,3 @@
   base = "frontend"
   publish = "out"
   command = "npm run build"
-
-[[headers]]
-  for = "/*"
-  [headers.values]
-    Content-Security-Policy = "default-src 'self'; script-src 'self' 'sha256-/5jSGBRW7+AgRGMseNL4/sF9aLPituT7Otj3Fueh6ho=' 'sha256-/TDXj64e4QIlGHy+FV4Uk9PP6NHQ3ZpG2sq82eZYR48=' 'sha256-1PmsZpGDkr1RENQKXMbfXBa8L1QovkWAJOpUaHkFeR8=' 'sha256-36FrjZJPK9fKXuF0aPSUWj30LrPvBhTzDsGc28YW6Mc=' 'sha256-5QSEC4zdPvPeV+849zdJ9tYkUuzYyHaZAMJwt9Nl5gc=' 'sha256-7UsiJZ9lhenf53QBS3nuGUvzXvwNKSLxPLz0nXnenCY=' 'sha256-B5X03xsWopR9BIcBK06lvD245JAAhUpRCOzoCWU5ARo=' 'sha256-BSXY9yAdBFEFSOoNXjbQYvTYuNZgUZNpTssQqzqz4D0=' 'sha256-BvIikeWq6SZZwx7rrAGoZB30/k75BF0dmDD0dcx8zyE=' 'sha256-EDG8p7TChmfyFG33f/7HPfcScc+Bd+YECqBlWBMfWlI=' 'sha256-K5jFi5Qdf2w85Dy0K+3JOBLLypr7QTCVwPntF6JHVIs=' 'sha256-OBTN3RiyCV4Bq7dFqZ5a2pAXjnCcCYeTJMO2I/LYKeo=' 'sha256-ZyjYVcG4VwnUPCVMop8+zdtGlgyA3SbaJSRE1b4AQi8=' 'sha256-eXcLzUqhwCS/pcYHArBxK/33maB03TkYXJIhlDeWAWU=' 'sha256-myOKJJQj73hqffTPb8UPkrIcOPOGnydUDRmceSuscDM=' 'sha256-nnEnGBcPz3P7HL/w8pQ6w2/nQ/OhjlQPfaQO940RCNY=' 'sha256-tNMd3+sn1BBav6uOWcCiQ7R++C3ZUkVIfog5Vjn4oFw='; style-src 'self' https://fonts.googleapis.com 'unsafe-inline'; img-src 'self' data: blob: https://*.tile.openstreetmap.org https://tile.openstreetmap.org; font-src 'self' https://fonts.gstatic.com data:; connect-src 'self' https://utsav-ai-ycg2.onrender.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none';"
-    X-Content-Type-Options = "nosniff"
-    X-Frame-Options = "DENY"
-    Referrer-Policy = "strict-origin-when-cross-origin"
-    Permissions-Policy = "geolocation=(self), camera=(), microphone=()"

@@ -2,7 +2,7 @@ import re
 from collections import Counter
 from typing import Any, ClassVar
 
-from backend.app.schemas.vibe import SingleImageVibeSchema
+from backend.app.schemas.vibe import SingleImageVibeSchema, VibeExtractionPayloadSchema
 
 
 def normalize_hex(color_str: str) -> str | None:
@@ -160,9 +160,21 @@ class VibeAggregationEngine:
         }
 
     @classmethod
-    def aggregate(cls, payload: Any, text_description: str | None = None) -> dict[str, Any]:
-        images = getattr(payload, "images", payload)
-        overall_mood_words = getattr(payload, "overall_mood_words", None)
+    def aggregate(
+        cls,
+        payload: VibeExtractionPayloadSchema | SingleImageVibeSchema | list[SingleImageVibeSchema],
+        text_description: str | None = None,
+    ) -> dict[str, Any]:
+        if isinstance(payload, VibeExtractionPayloadSchema):
+            images: list[SingleImageVibeSchema] = payload.images
+            overall_mood_words = payload.overall_mood_words
+        elif isinstance(payload, list):
+            images = payload
+            overall_mood_words = None
+        else:
+            images = [payload]
+            overall_mood_words = None
+
         return cls.aggregate_vibe_profiles(
             image_vibes=images,
             text_description=text_description,

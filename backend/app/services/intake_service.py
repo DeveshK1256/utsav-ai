@@ -21,7 +21,7 @@ from backend.app.schemas.intake import (
 )
 from backend.app.services.budget_engine import BudgetScalingEngine
 from backend.app.services.budget_rescaling_engine import BudgetRescalingEngine
-from backend.app.services.dag_scheduler import DAGScheduler
+from backend.app.services.dag import DAGScheduler
 
 
 def normalize_indian_phone(phone: str) -> str:
@@ -36,7 +36,8 @@ def normalize_indian_phone(phone: str) -> str:
         digits = cleaned
 
     if len(digits) != 10 or not digits.isdigit() or digits[0] not in "6789":
-        raise ValueError(f"Invalid Indian mobile number: {phone}")
+        err_msg = f"Invalid Indian mobile number: {phone}"
+        raise ValueError(err_msg)
 
     return f"+91{digits}"
 

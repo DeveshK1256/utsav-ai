@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import Link from "next/link";
 import {
   Calculator,
@@ -14,9 +14,10 @@ import {
   Compass,
 } from "lucide-react";
 import { Interactive3DCard } from "./Interactive3DCard";
+import { useReducedMotion } from "@/lib/useReducedMotion";
 
 export function FeatureShowcase3D() {
-  const [reducedMotion, setReducedMotion] = useState(false);
+  const reducedMotion = useReducedMotion();
 
   // Feature 1: Budget Rescaler State
   const [guestCount, setGuestCount] = useState<number>(200);
@@ -56,23 +57,6 @@ export function FeatureShowcase3D() {
   const [selectedLayout, setSelectedLayout] = useState<
     "classic_arch" | "royal_floral" | "modern_minimalist"
   >("classic_arch");
-
-  useEffect(() => {
-    const mediaQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
-    setReducedMotion(
-      mediaQuery.matches ||
-        document.documentElement.classList.contains("reduced-motion"),
-    );
-
-    const handler = (e: MediaQueryListEvent) => {
-      setReducedMotion(
-        e.matches ||
-          document.documentElement.classList.contains("reduced-motion"),
-      );
-    };
-    mediaQuery.addEventListener("change", handler);
-    return () => mediaQuery.removeEventListener("change", handler);
-  }, []);
 
   return (
     <div className="w-full max-w-6xl mx-auto px-4 sm:px-6 py-16 space-y-28">

@@ -1,6 +1,4 @@
-from typing import Any
-
-from PIL import Image, ImageDraw
+from PIL import Image, ImageDraw, ImageFont
 
 from backend.app.services.invitation.fonts import (
     FONT_BOLD_PATH,
@@ -15,12 +13,13 @@ from backend.app.services.invitation.fonts import (
 class FloralFestiveLayout:
     WIDTH = 1200
     HEIGHT = 1800
+
     @classmethod
     def _draw_floral_framing(
         cls,
         draw: ImageDraw.ImageDraw,
         is_dev: bool,
-        font_badge: Any,
+        font_badge: ImageFont.FreeTypeFont | ImageFont.ImageFont,
         primary: tuple[int, int, int],
         secondary: tuple[int, int, int],
         accent: tuple[int, int, int],
@@ -43,7 +42,7 @@ class FloralFestiveLayout:
         draw: ImageDraw.ImageDraw,
         host_name: str | None,
         is_dev: bool,
-        font_host: Any,
+        font_host: ImageFont.FreeTypeFont | ImageFont.ImageFont,
         cur_y: int,
     ) -> int:
         if host_name:
@@ -79,8 +78,8 @@ class FloralFestiveLayout:
         date_str: str,
         muhurat: str | None,
         is_dev: bool,
-        font_meta: Any,
-        font_sub: Any,
+        font_meta: ImageFont.FreeTypeFont | ImageFont.ImageFont,
+        font_sub: ImageFont.FreeTypeFont | ImageFont.ImageFont,
         primary: tuple[int, int, int],
         secondary: tuple[int, int, int],
         cur_y: int,
@@ -117,8 +116,8 @@ class FloralFestiveLayout:
         draw: ImageDraw.ImageDraw,
         venue_str: str,
         is_dev: bool,
-        font_sub: Any,
-        font_body: Any,
+        font_sub: ImageFont.FreeTypeFont | ImageFont.ImageFont,
+        font_body: ImageFont.FreeTypeFont | ImageFont.ImageFont,
         accent: tuple[int, int, int],
         cur_y: int,
     ) -> None:
@@ -142,8 +141,8 @@ class FloralFestiveLayout:
         guest_name: str | None,
         guest_diet: str | None,
         is_dev: bool,
-        font_guest: Any,
-        font_sub: Any,
+        font_guest: ImageFont.FreeTypeFont | ImageFont.ImageFont,
+        font_sub: ImageFont.FreeTypeFont | ImageFont.ImageFont,
         primary: tuple[int, int, int],
         secondary: tuple[int, int, int],
         accent: tuple[int, int, int],
@@ -193,7 +192,7 @@ class FloralFestiveLayout:
         venue_str: str,
         wording: str,
         muhurat: str | None,
-        ceremonies: list[str] | None,
+        _ceremonies: list[str] | None,
         guest_name: str | None,
         guest_diet: str | None,
         primary: tuple[int, int, int],

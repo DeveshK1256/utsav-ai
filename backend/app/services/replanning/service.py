@@ -1,4 +1,3 @@
-
 from sqlalchemy.orm import Session
 from sqlalchemy.orm.attributes import flag_modified
 
@@ -43,11 +42,12 @@ class ReplanningService:
         db: Session,
         event_id: str,
         change_req: ChangeRequestSchema,
-        actor_id: str | None = None,
+        _actor_id: str | None = None,
     ) -> ChangeProposalResponseSchema:
         event = db.query(Event).filter(Event.id == event_id).first()
         if not event:
-            raise ValueError(f"Event with id '{event_id}' not found.")
+            err_msg = f"Event with id '{event_id}' not found."
+            raise ValueError(err_msg)
 
         payload = change_req.payload or {}
         change_type = change_req.change_type
@@ -179,11 +179,13 @@ class ReplanningService:
             .first()
         )
         if not change_event:
-            raise ValueError(f"Change event '{change_id}' not found for event '{event_id}'.")
+            err_msg = f"Change event '{change_id}' not found for event '{event_id}'."
+            raise ValueError(err_msg)
 
         sugg = db.query(AISuggestion).filter(AISuggestion.change_event_id == change_id).first()
         if not sugg or not sugg.proposal_payload:
-            raise ValueError(f"AI proposal not found for change event '{change_id}'.")
+            err_msg = f"AI proposal not found for change event '{change_id}'."
+            raise ValueError(err_msg)
 
         p = sugg.proposal_payload
         return ChangeProposalResponseSchema(
@@ -209,7 +211,6 @@ class ReplanningService:
             created_at=change_event.created_at,
         )
 
-
     @classmethod
     def accept_change(
         cls, db: Session, event_id: str, change_id: str, actor_id: str | None = None
@@ -220,22 +221,27 @@ class ReplanningService:
             .first()
         )
         if not change_event:
-            raise ValueError(f"Change event '{change_id}' not found for event '{event_id}'.")
+            err_msg = f"Change event '{change_id}' not found for event '{event_id}'."
+            raise ValueError(err_msg)
 
         if change_event.status == "blocked_infeasible":
-            raise ValueError("Cannot accept an infeasible change proposal.")
+            err_msg = "Cannot accept an infeasible change proposal."
+            raise ValueError(err_msg)
         if change_event.status != "pending":
-            raise ValueError(
+            err_msg = (
                 f"Cannot accept change event in status '{change_event.status}'. Must be 'pending'."
             )
+            raise ValueError(err_msg)
 
         sugg = db.query(AISuggestion).filter(AISuggestion.change_event_id == change_id).first()
         if not sugg or not sugg.proposal_payload:
-            raise ValueError("Proposal payload missing.")
+            err_msg = "Proposal payload missing."
+            raise ValueError(err_msg)
 
         event = db.query(Event).filter(Event.id == event_id).first()
         if not event:
-            raise ValueError("Event not found.")
+            err_msg = "Event not found."
+            raise ValueError(err_msg)
         payload = sugg.proposal_payload
 
         # 1. Mutate Budget Items
@@ -284,13 +290,15 @@ class ReplanningService:
             .first()
         )
         if not change_event:
-            raise ValueError(f"Change event '{change_id}' not found for event '{event_id}'.")
+            err_msg = f"Change event '{change_id}' not found for event '{event_id}'."
+            raise ValueError(err_msg)
 
         if change_event.status not in ("pending", "queued"):
-            raise ValueError(
+            err_msg = (
                 f"Cannot reject change event in status '{change_event.status}'. "
                 "Must be pending or queued."
             )
+            raise ValueError(err_msg)
 
         was_pending = change_event.status == "pending"
 
@@ -329,16 +337,17 @@ class ReplanningService:
             .first()
         )
         if not change_event:
-            raise ValueError(f"Change event '{change_id}' not found.")
+            err_msg = f"Change event '{change_id}' not found."
+            raise ValueError(err_msg)
 
         if change_event.status != "pending":
-            raise ValueError(
-                f"Cannot edit proposal in status '{change_event.status}'. Must be pending."
-            )
+            err_msg = f"Cannot edit proposal in status '{change_event.status}'. Must be pending."
+            raise ValueError(err_msg)
 
         sugg = db.query(AISuggestion).filter(AISuggestion.change_event_id == change_id).first()
         if not sugg or not sugg.proposal_payload:
-            raise ValueError("Proposal payload missing.")
+            err_msg = "Proposal payload missing."
+            raise ValueError(err_msg)
 
         payload = sugg.proposal_payload
         budget_diff = payload.get("budget_diff", [])
@@ -361,5 +370,3 @@ class ReplanningService:
             db.commit()
 
         return cls.get_change_proposal(db, event_id, change_id)
-
-

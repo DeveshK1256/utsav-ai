@@ -1,7 +1,7 @@
 import logging
 import os
 from abc import ABC, abstractmethod
-from typing import Any, cast
+from typing import Any
 
 from backend.app.schemas.quotes import (
     ExtractedLineItemSchema,
@@ -86,6 +86,9 @@ class DeterministicStubQuoteExtractionProvider(BaseQuoteExtractionProvider):
     def extract_quote_from_document(
         self, file_bytes: bytes, file_name: str, mime_type: str, category_hint: str | None = None
     ) -> QuoteExtractionPayloadSchema:
+        _ = file_bytes
+        _ = file_name
+        _ = mime_type
         cat = (category_hint or "caterer").lower()
 
         if "cater" in cat:
@@ -135,7 +138,7 @@ class DeterministicStubQuoteExtractionProvider(BaseQuoteExtractionProvider):
                     ),
                 ],
             )
-        elif "venue" in cat:
+        if "venue" in cat:
             return QuoteExtractionPayloadSchema(
                 vendor_name="Grand Heritage Palace Banquet & Lawns",
                 category="venue",
@@ -177,7 +180,7 @@ class DeterministicStubQuoteExtractionProvider(BaseQuoteExtractionProvider):
                     ),
                 ],
             )
-        elif "decorator" in cat:
+        if "decorator" in cat:
             return QuoteExtractionPayloadSchema(
                 vendor_name="Mayur Mandap & Floral Decor Studio",
                 category="decorator",
@@ -218,39 +221,38 @@ class DeterministicStubQuoteExtractionProvider(BaseQuoteExtractionProvider):
                     ),
                 ],
             )
-        else:
-            return QuoteExtractionPayloadSchema(
-                vendor_name="Snapshot Stories Cinematography",
-                category="photographer",
-                currency="INR",
-                subtotal=280000.0,
-                tax_amount=50400.0,
-                total_amount=330400.0,
-                is_gst_included=True,
-                confidence_score=0.97,
-                terms_and_conditions=[
-                    "Raw footage provided on external hard drive provided by client",
-                    "Teaser video delivered within 15 days, main film within 60 days",
-                ],
-                line_items=[
-                    ExtractedLineItemSchema(
-                        name="Traditional Photo & 4K Video Coverage (2 Days)",
-                        qty=2.0,
-                        unit="days",
-                        unit_price=90000.0,
-                        total=180000.0,
-                        category_tag="photo_video",
-                    ),
-                    ExtractedLineItemSchema(
-                        name="Candid Lead Photographer & Cinematic Teaser",
-                        qty=1.0,
-                        unit="package",
-                        unit_price=100000.0,
-                        total=100000.0,
-                        category_tag="candid",
-                    ),
-                ],
-            )
+        return QuoteExtractionPayloadSchema(
+            vendor_name="Snapshot Stories Cinematography",
+            category="photographer",
+            currency="INR",
+            subtotal=280000.0,
+            tax_amount=50400.0,
+            total_amount=330400.0,
+            is_gst_included=True,
+            confidence_score=0.97,
+            terms_and_conditions=[
+                "Raw footage provided on external hard drive provided by client",
+                "Teaser video delivered within 15 days, main film within 60 days",
+            ],
+            line_items=[
+                ExtractedLineItemSchema(
+                    name="Traditional Photo & 4K Video Coverage (2 Days)",
+                    qty=2.0,
+                    unit="days",
+                    unit_price=90000.0,
+                    total=180000.0,
+                    category_tag="photo_video",
+                ),
+                ExtractedLineItemSchema(
+                    name="Candid Lead Photographer & Cinematic Teaser",
+                    qty=1.0,
+                    unit="package",
+                    unit_price=100000.0,
+                    total=100000.0,
+                    category_tag="candid",
+                ),
+            ],
+        )
 
 
 class DeterministicStubNegotiationDraftProvider(BaseNegotiationDraftProvider):
@@ -269,6 +271,7 @@ class DeterministicStubNegotiationDraftProvider(BaseNegotiationDraftProvider):
         competing_vendor_name: str | None = None,
         competing_quote_total: float | None = None,
     ) -> dict[str, dict[str, str]]:
+        _ = category
         target_amount = round(quoted_total * (1.0 - target_discount_pct / 100.0), 2)
         diff_amount = round(quoted_total - target_amount, 2)
         leverage_summary_en = (
@@ -366,7 +369,7 @@ def get_quote_extraction_provider() -> BaseQuoteExtractionProvider:
     gemini_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
     if gemini_key:
         try:
-            from backend.app.services.providers.gemini_provider import (
+            from backend.app.services.providers.gemini_provider import (  # noqa: PLC0415
                 GeminiQuoteExtractionProvider,
             )
 
@@ -374,21 +377,6 @@ def get_quote_extraction_provider() -> BaseQuoteExtractionProvider:
         except (ImportError, AttributeError, TypeError, ValueError, RuntimeError, KeyError) as exc:
             logger.debug(
                 "GeminiQuoteExtractionProvider initialization failed, falling back: %s", exc
-            )
-
-    openai_key = os.getenv("OPENAI_API_KEY")
-    if openai_key:
-        try:
-            from backend.app.services.providers.openai_provider import (
-                OpenAIQuoteExtractionProvider,
-            )
-
-            return cast(
-                BaseQuoteExtractionProvider, OpenAIQuoteExtractionProvider(api_key=openai_key)
-            )
-        except (ImportError, AttributeError, TypeError, ValueError, RuntimeError, KeyError) as exc:
-            logger.debug(
-                "OpenAIQuoteExtractionProvider initialization failed, falling back: %s", exc
             )
 
     return DeterministicStubQuoteExtractionProvider()
@@ -401,7 +389,7 @@ def get_negotiation_draft_provider() -> BaseNegotiationDraftProvider:
     gemini_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
     if gemini_key:
         try:
-            from backend.app.services.providers.gemini_provider import (
+            from backend.app.services.providers.gemini_provider import (  # noqa: PLC0415
                 GeminiNegotiationDraftProvider,
             )
 
@@ -517,7 +505,7 @@ def get_replanning_explanation_provider() -> BaseReplanningExplanationProvider:
     gemini_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
     if gemini_key:
         try:
-            from backend.app.services.providers.gemini_provider import (
+            from backend.app.services.providers.gemini_provider import (  # noqa: PLC0415
                 GeminiReplanningExplanationProvider,
             )
 
@@ -539,6 +527,7 @@ class DeterministicStubVibeProvider(BaseVibeExtractionProvider, BaseThemeGenerat
     def extract_vibe_from_images(
         self, images: list[dict[str, Any]], text_description: str | None = None
     ) -> VibeExtractionPayloadSchema:
+        _ = text_description
         single_images = []
         count = max(len(images), 1)
 
@@ -573,6 +562,7 @@ class DeterministicStubVibeProvider(BaseVibeExtractionProvider, BaseThemeGenerat
     def generate_theme_proposal(
         self, style_profile: dict[str, Any], event_details: dict[str, Any]
     ) -> ThemeGenerationPayloadSchema:
+        _ = event_details
         palette = style_profile.get("extracted_palette") or [
             "#FF9933",
             "#800020",
@@ -704,7 +694,7 @@ def get_vibe_extraction_provider() -> BaseVibeExtractionProvider:
     gemini_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
     if gemini_key:
         try:
-            from backend.app.services.providers.gemini_provider import (
+            from backend.app.services.providers.gemini_provider import (  # noqa: PLC0415
                 GeminiVibeProvider,
             )
 
@@ -723,7 +713,7 @@ def get_theme_generation_provider() -> BaseThemeGenerationProvider:
     gemini_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
     if gemini_key:
         try:
-            from backend.app.services.providers.gemini_provider import (
+            from backend.app.services.providers.gemini_provider import (  # noqa: PLC0415
                 GeminiVibeProvider,
             )
 

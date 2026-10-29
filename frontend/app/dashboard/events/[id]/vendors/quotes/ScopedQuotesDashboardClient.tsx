@@ -160,32 +160,43 @@ export default function ScopedQuotesDashboardClient() {
 
   // 1. Fetch Event Metadata & Scoped Quotes
   useEffect(() => {
-    if (!eventId || eventId === "default") {
-      setIsLoading(false);
-      return;
-    }
+    let ignore = false;
+    const init = async () => {
+      await Promise.resolve();
+      if (ignore) return;
 
-    const apiBase = getApiBase();
+      if (!eventId || eventId === "default") {
+        setIsLoading(false);
+        return;
+      }
 
-    // Fetch Event Metadata
-    fetch(`${apiBase}/events/${eventId}`, {
-      headers: getAuthHeaders(eventId),
-    })
-      .then((res) => (res.ok ? res.json() : null))
-      .then((data) => {
-        if (data) {
-          setEventMeta({
-            name: data.name,
-            city: data.city,
-            guest_count: data.guest_count,
-            total_budget: Number(data.total_budget),
-          });
-        }
+      const apiBase = getApiBase();
+
+      // Fetch Event Metadata
+      fetch(`${apiBase}/events/${eventId}`, {
+        headers: getAuthHeaders(eventId),
       })
-      .catch((err) => console.warn("Could not fetch event details:", err));
+        .then((res) => (res.ok ? res.json() : null))
+        .then((data) => {
+          if (!ignore && data) {
+            setEventMeta({
+              name: data.name,
+              city: data.city,
+              guest_count: data.guest_count,
+              total_budget: Number(data.total_budget),
+            });
+          }
+        })
+        .catch((err) => console.warn("Could not fetch event details:", err));
 
-    // Fetch Quotes for this Event
-    loadQuotes(eventId);
+      // Fetch Quotes for this Event
+      loadQuotes(eventId);
+    };
+
+    init();
+    return () => {
+      ignore = true;
+    };
   }, [eventId, loadQuotes]);
 
   // Upload quote file for THIS event

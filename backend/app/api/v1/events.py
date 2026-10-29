@@ -118,6 +118,10 @@ def _build_task_schemas(tasks: list[Any]) -> list[TaskResponseSchema]:
 def get_event(
     event_id: str, event: Event = Depends(verify_event_owner_token), db: Session = Depends(get_db)
 ) -> EventDetailResponseSchema:
+    _ = (
+        db,
+        event_id,
+    )
     returned_token = event.owner_token or (event.metadata_json or {}).get("owner_token")
     tier = BudgetScalingEngine.resolve_city_tier(event.city)
     owner_name = (
@@ -165,6 +169,7 @@ def update_event_compose_progress(
       and writes to event.metadata_json['muhurat_time'].
     - Explicit skip actions record skip flags without fabricating or carrying stale data.
     """
+    _ = (event_id,)
     meta = dict(event.metadata_json or {})
     compose_state = dict(meta.get("compose_celebration", {}))
 

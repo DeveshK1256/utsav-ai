@@ -84,7 +84,7 @@ class RSVPParser:
                 needs_host_review=False,
                 parsing_method="quick_reply",
             )
-        elif "no" in bid or "decline" in bid or "reject" in bid:
+        if "no" in bid or "decline" in bid or "reject" in bid:
             return ParsedRSVP(
                 rsvp_status="declined",
                 headcount=0,
@@ -92,7 +92,7 @@ class RSVPParser:
                 needs_host_review=False,
                 parsing_method="quick_reply",
             )
-        elif "maybe" in bid or "tentative" in bid:
+        if "maybe" in bid or "tentative" in bid:
             return ParsedRSVP(
                 rsvp_status="maybe",
                 headcount=1,

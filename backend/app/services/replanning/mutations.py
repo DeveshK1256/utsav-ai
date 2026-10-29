@@ -115,8 +115,9 @@ class ProposalMutations:
             if next_sugg:
                 next_sugg.status = "pending"
                 if next_sugg.proposal_payload:
-                    next_sugg.proposal_payload["status"] = "pending"
-
+                    payload = dict(next_sugg.proposal_payload)
+                    payload["status"] = "pending"
+                    next_sugg.proposal_payload = payload
 
     @classmethod
     def _apply_budget_overrides(
@@ -132,5 +133,3 @@ class ProposalMutations:
                 item["formula"] = (
                     f"{item.get('category')}: User manual override = {overridden_amt:.2f}"
                 )
-
-

@@ -30,18 +30,16 @@ class ReminderScheduler:
         """
         if offset_type == "7_days_before":
             return sub_event_start - timedelta(days=7)
-        elif offset_type == "1_day_before":
+        if offset_type == "1_day_before":
             return sub_event_start - timedelta(days=1)
-        elif offset_type == "morning_of":
+        if offset_type == "morning_of":
             # 8:00 AM on the day of the sub-event, or 2 hours prior if sub-event is before 10:00 AM
             morning_eight = datetime.combine(sub_event_start.date(), time(8, 0))
             if sub_event_start <= morning_eight:
                 return sub_event_start - timedelta(hours=2)
             return morning_eight
-        else:
-            raise ValueError(
-                f"Unsupported offset_type: {offset_type}. Choose from {cls.SUPPORTED_OFFSETS}"
-            )
+        err_msg = f"Unsupported offset_type: {offset_type}. Choose from {cls.SUPPORTED_OFFSETS}"
+        raise ValueError(err_msg)
 
     @classmethod
     def draft_reminder_text(cls, event: Event, sub_event: SubEvent, offset_type: str) -> str:

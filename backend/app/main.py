@@ -10,6 +10,7 @@ from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
+from sqlalchemy import text
 from sqlalchemy.exc import OperationalError, SQLAlchemyError
 
 from backend.app.api.v1.discovery import router as discovery_router
@@ -22,6 +23,10 @@ from backend.app.api.v1.rituals import router as rituals_router
 from backend.app.api.v1.vibe import router as vibe_router
 from backend.app.core.config import settings
 from backend.app.core.limiter import limiter
+from backend.app.db.base import Base
+from backend.app.db.seed_traditions import seed_cultural_traditions
+from backend.app.db.session import SessionLocal, engine
+from scripts.seed_vendor_discovery import seed_vendor_profiles
 
 logger = logging.getLogger("uvicorn.error")
 
@@ -98,8 +103,8 @@ if ENABLE_M4_WHATSAPP:
 
         app.include_router(guests_router, prefix=settings.API_V1_STR)
         app.include_router(webhooks_router, prefix=settings.API_V1_STR)
-    except (ImportError, AttributeError, ValueError) as exc:
-        logger.exception("Failed to conditionally register M4 WhatsApp router, skipping: %s", exc)
+    except (ImportError, AttributeError, ValueError):
+        logger.exception("Failed to conditionally register M4 WhatsApp router, skipping")
 
 
 def _background_db_backfill() -> None:
@@ -111,11 +116,6 @@ def _background_db_backfill() -> None:
     """
     logger.info("Starting background DB schema check and backfill...")
     try:
-        from sqlalchemy import text
-
-        from backend.app.db.base import Base
-        from backend.app.db.session import SessionLocal, engine
-
         # 1. Ensure tables exist
         Base.metadata.create_all(bind=engine)
 
@@ -214,11 +214,7 @@ def _background_db_backfill() -> None:
         # 3. Seed traditions and baseline venues idempotently
         db = SessionLocal()
         try:
-            from backend.app.db.seed_traditions import seed_cultural_traditions
-
             seed_cultural_traditions(db=db)
-
-            from scripts.seed_vendor_discovery import seed_vendor_profiles
 
             seed_vendor_profiles()
         finally:

@@ -310,10 +310,15 @@ export default function VibeToPlanClient() {
             </div>
 
             <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-stone-700 dark:text-stone-300 mb-2">
+              <label
+                htmlFor="aesthetic-vision-textarea"
+                className="block text-xs font-semibold uppercase tracking-wider text-stone-700 dark:text-stone-300 mb-2"
+              >
                 Aesthetic Vision & Atmosphere Notes (Optional)
               </label>
               <textarea
+                id="aesthetic-vision-textarea"
+                aria-label="Aesthetic Vision & Atmosphere Notes"
                 value={textDescription}
                 onChange={(e) => setTextDescription(e.target.value)}
                 placeholder="e.g. Royal Rajasthani heritage palace vibe, vibrant marigold yellow, antique brass diyas, raw silk fabrics..."

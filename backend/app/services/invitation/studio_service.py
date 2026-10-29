@@ -18,7 +18,7 @@ from backend.app.schemas.invitations import (
     InvitationGenerateRequest,
     LayoutOption,
 )
-from backend.app.services.invitation_renderer import InvitationCardRenderer
+from backend.app.services.invitation import InvitationCardRenderer
 from backend.app.services.invitation_wording_agent import InvitationWordingAgent
 
 logger = logging.getLogger(__name__)
@@ -208,7 +208,7 @@ def render_guest_cards(
             db.add(card)
             created_cards.append(card)
         except (ValueError, RuntimeError, OSError, KeyError) as err:
-            logger.exception("Failed to render card for guest %s (%s): %s", g.id, g.name, err)
+            logger.exception("Failed to render card for guest %s (%s)", g.id, g.name)
             failed_guests.append(FailedGuestSummary(guest_id=g.id, name=g.name, reason=str(err)))
     return created_cards, failed_guests
 
@@ -251,15 +251,14 @@ def render_generic_card(
             generated_at=datetime.now(UTC),
         )
         db.add(card)
-        return card
     except (ValueError, RuntimeError, OSError, KeyError, SQLAlchemyError) as err:
-        logger.exception("Failed to render generic card: %s", err)
+        logger.exception("Failed to render generic card")
         raise HTTPException(status_code=500, detail=f"Card composition failed: {err}") from err
+    else:
+        return card
 
 
-def build_card_summaries(
-    cards: list[InvitationCard], event_id: str
-) -> list[InvitationCardSummary]:
+def build_card_summaries(cards: list[InvitationCard], event_id: str) -> list[InvitationCardSummary]:
     summaries = []
     base_url = f"/api/v1/events/{event_id}/invitations"
     for c in cards:

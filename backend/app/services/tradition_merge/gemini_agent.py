@@ -2,6 +2,7 @@ import json
 import logging
 from datetime import date
 
+import google.generativeai as genai
 from pydantic import ValidationError
 
 from backend.app.models.models import Tradition
@@ -23,7 +24,7 @@ class GeminiTraditionMergeAgent(BaseTraditionMergeAgent):
     Falls back gracefully to DeterministicStubTraditionMergeAgent on error.
     """
 
-    def __init__(self, api_key: str):
+    def __init__(self, api_key: str) -> None:
         self.api_key = api_key
         self.stub_fallback = DeterministicStubTraditionMergeAgent()
 
@@ -31,8 +32,6 @@ class GeminiTraditionMergeAgent(BaseTraditionMergeAgent):
         self, primary: Tradition, secondary: Tradition, start_date: date, notes: str | None = None
     ) -> MergedRunOfShowSchema:
         try:
-            import google.generativeai as genai
-
             genai.configure(api_key=self.api_key)
             model = genai.GenerativeModel("gemini-2.0-flash")
 

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useSyncExternalStore } from "react";
 import { Globe } from "lucide-react";
 
 const SUPPORTED_LANGUAGES = [
@@ -9,28 +9,39 @@ const SUPPORTED_LANGUAGES = [
   { code: "mr", label: "मराठी", native: "मराठी" },
 ];
 
-export function LanguageSelector() {
-  const [currentLang, setCurrentLang] = useState("en");
+const subscribeLang = (callback: () => void) => {
+  if (typeof window === "undefined") return () => {};
+  window.addEventListener("utsav_locale_change", callback);
+  window.addEventListener("storage", callback);
+  return () => {
+    window.removeEventListener("utsav_locale_change", callback);
+    window.removeEventListener("storage", callback);
+  };
+};
 
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem("utsav_locale");
-      if (saved && ["en", "hi", "mr"].includes(saved)) {
-        setCurrentLang(saved);
-        document.documentElement.lang = saved;
-      } else {
-        document.documentElement.lang = "en";
-      }
-    } catch {
-      document.documentElement.lang = "en";
-    }
-  }, []);
+const getLangSnapshot = (): string => {
+  if (typeof window === "undefined") return "en";
+  try {
+    const saved = localStorage.getItem("utsav_locale");
+    if (saved && ["en", "hi", "mr"].includes(saved)) return saved;
+  } catch {
+    // storage quota or private mode
+  }
+  return "en";
+};
+
+export function LanguageSelector() {
+  const currentLang = useSyncExternalStore(
+    subscribeLang,
+    getLangSnapshot,
+    () => "en",
+  );
 
   const handleLangChange = (code: string) => {
-    setCurrentLang(code);
     document.documentElement.lang = code;
     try {
       localStorage.setItem("utsav_locale", code);
+      window.dispatchEvent(new Event("utsav_locale_change"));
     } catch {
       // storage quota or private mode
     }

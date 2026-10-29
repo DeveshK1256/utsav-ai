@@ -19,14 +19,16 @@ def _parse_indian_phone(cleaned: str, phone_raw: str) -> str | None:
     digits = _extract_indian_digits(cleaned)
     if digits is None:
         if cleaned.startswith("+91") or (cleaned.startswith("91") and len(cleaned) >= 10):
-            raise ValueError(
+            err_msg = (
                 f"Invalid Indian mobile number '{phone_raw}': 10 digits starting with 6-9 required"
             )
+            raise ValueError(err_msg)
         return None
 
     if digits.isdigit() and digits[0] in "6789":
         return f"+91{digits}"
-    raise ValueError(f"Invalid Indian mobile number '{phone_raw}': must start with 6, 7, 8, or 9")
+    err_msg = f"Invalid Indian mobile number '{phone_raw}': must start with 6, 7, 8, or 9"
+    raise ValueError(err_msg)
 
 
 def _parse_international_phone(cleaned: str, phone_raw: str) -> str | None:
@@ -35,7 +37,8 @@ def _parse_international_phone(cleaned: str, phone_raw: str) -> str | None:
         rest = cleaned[1:]
         if 8 <= len(rest) <= 15 and rest.isdigit() and rest[0] != "0":
             return cleaned
-        raise ValueError(f"Invalid international E.164 phone number: '{phone_raw}'")
+        err_msg = f"Invalid international E.164 phone number: '{phone_raw}'"
+        raise ValueError(err_msg)
     return None
 
 
@@ -49,7 +52,8 @@ def normalize_e164_phone(phone_raw: str) -> str:
     Raises ValueError with descriptive reason if invalid.
     """
     if not phone_raw or not str(phone_raw).strip():
-        raise ValueError("Phone number cannot be empty")
+        err_msg = "Phone number cannot be empty"
+        raise ValueError(err_msg)
 
     cleaned = re.sub(r"[\s\-\(\)\.]", "", str(phone_raw).strip())
 
@@ -61,10 +65,11 @@ def normalize_e164_phone(phone_raw: str) -> str:
     if intl_res:
         return intl_res
 
-    raise ValueError(
+    err_msg = (
         f"Unparseable phone number '{phone_raw}'. "
         "Provide a valid 10-digit Indian mobile or +E.164 format."
     )
+    raise ValueError(err_msg)
 
 
 def validate_and_normalize_guest_phone(phone_raw: str) -> tuple[bool, str | None, str | None]:
@@ -74,6 +79,7 @@ def validate_and_normalize_guest_phone(phone_raw: str) -> tuple[bool, str | None
     """
     try:
         norm = normalize_e164_phone(phone_raw)
-        return True, norm, None
     except ValueError as e:
         return False, None, str(e)
+    else:
+        return True, norm, None

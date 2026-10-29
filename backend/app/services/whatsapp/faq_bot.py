@@ -1,5 +1,5 @@
 import logging
-from typing import Any, ClassVar
+from typing import ClassVar
 
 from pydantic import BaseModel
 
@@ -67,7 +67,9 @@ class FAQBotService:
     }
 
     @classmethod
-    def _format_standard_field_answer(cls, field: str, val: Any, fact_sheet: EventFactSheet) -> str:
+    def _format_standard_field_answer(
+        cls, field: str, val: object, fact_sheet: EventFactSheet
+    ) -> str:
         if field == "venue_address":
             ans = f"The celebration is at: {val}."
             if fact_sheet.map_link:
@@ -124,7 +126,7 @@ class FAQBotService:
 
     @classmethod
     def answer_question(
-        cls, event: Event, fact_sheet: EventFactSheet | None, question: str, use_llm: bool = False
+        cls, event: Event, fact_sheet: EventFactSheet | None, question: str, _use_llm: bool = False
     ) -> FAQResponse:
         """
         Determines if the question can be answered from the fact sheet.

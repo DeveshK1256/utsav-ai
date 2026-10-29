@@ -97,7 +97,7 @@ class GeminiQuoteExtractionProvider(BaseQuoteExtractionProvider):
     Strictly schema-validated via Pydantic with 2-attempt retry logic.
     """
 
-    def __init__(self, api_key: str):
+    def __init__(self, api_key: str) -> None:
         self.api_key = api_key
         self.fallback_stub = DeterministicStubQuoteExtractionProvider()
 
@@ -173,18 +173,17 @@ class GeminiQuoteExtractionProvider(BaseQuoteExtractionProvider):
         )
         if not parsed_dict:
             logger.error(f"Gemini quote extraction failed after 2 retries ({last_error}).")
-            raise ExtractionValidationError(
-                f"Schema validation failed after 2 retries (3 total attempts): {last_error}"
-            )
+            err_msg = f"Schema validation failed after 2 retries (3 total attempts): {last_error}"
+            raise ExtractionValidationError(err_msg)
         try:
             validated = QuoteExtractionPayloadSchema.model_validate(parsed_dict)
             validated.confidence_score = validated.compute_deterministic_confidence()
-            return validated
         except ValidationError as e:
-            logger.exception(f"Gemini quote extraction validation failed: {e}")
-            raise ExtractionValidationError(
-                f"Schema validation failed after 2 retries (3 total attempts): {e}"
-            ) from e
+            logger.exception("Gemini quote extraction validation failed")
+            err_msg = f"Schema validation failed after 2 retries (3 total attempts): {e}"
+            raise ExtractionValidationError(err_msg) from e
+        else:
+            return validated
 
 
 class GeminiNegotiationDraftProvider(BaseNegotiationDraftProvider):
@@ -192,7 +191,7 @@ class GeminiNegotiationDraftProvider(BaseNegotiationDraftProvider):
     Real Google Gemini provider for localized Hindi/English negotiation drafts.
     """
 
-    def __init__(self, api_key: str):
+    def __init__(self, api_key: str) -> None:
         self.api_key = api_key
         self.fallback_stub = DeterministicStubNegotiationDraftProvider()
 
@@ -283,7 +282,7 @@ class GeminiReplanningExplanationProvider(BaseReplanningExplanationProvider):
     Falls back gracefully to deterministic stub.
     """
 
-    def __init__(self, api_key: str):
+    def __init__(self, api_key: str) -> None:
         self.api_key = api_key
         self.fallback_stub = DeterministicStubReplanningExplanationProvider()
 
@@ -365,7 +364,7 @@ class GeminiVibeProvider(BaseVibeExtractionProvider, BaseThemeGenerationProvider
     Enforces Zero LLM Math: LLM produces only quantity formulas and cost tiers.
     """
 
-    def __init__(self, api_key: str):
+    def __init__(self, api_key: str) -> None:
         self.api_key = api_key
         self.fallback_stub = DeterministicStubVibeProvider()
         self.last_provider_used: str = "gemini-3-flash-preview"
@@ -438,9 +437,10 @@ class GeminiVibeProvider(BaseVibeExtractionProvider, BaseThemeGenerationProvider
                 validated = VibeExtractionPayloadSchema.model_validate(parsed)
                 self.last_provider_used = "gemini-3-flash-preview"
                 self.last_fallback_warning = None
-                return validated
             except ValidationError as e:
                 last_err = e
+            else:
+                return validated
 
         fallback_reason, warning_msg = _format_fallback_details(last_err, "vibe extraction")
         logger.error(warning_msg)

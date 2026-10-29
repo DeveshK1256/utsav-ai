@@ -4,6 +4,8 @@ from typing import Any, ClassVar
 
 from pydantic import BaseModel
 
+from backend.app.models.models import BudgetItem
+
 CONFIG_PATH = Path(__file__).resolve().parent.parent / "config" / "tier_breakpoints.json"
 
 
@@ -80,7 +82,7 @@ class BudgetRescalingEngine:
 
     @classmethod
     def _rescale_single_guest_item(
-        cls, b: Any, old_guest_count: int, new_guest_count: int
+        cls, b: BudgetItem, old_guest_count: int, new_guest_count: int
     ) -> BudgetItemDiff:
         b_id = getattr(b, "id", "")
         cat = (getattr(b, "category", "") or "other").lower()
@@ -147,9 +149,11 @@ class BudgetRescalingEngine:
         Zero LLM math. Formula strictly exposed per item.
         """
         if old_guest_count <= 0:
-            raise ValueError(f"old_guest_count must be > 0 (received {old_guest_count})")
+            err_msg = f"old_guest_count must be > 0 (received {old_guest_count})"
+            raise ValueError(err_msg)
         if new_guest_count <= 0:
-            raise ValueError(f"new_guest_count must be > 0 (received {new_guest_count})")
+            err_msg = f"new_guest_count must be > 0 (received {new_guest_count})"
+            raise ValueError(err_msg)
 
         diffs = [
             cls._rescale_single_guest_item(b, old_guest_count, new_guest_count)
@@ -207,7 +211,7 @@ class BudgetRescalingEngine:
         return to_budget / from_budget
 
     @classmethod
-    def _rescale_single_cut_item(cls, b: Any, cut_ratio: float) -> BudgetItemDiff:
+    def _rescale_single_cut_item(cls, b: BudgetItem, cut_ratio: float) -> BudgetItemDiff:
         b_id = getattr(b, "id", "")
         cat = (getattr(b, "category", "") or "other").lower()
         name = getattr(b, "name", "")
@@ -243,11 +247,13 @@ class BudgetRescalingEngine:
         Protects committed/paid items.
         """
         if to_budget >= from_budget:
-            raise ValueError(
+            err_msg = (
                 f"to_budget ({to_budget}) must be strictly less than from_budget ({from_budget})"
             )
+            raise ValueError(err_msg)
         if to_budget <= 0:
-            raise ValueError(f"to_budget must be positive (received {to_budget})")
+            err_msg = f"to_budget must be positive (received {to_budget})"
+            raise ValueError(err_msg)
 
         cut_ratio = cls._calculate_cut_ratio(from_budget, to_budget, budget_items)
         diffs = [cls._rescale_single_cut_item(b, cut_ratio) for b in budget_items]

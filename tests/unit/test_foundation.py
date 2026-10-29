@@ -172,7 +172,7 @@ def test_database_url_normalization_to_postgresql():
 
 
 def test_birthday_budget_allocation_and_dag_tasks():
-    from backend.app.services.dag_scheduler import DAGScheduler
+    from backend.app.services.dag import DAGScheduler
     from datetime import date
 
     envelope = 250000.0  # ₹2.5 Lakhs
@@ -195,7 +195,7 @@ def test_birthday_budget_allocation_and_dag_tasks():
 
 
 def test_community_festival_budget_allocation_and_dag_tasks():
-    from backend.app.services.dag_scheduler import DAGScheduler
+    from backend.app.services.dag import DAGScheduler
     from datetime import date
 
     envelope = 800000.0  # ₹8 Lakhs
@@ -285,7 +285,7 @@ def test_branch_coverage_closure_and_edge_branches(db, test_data):
     from backend.app.services.intake_service import normalize_indian_phone, IntakeService
     from backend.app.schemas.intake import IntakeRequestSchema
     from backend.app.services.vibe_aggregation_engine import VibeAggregationEngine, SingleImageVibeSchema
-    from backend.app.services.replanning_service import ReplanningService
+    from backend.app.services.replanning import ReplanningService
     from backend.app.models.models import ChangeEvent, AISuggestion, BudgetItem, Task, SubEvent
     from datetime import date, datetime, timedelta, timezone
 

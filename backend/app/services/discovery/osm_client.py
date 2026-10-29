@@ -74,8 +74,7 @@ class OSMClient:
             "https://overpass.private.coffee/api/interpreter",
         ]
         names_regex = (
-            "banquet|marriage garden|mangal karyalay|"
-            "kalyana mandap|kalyana mantap|marriage hall"
+            "banquet|marriage garden|mangal karyalay|kalyana mandap|kalyana mantap|marriage hall"
         )
         hotel_names = "banquet|lawn|marriage|garden|resort|palace|convention"
         ql = (
@@ -151,14 +150,9 @@ class OSMClient:
         if city_hint:
             return city_hint
         try:
-            rev_url = (
-                f"https://nominatim.openstreetmap.org/reverse"
-                f"?lat={lat}&lon={lng}&format=json"
-            )
+            rev_url = f"https://nominatim.openstreetmap.org/reverse?lat={lat}&lon={lng}&format=json"
             _validate_safe_outbound_url(rev_url)
-            rev_req = urllib.request.Request(
-                rev_url, headers={"User-Agent": OSM_USER_AGENT}
-            )
+            rev_req = urllib.request.Request(rev_url, headers={"User-Agent": OSM_USER_AGENT})
             with urllib.request.urlopen(rev_req, timeout=3.0) as rev_resp:  # nosec B310 # noqa: S310
                 rev_data = json.loads(rev_resp.read().decode("utf-8"))
                 addr: dict[str, Any] = rev_data.get("address", {})

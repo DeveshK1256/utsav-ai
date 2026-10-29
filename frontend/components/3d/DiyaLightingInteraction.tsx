@@ -1,29 +1,13 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import Link from "next/link";
 import { Sparkles, ArrowRight } from "lucide-react";
+import { useReducedMotion } from "@/lib/useReducedMotion";
 
 export function DiyaLightingInteraction() {
   const [isLit, setIsLit] = useState(false);
-  const [reducedMotion, setReducedMotion] = useState(false);
-
-  useEffect(() => {
-    const mediaQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
-    setReducedMotion(
-      mediaQuery.matches ||
-        document.documentElement.classList.contains("reduced-motion"),
-    );
-
-    const handler = (e: MediaQueryListEvent) => {
-      setReducedMotion(
-        e.matches ||
-          document.documentElement.classList.contains("reduced-motion"),
-      );
-    };
-    mediaQuery.addEventListener("change", handler);
-    return () => mediaQuery.removeEventListener("change", handler);
-  }, []);
+  const reducedMotion = useReducedMotion();
 
   return (
     <section className="relative w-full max-w-4xl mx-auto px-4 py-16 text-center">

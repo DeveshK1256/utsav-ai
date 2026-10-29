@@ -128,30 +128,41 @@ export default function ComposePageClient() {
   }, []);
 
   useEffect(() => {
-    let resolvedId = rawEventId;
-    if (typeof window !== "undefined") {
-      const segments = window.location.pathname.split("/").filter(Boolean);
-      const evIdx = segments.indexOf("events");
-      if (
-        evIdx !== -1 &&
-        segments[evIdx + 1] &&
-        segments[evIdx + 1] !== "default"
-      ) {
-        resolvedId = segments[evIdx + 1] ?? rawEventId;
-      } else if (!resolvedId || resolvedId === "default") {
-        const stored =
-          localStorage.getItem("current_event_id") ||
-          localStorage.getItem("last_event_id");
-        if (stored) resolvedId = stored;
-      }
-    }
+    let ignore = false;
+    const init = async () => {
+      await Promise.resolve();
+      if (ignore) return;
 
-    if (resolvedId && resolvedId !== "default") {
-      setEventId(resolvedId);
-      loadEvent(resolvedId);
-    } else {
-      setLoading(false);
-    }
+      let resolvedId = rawEventId;
+      if (typeof window !== "undefined") {
+        const segments = window.location.pathname.split("/").filter(Boolean);
+        const evIdx = segments.indexOf("events");
+        if (
+          evIdx !== -1 &&
+          segments[evIdx + 1] &&
+          segments[evIdx + 1] !== "default"
+        ) {
+          resolvedId = segments[evIdx + 1] ?? rawEventId;
+        } else if (!resolvedId || resolvedId === "default") {
+          const stored =
+            localStorage.getItem("current_event_id") ||
+            localStorage.getItem("last_event_id");
+          if (stored) resolvedId = stored;
+        }
+      }
+
+      if (resolvedId && resolvedId !== "default") {
+        setEventId(resolvedId);
+        loadEvent(resolvedId);
+      } else {
+        setLoading(false);
+      }
+    };
+
+    init();
+    return () => {
+      ignore = true;
+    };
   }, [rawEventId, loadEvent]);
 
   // Step A: Save Venue or Skip

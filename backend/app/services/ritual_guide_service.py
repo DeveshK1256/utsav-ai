@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 
 from backend.app.models.models import Event, RitualItem, SubEvent, Tradition
 from backend.app.services.panchang_service import default_panchang_provider
-from backend.app.services.tradition_merge_service import TraditionMergeService
+from backend.app.services.tradition_merge import TraditionMergeService
 
 
 def get_city_coordinates(city: str) -> tuple[float, float, float]:
@@ -92,8 +92,7 @@ def calculate_muhurat_candidates(
             "id": "muhurat-abhijit",
             "name": "Abhijit Muhurat (Midday Solar Zenith)",
             "window": (
-                f"{p_data['abhijit_muhurat']['start'][:5]} - "
-                f"{p_data['abhijit_muhurat']['end'][:5]}"
+                f"{p_data['abhijit_muhurat']['start'][:5]} - {p_data['abhijit_muhurat']['end'][:5]}"
             ),
             "suitability": (
                 "Auspicious (Universal Victory Muhurat)"
@@ -123,8 +122,7 @@ def calculate_muhurat_candidates(
         "sunrise": p_data["sunrise"],
         "sunset": p_data["sunset"],
         "rahu_kaal_prohibited_window": (
-            f"{p_data['rahu_kaal']['start'][:5]} - "
-            f"{p_data['rahu_kaal']['end'][:5]}"
+            f"{p_data['rahu_kaal']['start'][:5]} - {p_data['rahu_kaal']['end'][:5]}"
         ),
         "tithi": p_data["tithi"],
         "nakshatra": p_data["nakshatra"],
@@ -140,10 +138,7 @@ def build_pandit_guide_payload(event: Event, db: Session) -> dict[str, Any]:
     )
 
     sub_events = (
-        db.query(SubEvent)
-        .filter(SubEvent.event_id == event.id)
-        .order_by(SubEvent.sort_order)
-        .all()
+        db.query(SubEvent).filter(SubEvent.event_id == event.id).order_by(SubEvent.sort_order).all()
     )
     itinerary_summary = [
         {

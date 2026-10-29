@@ -1,7 +1,7 @@
 import pytest
 from fastapi.testclient import TestClient
 from backend.app.main import app
-from backend.app.services.discovery_service import haversine_distance_km
+from backend.app.services.discovery import haversine_distance_km
 from backend.app.db.session import SessionLocal
 from backend.app.models.models import VendorProfile
 
@@ -97,7 +97,7 @@ def test_overpass_in_process_ttl_cache_speedup():
     and accelerates repeated queries to the same city / coordinates deterministically via call counter.
     """
     from unittest.mock import patch
-    from backend.app.services.discovery_service import _OVERPASS_CACHE, VendorDiscoveryService
+    from backend.app.services.discovery import _OVERPASS_CACHE, VendorDiscoveryService
 
     # Clear cache for isolated test
     _OVERPASS_CACHE.clear()
@@ -120,7 +120,7 @@ def test_overpass_in_process_ttl_cache_speedup():
 
 import json
 from unittest.mock import MagicMock, patch
-from backend.app.services.discovery_service import (
+from backend.app.services.discovery import (
     VendorDiscoveryService,
     CITY_CENTERS,
     haversine_distance_km,
@@ -128,7 +128,7 @@ from backend.app.services.discovery_service import (
 
 
 def test_discovery_service_utility_and_edge_branches(db):
-    from backend.app.services.discovery_service import is_valid_venue_name, are_venues_duplicates, VendorDiscoveryService
+    from backend.app.services.discovery import is_valid_venue_name, are_venues_duplicates, VendorDiscoveryService
 
     # 1. is_valid_venue_name branches
     assert is_valid_venue_name("node/12345") is False
@@ -163,11 +163,11 @@ def test_discovery_service_utility_and_edge_branches(db):
 
 def test_discovery_service_fallbacks(db, test_data):
     event, token = test_data
-    from backend.app.services.discovery_service import VendorDiscoveryService
+    from backend.app.services.discovery import VendorDiscoveryService
     from unittest.mock import patch
 
     # Mock Overpass network timeout to trigger fallback
-    with patch("backend.app.services.discovery_service.urllib.request.urlopen") as mock_url:
+    with patch("backend.app.services.discovery.urllib.request.urlopen") as mock_url:
         import urllib.error
         mock_url.side_effect = urllib.error.URLError("Overpass network timeout")
 
@@ -265,7 +265,7 @@ def test_discovery_osm_venues_overpass_mock():
 
 
 def test_discovery_helper_functions_and_profile_conversion():
-    from backend.app.services.discovery_service import (
+    from backend.app.services.discovery import (
         is_valid_venue_name,
         are_venues_duplicates,
         VendorDiscoveryService

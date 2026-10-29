@@ -43,6 +43,7 @@ def import_guests(
     Imports, validates, and normalizes guest rows for an event.
     Deduplicates by phone and rejects unparseable phone numbers with explicit feedback.
     """
+    _ = (event,)
     rows = [g.model_dump() for g in payload.guests] if payload and payload.guests else []
     return GuestService.import_guest_rows(db, event_id, rows)
 
@@ -57,6 +58,7 @@ async def import_guests_csv(
     """
     Imports guests via CSV file upload.
     """
+    _ = (event,)
     contents = await file.read()
     text = contents.decode("utf-8-sig", errors="ignore")
     rows = GuestService.parse_csv_file(text)
@@ -115,6 +117,7 @@ def send_invitations(
     Batch-sends WhatsApp invitations to guests.
     Enforces opt_out verification before every send.
     """
+    _ = (event,)
     return WhatsAppSendService.send_batch_invitations(db, event_id, guest_ids)
 
 
@@ -126,6 +129,7 @@ def delete_guest(
     db: Session = Depends(get_db),
 ) -> DeleteGuestResponseSchema:
     """Purges guest data on request per privacy and data-deletion policies."""
+    _ = (event,)
     success = GuestService.delete_guest_privacy_purge(db, event_id, guest_id)
     if not success:
         raise HTTPException(status_code=404, detail="Guest not found")
@@ -165,6 +169,7 @@ def update_fact_sheet(
     db: Session = Depends(get_db),
 ) -> FactSheetResponseSchema:
     """Creates or updates the verified event fact sheet."""
+    _ = (event,)
     fs = db.query(EventFactSheet).filter(EventFactSheet.event_id == event_id).first()
     if not fs:
         fs = EventFactSheet(

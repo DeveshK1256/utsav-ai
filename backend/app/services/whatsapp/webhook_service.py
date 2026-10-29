@@ -13,7 +13,7 @@ from backend.app.models.models import Event, EventFactSheet, Guest, MessageLog, 
 from backend.app.services.whatsapp.faq_bot import FAQBotService
 from backend.app.services.whatsapp.phone_utils import normalize_e164_phone
 from backend.app.services.whatsapp.provider import WhatsAppProvider
-from backend.app.services.whatsapp.rsvp_parser import RSVPParser
+from backend.app.services.whatsapp.rsvp_parser import ParsedRSVP, RSVPParser
 from backend.app.services.whatsapp.send_service import WhatsAppSendService
 
 logger = logging.getLogger(__name__)
@@ -108,7 +108,7 @@ class WhatsAppWebhookService:
         return "", None
 
     @classmethod
-    def _update_guest_rsvp(cls, db: Session, guest: Guest | None, parsed: Any) -> int:
+    def _update_guest_rsvp(cls, db: Session, guest: Guest | None, parsed: ParsedRSVP) -> int:
         if not guest or parsed.rsvp_status not in ("attending", "declined", "maybe"):
             return 0
         guest.rsvp_status = parsed.rsvp_status
@@ -143,10 +143,11 @@ class WhatsAppWebhookService:
                 message_type="freeform",
                 provider=provider,
             )
-            return 1
-        except (SQLAlchemyError, ValueError, RuntimeError, TypeError, KeyError) as e:
-            logger.exception("Failed to transmit FAQ response: %s", e)
+        except (SQLAlchemyError, ValueError, RuntimeError, TypeError, KeyError):
+            logger.exception("Failed to transmit FAQ response")
             return 0
+        else:
+            return 1
 
     @classmethod
     def _handle_inbound_message_action(

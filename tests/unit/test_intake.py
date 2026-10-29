@@ -9,7 +9,7 @@ from backend.app.models.models import Event, SubEvent, BudgetItem, Task, User
 from backend.app.schemas.intake import IntakeRequestSchema
 from backend.app.services.intake_service import IntakeService, normalize_indian_phone
 from backend.app.services.budget_engine import BudgetScalingEngine
-from backend.app.services.dag_scheduler import DAGScheduler, TaskNode
+from backend.app.services.dag import DAGScheduler, TaskNode
 
 
 @pytest.fixture

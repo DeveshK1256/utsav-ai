@@ -123,9 +123,11 @@ class BudgetScalingEngine:
         guest_count: int = 350,
     ) -> list[dict[str, Any]]:
         if total_envelope <= 0:
-            raise ValueError("Total budget envelope must be strictly greater than 0")
+            err_msg = "Total budget envelope must be strictly greater than 0"
+            raise ValueError(err_msg)
         if guest_count <= 0:
-            raise ValueError("Guest count must be strictly greater than 0")
+            err_msg = "Guest count must be strictly greater than 0"
+            raise ValueError(err_msg)
 
         tier = cls.resolve_city_tier(city)
         multiplier = cls.get_tier_multiplier(tier)

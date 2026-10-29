@@ -32,6 +32,7 @@ def calculate_budget(
     Computes deterministic city-tier scaled budget allocation.
     Single authoritative backend calculation engine called by frontend clients.
     """
+    _ = (request,)
     try:
         tier = BudgetScalingEngine.resolve_city_tier(payload.city)
         multiplier = float(BudgetScalingEngine.get_tier_multiplier(tier))
@@ -63,7 +64,7 @@ def calculate_budget(
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
     except (KeyError, RuntimeError, SQLAlchemyError) as e:
-        logger.exception("Budget calculation failed: %s", e)
+        logger.exception("Budget calculation failed")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Budget calculation failed: {e!s}",
@@ -81,12 +82,13 @@ def generate_plan(
     Submits conversational intake questionnaire and deterministically generates
     the multi-day master itinerary, itemized budget, and scheduled task dependencies.
     """
+    _ = (request,)
     try:
         return IntakeService.generate_master_plan(db, payload)
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
     except (KeyError, RuntimeError, SQLAlchemyError) as e:
-        logger.exception("Plan generation failed: %s", e)
+        logger.exception("Plan generation failed")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Plan generation failed: {e!s}",
@@ -96,6 +98,7 @@ def generate_plan(
 @router.get("/traditions", response_model=list[TraditionOptionSchema])
 def list_traditions(db: Session = Depends(get_db)) -> list[TraditionOptionSchema]:
     """
+    _ = request
     Lists available cultural traditions and ritual frameworks.
     """
     IntakeService.ensure_default_traditions(db)

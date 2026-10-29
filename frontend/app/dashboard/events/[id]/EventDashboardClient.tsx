@@ -235,7 +235,17 @@ export default function EventDashboardClient() {
   }, [rawEventId]);
 
   useEffect(() => {
-    fetchEventData();
+    let ignore = false;
+    const run = async () => {
+      await Promise.resolve();
+      if (!ignore) {
+        fetchEventData();
+      }
+    };
+    run();
+    return () => {
+      ignore = true;
+    };
   }, [fetchEventData]);
 
   // Derived KPI calculations from REAL database data

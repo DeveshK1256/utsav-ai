@@ -9,6 +9,7 @@ from fastapi import HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from backend.app.core.security import _extract_provided_token, _resolve_expected_token
 from backend.app.models.models import (
     Event,
     QuoteDocument,
@@ -27,6 +28,7 @@ from backend.app.schemas.quotes import (
 from backend.app.services.budget_engine import BudgetScalingEngine
 from backend.app.services.hidden_cost_engine import HiddenCostDetector
 from backend.app.services.llm_provider import (
+    BaseQuoteExtractionProvider,
     ExtractionValidationError,
 )
 from backend.app.services.quote_comparison_engine import QuoteComparisonEngine
@@ -43,7 +45,6 @@ def _verify_quote_ownership(
     authorization: str | None,
     db: Session,
 ) -> None:
-    from backend.app.core.security import _extract_provided_token, _resolve_expected_token
 
     provided = owner_token or _extract_provided_token(x_event_owner_token, authorization)
     expected = _resolve_expected_token(event, db)
@@ -209,7 +210,7 @@ def _save_vendor_and_quote(
 
 
 def _extract_quote_payload(
-    provider: Any,
+    provider: BaseQuoteExtractionProvider,
     file_bytes: bytes,
     filename: str,
     content_type: str,
@@ -222,12 +223,13 @@ def _extract_quote_payload(
             mime_type=content_type,
             category_hint=category,
         )
-        if not extracted:
-            return None, "Null extraction result"
-        return extracted, None
     except (ExtractionValidationError, ValueError, RuntimeError, KeyError, TypeError, OSError) as e:
         logger.warning("Quote extraction provider failed: %s", e)
         return None, str(e)
+    else:
+        if not extracted:
+            return None, "Null extraction result"
+        return extracted, None
 
 
 def _build_quote_document_response(
@@ -258,7 +260,6 @@ def _build_quote_document_response(
     )
 
 
-
 def _validate_comparison_category(quotes: Sequence[QuoteDocument], requested_ids: list[str]) -> str:
     if len(quotes) != len(requested_ids):
         found_ids = {q.id for q in quotes}
@@ -277,7 +278,6 @@ def _validate_comparison_category(quotes: Sequence[QuoteDocument], requested_ids
             ),
         )
     return str(next(iter(categories)))
-
 
 
 def _extract_competitor_leverage(

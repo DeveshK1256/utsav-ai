@@ -145,8 +145,7 @@ class DecorCostEngine:
 
         # Check "1 per table"
         if "table" in f_lower:
-            tables = max(1, math.ceil(guest_count / table_size))
-            return tables
+            return max(1, math.ceil(guest_count / table_size))
 
         # Check explicit integer e.g. "4 units", "2 fixed", "3 backdrops"
         unit_match = re.search(r"^(\d+)", f_lower)

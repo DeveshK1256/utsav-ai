@@ -1,3 +1,4 @@
+import html
 from datetime import date, datetime
 from typing import Any
 
@@ -51,7 +52,6 @@ class IntakeRequestSchema(BaseModel):
     @field_validator("name", "host_name")
     @classmethod
     def sanitize_strings(cls, v: str) -> str:
-        import html
 
         return html.escape(v.strip())
 
@@ -60,7 +60,8 @@ class IntakeRequestSchema(BaseModel):
     def validate_dates(cls, end_date_val: date, info: ValidationInfo) -> date:
         start_date_val = info.data.get("start_date")
         if start_date_val and end_date_val < start_date_val:
-            raise ValueError("end_date cannot be earlier than start_date")
+            err_msg = "end_date cannot be earlier than start_date"
+            raise ValueError(err_msg)
         return end_date_val
 
 

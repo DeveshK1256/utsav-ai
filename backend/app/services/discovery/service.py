@@ -45,6 +45,7 @@ ALLOWED_OUTBOUND_DOMAINS = {
     "overpass.private.coffee",
 }
 
+
 class VendorDiscoveryService:
     """
     Deterministic Geo & Directory discovery engine (F15-Lite).
@@ -180,6 +181,7 @@ class VendorDiscoveryService:
         category: str | None = None,
         sort_by: str = "distance_asc",
     ) -> VendorDiscoveryResponse:
+        _ = sort_by
         resolved_lat, resolved_lng = cls._resolve_coordinates(lat, lng, city)
 
         if resolved_lat is None or resolved_lng is None:

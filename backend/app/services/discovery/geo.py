@@ -24,12 +24,15 @@ def _validate_safe_outbound_url(url: str) -> None:
     """SSRF guard: Validates URL uses HTTPS/HTTP and resolves to public IPs."""
     parsed = urlparse(url)
     if parsed.scheme not in ("http", "https"):
-        raise ValueError(f"Unsafe URL scheme '{parsed.scheme}'; only http/https allowed.")
+        err_msg = f"Unsafe URL scheme '{parsed.scheme}'; only http/https allowed."
+        raise ValueError(err_msg)
     hostname = parsed.hostname
     if not hostname:
-        raise ValueError("Missing hostname in outbound request URL.")
+        err_msg = "Missing hostname in outbound request URL."
+        raise ValueError(err_msg)
     if hostname in ("localhost", "127.0.0.1", "::1"):
-        raise ValueError(f"SSRF blocked: Hostname '{hostname}' is loopback/private.")
+        err_msg = f"SSRF blocked: Hostname '{hostname}' is loopback/private."
+        raise ValueError(err_msg)
     addr_info = socket.getaddrinfo(hostname, None)
     for res in addr_info:
         ip = res[4][0]
@@ -41,9 +44,8 @@ def _validate_safe_outbound_url(url: str) -> None:
             or ip_obj.is_reserved
             or ip_obj.is_multicast
         ):
-            raise ValueError(
-                f"SSRF blocked: Hostname '{hostname}' resolved to prohibited IP '{ip}'."
-            )
+            err_msg = f"SSRF blocked: Hostname '{hostname}' resolved to prohibited IP '{ip}'."
+            raise ValueError(err_msg)
 
 
 def haversine_distance_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:

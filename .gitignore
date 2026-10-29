@@ -92,3 +92,7 @@ marketing/video_pipeline/clips_detailed/
 marketing/video_pipeline/trimmed_detailed/
 marketing/video_pipeline/detailed_vo/
 marketing/video_pipeline/detailed_video_concat.mp4
+
+frontend/out/
+frontend/public/_headers
+docs/lighthouse/*.json

@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 
 from backend.app.models.models import RitualItem, Tradition
 from backend.app.services.tradition_merge.gemini_agent import GeminiTraditionMergeAgent
+from backend.app.services.tradition_merge.schemas import MergedRunOfShowSchema
 from backend.app.services.tradition_merge.stub_agent import (
     BaseTraditionMergeAgent,
     DeterministicStubTraditionMergeAgent,
@@ -73,7 +74,7 @@ class TraditionMergeService:
         ),
     }
 
-    def __init__(self, db: Session):
+    def __init__(self, db: Session) -> None:
         self.db = db
         self.agent = get_tradition_merge_agent()
 
@@ -190,7 +191,7 @@ class TraditionMergeService:
         event_name: str | None,
         primary: Tradition,
         secondary: Tradition,
-        run_of_show: Any,
+        run_of_show: MergedRunOfShowSchema,
         final_samagri: list[dict[str, Any]],
         shared_lookup: dict[str, dict[str, Any]],
     ) -> dict[str, Any]:
@@ -269,9 +270,8 @@ class TraditionMergeService:
         secondary = self.get_tradition(secondary_code)
 
         if not primary or not secondary:
-            raise ValueError(
-                f"Invalid tradition codes: primary={primary_code}, secondary={secondary_code}"
-            )
+            err_msg = f"Invalid tradition codes: primary={primary_code}, secondary={secondary_code}"
+            raise ValueError(err_msg)
 
         event_start = start_date or date.today()
 

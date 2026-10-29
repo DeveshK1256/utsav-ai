@@ -204,7 +204,17 @@ export const RitualIntelligenceHub: React.FC<RitualHubProps> = ({
   ]);
 
   useEffect(() => {
-    handleMergeTraditions();
+    let ignore = false;
+    const init = async () => {
+      await Promise.resolve();
+      if (!ignore) {
+        handleMergeTraditions();
+      }
+    };
+    init();
+    return () => {
+      ignore = true;
+    };
   }, [handleMergeTraditions]);
 
   // Generate ritual tasks into DAG

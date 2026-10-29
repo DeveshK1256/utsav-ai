@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useRef, useState, useEffect } from "react";
+import React, { useRef, useState } from "react";
+import { useReducedMotion } from "@/lib/useReducedMotion";
 
 interface Interactive3DCardProps {
   children: React.ReactNode;
@@ -19,25 +20,7 @@ export function Interactive3DCard({
 }: Interactive3DCardProps) {
   const cardRef = useRef<HTMLDivElement>(null);
   const [transformStyle, setTransformStyle] = useState<string>("");
-  const [reducedMotion, setReducedMotion] = useState(false);
-
-  useEffect(() => {
-    // Check system preference
-    const mediaQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
-    setReducedMotion(
-      mediaQuery.matches ||
-        document.documentElement.classList.contains("reduced-motion"),
-    );
-
-    const handler = (e: MediaQueryListEvent) => {
-      setReducedMotion(
-        e.matches ||
-          document.documentElement.classList.contains("reduced-motion"),
-      );
-    };
-    mediaQuery.addEventListener("change", handler);
-    return () => mediaQuery.removeEventListener("change", handler);
-  }, []);
+  const reducedMotion = useReducedMotion();
 
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
     if (reducedMotion || !cardRef.current) return;

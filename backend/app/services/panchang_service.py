@@ -128,8 +128,7 @@ class EphemPanchangProvider(PanchangProvider):
         Annual precession rate: 50.290966" / year.
         """
         t_centuries = (jd - 2451545.0) / 36525.0
-        ayan = 23.8570916667 + (5029.0966 * t_centuries + 1.112 * (t_centuries**2)) / 3600.0
-        return ayan
+        return 23.8570916667 + (5029.0966 * t_centuries + 1.112 * (t_centuries**2)) / 3600.0
 
     def calculate_panchang(
         self,

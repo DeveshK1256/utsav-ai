@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import Link from "next/link";
 import {
   ArrowRight,
@@ -10,27 +10,11 @@ import {
   RefreshCw,
 } from "lucide-react";
 import { Interactive3DCard } from "./Interactive3DCard";
+import { useReducedMotion } from "@/lib/useReducedMotion";
 
 export function HeroChaosToComposed() {
   const [isComposed, setIsComposed] = useState(false);
-  const [reducedMotion, setReducedMotion] = useState(false);
-
-  useEffect(() => {
-    const mediaQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
-    setReducedMotion(
-      mediaQuery.matches ||
-        document.documentElement.classList.contains("reduced-motion"),
-    );
-
-    const handler = (e: MediaQueryListEvent) => {
-      setReducedMotion(
-        e.matches ||
-          document.documentElement.classList.contains("reduced-motion"),
-      );
-    };
-    mediaQuery.addEventListener("change", handler);
-    return () => mediaQuery.removeEventListener("change", handler);
-  }, []);
+  const reducedMotion = useReducedMotion();
 
   return (
     <section className="relative w-full max-w-6xl mx-auto px-4 sm:px-6 pt-6 pb-20 overflow-hidden">
@@ -159,7 +143,7 @@ export function HeroChaosToComposed() {
                   <span className="text-xs font-bold text-amber-900 dark:text-amber-300">
                     📄 Vendor Quote: Decorator
                   </span>
-                  <span className="text-[10px] bg-amber-200 dark:bg-amber-950 text-amber-800 dark:text-amber-300 px-2 py-0.5 rounded-full font-semibold">
+                  <span className="text-[10px] bg-amber-200 dark:bg-amber-950 text-stone-950 dark:text-amber-100 px-2 py-0.5 rounded-full font-bold">
                     Unitemized
                   </span>
                 </div>

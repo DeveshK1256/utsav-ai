@@ -124,47 +124,58 @@ export default function ChangeProposalDiffClient() {
   );
 
   useEffect(() => {
-    if (!eventId || eventId === "default") {
-      setLoading(false);
-      return;
-    }
+    let ignore = false;
+    const init = async () => {
+      await Promise.resolve();
+      if (ignore) return;
 
-    // 1. Fetch Event Info
-    fetch(`${API_BASE_URL}/events/${eventId}`, {
-      headers: getAuthHeaders(eventId),
-    })
-      .then((r) => (r.ok ? r.json() : null))
-      .then((data) => {
-        if (data) {
-          setEventData({
-            name: data.name,
-            guest_count: data.guest_count,
-            total_budget: Number(data.total_budget),
-            city: data.city,
-          });
-          setCustomGuestCount((data.guest_count || 250) + 50);
-        }
+      if (!eventId || eventId === "default") {
+        setLoading(false);
+        return;
+      }
+
+      // 1. Fetch Event Info
+      fetch(`${API_BASE_URL}/events/${eventId}`, {
+        headers: getAuthHeaders(eventId),
       })
-      .catch((e) => console.warn("Could not fetch event context:", e));
+        .then((r) => (r.ok ? r.json() : null))
+        .then((data) => {
+          if (!ignore && data) {
+            setEventData({
+              name: data.name,
+              guest_count: data.guest_count,
+              total_budget: Number(data.total_budget),
+              city: data.city,
+            });
+            setCustomGuestCount((data.guest_count || 250) + 50);
+          }
+        })
+        .catch((e) => console.warn("Could not fetch event context:", e));
 
-    // 2. Fetch Existing Proposals for this Event
-    fetch(`${API_BASE_URL}/events/${eventId}/changes`, {
-      headers: getAuthHeaders(eventId),
-    })
-      .then((r) => (r.ok ? r.json() : []))
-      .then((proposals) => {
-        if (Array.isArray(proposals)) {
-          setExistingProposals(proposals);
-        }
+      // 2. Fetch Existing Proposals for this Event
+      fetch(`${API_BASE_URL}/events/${eventId}/changes`, {
+        headers: getAuthHeaders(eventId),
       })
-      .catch(() => {});
+        .then((r) => (r.ok ? r.json() : []))
+        .then((proposals) => {
+          if (!ignore && Array.isArray(proposals)) {
+            setExistingProposals(proposals);
+          }
+        })
+        .catch(() => {});
 
-    // 3. Fetch specific proposal if changeId is valid
-    if (changeId && changeId !== "default") {
-      fetchProposal(changeId);
-    } else {
-      setLoading(false);
-    }
+      // 3. Fetch specific proposal if changeId is valid
+      if (changeId && changeId !== "default") {
+        fetchProposal(changeId);
+      } else {
+        setLoading(false);
+      }
+    };
+
+    init();
+    return () => {
+      ignore = true;
+    };
   }, [eventId, changeId, fetchProposal]);
 
   const handleSimulateScenario = async (

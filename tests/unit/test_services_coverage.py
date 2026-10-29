@@ -14,7 +14,7 @@ from backend.app.services.budget_rescaling_engine import (
     BudgetItemDiff,
     BudgetRescalingResult,
 )
-from backend.app.services.tradition_merge_service import (
+from backend.app.services.tradition_merge import (
     TraditionMergeService,
     MergedRunOfShowSchema,
     CeremonyItemSchema,
@@ -28,7 +28,7 @@ from backend.app.services.invitation_wording_agent import (
     InvitationWordingAgent,
     InvitationWordingResponse,
 )
-from backend.app.services.discovery_service import (
+from backend.app.services.discovery import (
     are_venues_duplicates,
     haversine_distance_km,
     is_valid_venue_name,

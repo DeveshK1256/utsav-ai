@@ -3,7 +3,7 @@ from abc import ABC, abstractmethod
 from datetime import date
 
 from backend.app.models.models import Tradition
-from backend.app.services.dag_scheduler import DAGScheduler
+from backend.app.services.dag import DAGScheduler
 from backend.app.services.tradition_merge.schemas import (
     CeremonyItemSchema,
     FamilyAlignmentPointSchema,
@@ -254,6 +254,8 @@ class DeterministicStubTraditionMergeAgent(BaseTraditionMergeAgent):
     def generate_merged_run_of_show(
         self, primary: Tradition, secondary: Tradition, start_date: date, notes: str | None = None
     ) -> MergedRunOfShowSchema:
+        _ = start_date
+        _ = notes
         p_code = primary.code.lower()
         s_code = secondary.code.lower()
         pair_set = {p_code, s_code}

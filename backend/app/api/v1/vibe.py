@@ -113,6 +113,10 @@ def upload_vibe_and_extract(
     Batches images into a single multimodal Gemini call (DEC-023) or deterministic stub.
     Aggregates palettes, style tags, and mood words into a StyleProfile.
     """
+    _ = (
+        event,
+        request,
+    )
     profile = VibeService.upload_vibe_and_extract(
         db=db, event_id=event_id, files=files, text_description=text_description
     )
@@ -137,6 +141,10 @@ def generate_theme(
     playlist genres, dress codes, and invitation briefs.
     Decor item costs and quantities are calculated with Zero LLM Math using DecorCostEngine.
     """
+    _ = (
+        event,
+        request,
+    )
     theme = VibeService.generate_theme(db=db, event_id=event_id, profile_id=profile_id)
     return format_theme_response(theme)
 
@@ -146,6 +154,7 @@ def get_moodboard(event_id: str, profile_id: str, db: Session = Depends(get_db))
     """
     Returns code-side generated Pillow mood board collage JPEG (DEC-022).
     """
+    _ = (event_id,)
     jpeg_bytes = VibeService.get_moodboard(db=db, profile_id=profile_id)
     return Response(content=jpeg_bytes, media_type="image/jpeg")
 
@@ -162,6 +171,10 @@ def accept_decor_item(
     """
     Accepts an individual decor item, automatically creating a corresponding BudgetItem and Task.
     """
+    _ = (
+        event,
+        event_id,
+    )
     item = VibeService.accept_decor_item(db=db, item_id=item_id)
     return format_decor_item_response(item)
 
@@ -178,6 +191,10 @@ def reject_decor_item(
     """
     Rejects an individual decor item.
     """
+    _ = (
+        event,
+        event_id,
+    )
     item = VibeService.reject_decor_item(db=db, item_id=item_id)
     return format_decor_item_response(item)
 
@@ -207,6 +224,7 @@ def list_themes_for_profile(
     """
     Lists theme proposals generated for a given style profile.
     """
+    _ = (event_id,)
     themes = (
         db.query(ThemeProposal)
         .filter(ThemeProposal.style_profile_id == profile_id)

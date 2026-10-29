@@ -34,7 +34,7 @@ export default function PrivacyPage() {
           <div className="font-bold text-amber-900 dark:text-amber-200 flex items-center gap-1.5">
             <span>✨</span> Core Privacy Commitment
           </div>
-          <p className="text-amber-800/90 dark:text-amber-300/90 leading-relaxed">
+          <p className="text-amber-950 dark:text-amber-200 leading-relaxed">
             Utsav never sells your personal data, never uses guest phone numbers
             for unsolicited marketing or advertising, and strictly enforces
             WhatsApp opt-outs (
@@ -56,7 +56,7 @@ export default function PrivacyPage() {
             rescaling, and WhatsApp guest coordination, we collect the following
             categories of information:
           </p>
-          <ul className="list-disc pl-5 space-y-1.5 text-stone-600 dark:text-stone-400">
+          <ul className="list-disc pl-5 space-y-1.5 text-stone-800 dark:text-stone-200">
             <li>
               <strong>Host Identification:</strong> Full name, verified mobile
               phone number, email address, preferred regional celebration
@@ -92,7 +92,7 @@ export default function PrivacyPage() {
             exclusively for transactional, event-related coordination authorized
             by the celebration host:
           </p>
-          <ul className="list-disc pl-5 space-y-1.5 text-stone-600 dark:text-stone-400">
+          <ul className="list-disc pl-5 space-y-1.5 text-stone-800 dark:text-stone-200">
             <li>
               <strong>Digital Invitations:</strong> Dispatching interactive
               cards with structured RSVP buttons (
@@ -112,7 +112,7 @@ export default function PrivacyPage() {
               code.
             </li>
           </ul>
-          <div className="p-3.5 rounded-xl bg-stone-100 dark:bg-stone-900 border border-stone-200 dark:border-stone-800 text-[11px] text-stone-600 dark:text-stone-400">
+          <div className="p-3.5 rounded-xl bg-stone-100 dark:bg-stone-900 border border-stone-200 dark:border-stone-800 text-[11px] text-stone-800 dark:text-stone-200">
             <strong>Strict Fact Sheet Scope (DEC-025):</strong> The WhatsApp
             guest bot answers questions strictly from the host-verified event
             fact sheet. It is technologically restricted from revealing private
@@ -130,7 +130,7 @@ export default function PrivacyPage() {
             In compliance with Meta Business Policies and global
             telecommunications anti-spam standards:
           </p>
-          <ul className="list-disc pl-5 space-y-1.5 text-stone-600 dark:text-stone-400">
+          <ul className="list-disc pl-5 space-y-1.5 text-stone-800 dark:text-stone-200">
             <li>
               <strong>Host-Authorized Dispatch:</strong> Hosts confirm that
               guests are personal acquaintances, family members, or community
@@ -159,7 +159,7 @@ export default function PrivacyPage() {
             <span>4.</span> Data Retention & Right to Erasure (PII Purge)
           </h2>
           <p>We adhere to strict data minimization principles:</p>
-          <ul className="list-disc pl-5 space-y-1.5 text-stone-600 dark:text-stone-400">
+          <ul className="list-disc pl-5 space-y-1.5 text-stone-800 dark:text-stone-200">
             <li>
               <strong>Immediate Data Deletion:</strong> Event hosts can delete
               any individual guest record at any time via the unified dashboard
@@ -186,7 +186,7 @@ export default function PrivacyPage() {
             Data integrity and privacy are protected through enterprise security
             controls:
           </p>
-          <ul className="list-disc pl-5 space-y-1.5 text-stone-600 dark:text-stone-400">
+          <ul className="list-disc pl-5 space-y-1.5 text-stone-800 dark:text-stone-200">
             <li>
               <strong>Encryption in Transit:</strong> 100% of network traffic is
               encrypted via TLS 1.3 / HTTPS. Inbound Meta webhooks require

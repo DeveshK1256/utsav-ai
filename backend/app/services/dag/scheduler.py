@@ -2,6 +2,10 @@ import logging
 from datetime import UTC, date, datetime, time, timedelta
 from typing import Any, ClassVar
 
+from sqlalchemy.orm import Session
+
+from backend.app.db.seed_traditions import CURATED_TRADITIONS
+from backend.app.models.models import RitualItem
 from backend.app.services.dag.node import TaskNode
 from backend.app.services.dag.templates import (
     BIRTHDAY_TASKS,
@@ -114,7 +118,8 @@ class DAGScheduler:
             task_nodes = cls.FOUNDATION_TASKS
 
         if cls.check_cycles(task_nodes):
-            raise ValueError(f"Circular dependency detected in {event_type} task DAG")
+            err_msg = f"Circular dependency detected in {event_type} task DAG"
+            raise ValueError(err_msg)
 
         scheduled = []
         for task in task_nodes:
@@ -205,8 +210,7 @@ class DAGScheduler:
         return diffs
 
     @classmethod
-    def _load_samagri_from_db(cls, codes: list[str], db: Any) -> list[dict[str, Any]]:
-        from backend.app.models.models import RitualItem
+    def _load_samagri_from_db(cls, codes: list[str], db: Session) -> list[dict[str, Any]]:
 
         items = []
         db_items = db.query(RitualItem).filter(RitualItem.tradition_code.in_(codes)).all()
@@ -226,7 +230,6 @@ class DAGScheduler:
 
     @classmethod
     def _load_samagri_from_curated(cls, tradition_set: set[str]) -> list[dict[str, Any]]:
-        from backend.app.db.seed_traditions import CURATED_TRADITIONS
 
         items = []
         for t in CURATED_TRADITIONS:
@@ -247,7 +250,7 @@ class DAGScheduler:
 
     @classmethod
     def _load_samagri_items(
-        cls, tradition_code: str, secondary_tradition_code: str | None, db: Any | None
+        cls, tradition_code: str, secondary_tradition_code: str | None, db: Session | None
     ) -> list[dict[str, Any]]:
         if db:
             codes = [c for c in [tradition_code, secondary_tradition_code] if c]
@@ -296,7 +299,7 @@ class DAGScheduler:
         start_date_val: date,
         tradition_code: str,
         secondary_tradition_code: str | None = None,
-        db: Any | None = None,
+        db: Session | None = None,
     ) -> list[dict[str, Any]]:
         """
         Generates structured preparation and procurement tasks for ritual samagri,

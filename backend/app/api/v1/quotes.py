@@ -53,6 +53,7 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/quotes", tags=["quotes"])
 
+
 @router.post(
     "/upload", response_model=QuoteDocumentResponseSchema, status_code=status.HTTP_201_CREATED
 )
@@ -73,6 +74,7 @@ async def upload_quote(
     provider, runs deterministic hidden-cost detection, saves quote + line items,
     and returns enriched analysis.
     """
+    _ = (request,)
     event = db.scalar(select(Event).where(Event.id == event_id))
     if not event:
         raise HTTPException(
@@ -175,7 +177,6 @@ def list_event_quotes(
     return results
 
 
-
 @router.post("/compare", response_model=QuoteComparisonResponseSchema)
 def compare_quotes(
     payload: QuoteComparisonRequestSchema, db: Session = Depends(get_db)
@@ -236,7 +237,6 @@ def compare_quotes(
         quotes_data=quotes_data,
         benchmark_samples=samples,
     )
-
 
 
 @router.post("/{quote_id}/negotiate-draft", response_model=NegotiationDraftResponseSchema)

@@ -83,7 +83,6 @@ class ReplanningInfeasibilityChecker:
             created_at=change_event.created_at,
         )
 
-
     @classmethod
     def _check_guest_count_infeasibility(cls, payload: dict[str, Any]) -> str | None:
         to_g = payload.get("to_guest_count")

@@ -174,7 +174,8 @@ class GuestService:
         """
         event = db.query(Event).filter(Event.id == event_id).first()
         if not event:
-            raise ValueError(f"Event {event_id} not found")
+            err_msg = f"Event {event_id} not found"
+            raise ValueError(err_msg)
 
         existing_phones = {
             g.phone for g in db.query(Guest.phone).filter(Guest.event_id == event_id).all()

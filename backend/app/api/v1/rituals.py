@@ -4,6 +4,7 @@ Exposes astronomical panchang calculations (DEC-027), curated tradition samagri,
 cross-tradition fusion merging, and priest/guruji export formats.
 """
 
+import uuid
 from datetime import date
 from typing import Any
 
@@ -12,14 +13,15 @@ from sqlalchemy.orm import Session
 
 from backend.app.core.security import verify_event_owner_token
 from backend.app.db.session import get_db
-from backend.app.models.models import Event, RitualItem, Tradition
+from backend.app.models.models import Event, RitualItem, Task, Tradition
 from backend.app.schemas.rituals import MergeTraditionsRequest, PanchangResponseSchema
+from backend.app.services.dag import DAGScheduler
 from backend.app.services.panchang_service import default_panchang_provider
 from backend.app.services.ritual_guide_service import (
     build_pandit_guide_payload,
     calculate_muhurat_candidates,
 )
-from backend.app.services.tradition_merge_service import TraditionMergeService
+from backend.app.services.tradition_merge import TraditionMergeService
 
 router = APIRouter(prefix="/rituals", tags=["Ritual & Cultural Intelligence"])
 
@@ -131,14 +133,13 @@ def merge_dual_traditions(
             db.commit()
 
     try:
-        merged = service.merge_traditions(
+        return service.merge_traditions(
             primary_code=payload.primary_tradition_code,
             secondary_code=payload.secondary_tradition_code,
             start_date=event_start,
             event_name=event_name,
             notes=payload.notes,
         )
-        return merged
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
 
@@ -151,10 +152,7 @@ def generate_ritual_tasks_for_event(
     Generates structured preparation and procurement tasks for ritual samagri,
     inserting them into the event's DAG task graph.
     """
-    import uuid
-
-    from backend.app.models.models import Task
-    from backend.app.services.dag_scheduler import DAGScheduler
+    _ = (event_id,)
 
     if not event:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Event not found")

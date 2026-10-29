@@ -1,6 +1,4 @@
-from typing import Any
-
-from PIL import Image, ImageDraw
+from PIL import Image, ImageDraw, ImageFont
 
 from backend.app.services.invitation.fonts import (
     FONT_BOLD_PATH,
@@ -14,6 +12,7 @@ from backend.app.services.invitation.fonts import (
 class ModernMinimalLayout:
     WIDTH = 1200
     HEIGHT = 1800
+
     @classmethod
     def _draw_modern_sidebar(
         cls,
@@ -32,10 +31,10 @@ class ModernMinimalLayout:
         muhurat: str | None,
         venue_str: str,
         is_dev: bool,
-        font_label: Any,
-        font_meta: Any,
-        font_sub: Any,
-        font_venue: Any,
+        font_label: ImageFont.FreeTypeFont | ImageFont.ImageFont,
+        font_meta: ImageFont.FreeTypeFont | ImageFont.ImageFont,
+        font_sub: ImageFont.FreeTypeFont | ImageFont.ImageFont,
+        font_venue: ImageFont.FreeTypeFont | ImageFont.ImageFont,
         primary: tuple[int, int, int],
         secondary: tuple[int, int, int],
         accent: tuple[int, int, int],
@@ -69,8 +68,8 @@ class ModernMinimalLayout:
         guest_name: str | None,
         guest_diet: str | None,
         is_dev: bool,
-        font_guest: Any,
-        font_sub: Any,
+        font_guest: ImageFont.FreeTypeFont | ImageFont.ImageFont,
+        font_sub: ImageFont.FreeTypeFont | ImageFont.ImageFont,
         primary: tuple[int, int, int],
         start_x: int,
     ) -> None:
@@ -105,7 +104,7 @@ class ModernMinimalLayout:
         venue_str: str,
         wording: str,
         muhurat: str | None,
-        ceremonies: list[str] | None,
+        _ceremonies: list[str] | None,
         guest_name: str | None,
         guest_diet: str | None,
         primary: tuple[int, int, int],

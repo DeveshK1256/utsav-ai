@@ -7,7 +7,7 @@ from fastapi.testclient import TestClient
 from backend.app.main import app
 from backend.app.db.session import SessionLocal
 from backend.app.models.models import Event, User, Guest, InvitationCard, ThemeProposal, StyleProfile
-from backend.app.services.invitation_renderer import InvitationCardRenderer
+from backend.app.services.invitation import InvitationCardRenderer
 from backend.app.services.invitation_wording_agent import InvitationWordingAgent
 
 client = TestClient(app)

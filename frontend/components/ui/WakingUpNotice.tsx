@@ -16,16 +16,15 @@ export function WakingUpNotice({
   const [show, setShow] = useState(false);
 
   useEffect(() => {
-    let timer: NodeJS.Timeout | null = null;
-    if (isLoading) {
-      timer = setTimeout(() => {
-        setShow(true);
-      }, timeoutMs);
-    } else {
-      setShow(false);
+    if (!isLoading) {
+      const resetTimer = setTimeout(() => setShow(false), 0);
+      return () => clearTimeout(resetTimer);
     }
+    const timer = setTimeout(() => {
+      setShow(true);
+    }, timeoutMs);
     return () => {
-      if (timer) clearTimeout(timer);
+      clearTimeout(timer);
     };
   }, [isLoading, timeoutMs]);
 

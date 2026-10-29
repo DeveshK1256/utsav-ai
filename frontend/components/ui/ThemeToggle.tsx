@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useSyncExternalStore } from "react";
 import { useTheme } from "./ThemeProvider";
 
 interface ThemeToggleProps {
@@ -8,16 +8,18 @@ interface ThemeToggleProps {
   showLabel?: boolean;
 }
 
+const emptySubscribe = () => () => {};
+
 export function ThemeToggle({
   className = "",
   showLabel = false,
 }: ThemeToggleProps) {
   const { theme, toggleTheme } = useTheme();
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+  const mounted = useSyncExternalStore(
+    emptySubscribe,
+    () => true,
+    () => false,
+  );
 
   if (!mounted) {
     // Render placeholder to avoid layout shift before mount
@@ -35,7 +37,6 @@ export function ThemeToggle({
       type="button"
       onClick={toggleTheme}
       aria-label={showLabel ? (isDark ? "Dark Mode" : "Light Mode") : (isDark ? "Switch to light mode" : "Switch to dark mode")}
-      title={isDark ? "Switch to light mode" : "Switch to dark mode"}
       className={`group relative inline-flex items-center justify-center p-2 rounded-xl border transition-all duration-200 active:scale-95 focus:outline-none focus:ring-2 focus:ring-amber-500/30 ${
         isDark
           ? "bg-stone-900/90 hover:bg-stone-800 border-stone-700/80 text-amber-400 shadow-sm"

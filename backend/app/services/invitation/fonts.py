@@ -1,6 +1,5 @@
 import logging
 from pathlib import Path
-from typing import Any
 
 from PIL import ImageDraw, ImageFont
 
@@ -28,7 +27,7 @@ def hex_to_rgb(
     return default
 
 
-def get_font(path: str, size: int) -> Any:
+def get_font(path: str, size: int) -> ImageFont.FreeTypeFont | ImageFont.ImageFont:
     try:
         if path and Path(path).exists():
             return ImageFont.truetype(path, size)
@@ -55,7 +54,12 @@ def is_devanagari_text(text: str | None) -> bool:
     return any(0x0900 <= ord(c) <= 0x097F for c in text)
 
 
-def wrap_text(text: str, font: Any, max_width: int, draw: ImageDraw.ImageDraw) -> list[str]:
+def wrap_text(
+    text: str,
+    font: ImageFont.FreeTypeFont | ImageFont.ImageFont,
+    max_width: int,
+    draw: ImageDraw.ImageDraw,
+) -> list[str]:
     """Wraps text so no line exceeds max_width."""
     words = text.split()
     if not words:
@@ -77,7 +81,10 @@ def wrap_text(text: str, font: Any, max_width: int, draw: ImageDraw.ImageDraw) -
 
 
 def truncate_with_ellipsis(
-    text: str, font: ImageFont.ImageFont, max_width: int, draw: ImageDraw.ImageDraw
+    text: str,
+    font: ImageFont.FreeTypeFont | ImageFont.ImageFont,
+    max_width: int,
+    draw: ImageDraw.ImageDraw,
 ) -> str:
     """Truncates text with ellipsis if it exceeds max_width."""
     bbox = draw.textbbox((0, 0), text, font=font)

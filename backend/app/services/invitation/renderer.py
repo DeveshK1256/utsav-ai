@@ -178,7 +178,6 @@ class InvitationCardRenderer:
 
         return png_bytes, pdf_bytes
 
-
     @classmethod
     def _image_to_lossless_pdf(cls, image: Image.Image, dpi: float = 300.0) -> bytes:
         return LosslessPDFExporter.image_to_lossless_pdf(image, dpi=dpi)

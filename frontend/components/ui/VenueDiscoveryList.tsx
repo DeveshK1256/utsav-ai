@@ -234,7 +234,17 @@ export const VenueDiscoveryList: React.FC<VenueDiscoveryListProps> = ({
   }, [apiBase, city, categoryFilter, geoState.lat, geoState.lng]);
 
   useEffect(() => {
-    fetchVenues();
+    let ignore = false;
+    const init = async () => {
+      await Promise.resolve();
+      if (!ignore) {
+        fetchVenues();
+      }
+    };
+    init();
+    return () => {
+      ignore = true;
+    };
   }, [fetchVenues]);
 
   const centerLat = geoState.lat || 26.9124;

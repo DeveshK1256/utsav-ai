@@ -6,7 +6,7 @@ from fastapi.testclient import TestClient
 from backend.app.main import app
 from backend.app.db.session import SessionLocal
 from backend.app.models.models import Event, User, SubEvent, InvitationCard, VendorProfile
-from backend.app.services.invitation_renderer import InvitationCardRenderer
+from backend.app.services.invitation import InvitationCardRenderer
 
 client = TestClient(app)
 
@@ -302,7 +302,7 @@ def test_compose_celebration_with_discovered_osm_venue():
     link to events via POST /events/{id}/compose.
     """
     import uuid
-    from backend.app.services.discovery_service import VendorDiscoveryService
+    from backend.app.services.discovery import VendorDiscoveryService
     db = SessionLocal()
     phone = f"+9198{random.randint(10000000, 99999999)}"
     user = User(phone_number=phone, full_name="Bengaluru Host", role="host")

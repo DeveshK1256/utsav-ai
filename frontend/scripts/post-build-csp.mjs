@@ -8,7 +8,6 @@ const __dirname = path.dirname(__filename);
 
 const frontendDir = path.resolve(__dirname, '..');
 const outDir = path.join(frontendDir, 'out');
-const rootDir = path.resolve(frontendDir, '..');
 
 function findHtmlFiles(dir) {
   let results = [];
@@ -74,34 +73,9 @@ const headersContent = `# Netlify Edge Security Headers (Static Export with Exac
   Permissions-Policy: geolocation=(self), camera=(), microphone=()
 `;
 
-// 1. Write to frontend/public/_headers
-const publicHeaders = path.join(frontendDir, 'public', '_headers');
-fs.writeFileSync(publicHeaders, headersContent, 'utf8');
-console.log(`[post-build-csp] Wrote CSP headers with ${hashList.length} hashes to ${publicHeaders}`);
-
-// 2. Write to frontend/out/_headers (for immediate deployment)
+// Write to frontend/out/_headers only (never touch tracked source files)
 const outHeaders = path.join(outDir, '_headers');
 if (fs.existsSync(outDir)) {
   fs.writeFileSync(outHeaders, headersContent, 'utf8');
   console.log(`[post-build-csp] Wrote CSP headers with ${hashList.length} hashes to ${outHeaders}`);
 }
-
-// 3. Update netlify.toml in repository root
-const netlifyTomlPath = path.join(rootDir, 'netlify.toml');
-const netlifyTomlContent = `[build]
-  base = "frontend"
-  publish = "out"
-  command = "npm run build"
-
-[[headers]]
-  for = "/*"
-  [headers.values]
-    Content-Security-Policy = "${cspValue};"
-    X-Content-Type-Options = "nosniff"
-    X-Frame-Options = "DENY"
-    Referrer-Policy = "strict-origin-when-cross-origin"
-    Permissions-Policy = "geolocation=(self), camera=(), microphone=()"
-`;
-
-fs.writeFileSync(netlifyTomlPath, netlifyTomlContent, 'utf8');
-console.log(`[post-build-csp] Updated root netlify.toml with static publish directory 'out' and exact CSP hashes.`);

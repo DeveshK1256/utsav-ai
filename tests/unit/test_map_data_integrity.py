@@ -3,7 +3,7 @@ import uuid
 import re
 import random
 from datetime import date, timedelta
-from backend.app.services.discovery_service import (
+from backend.app.services.discovery import (
     is_valid_venue_name,
     extract_distinctive_tokens,
     VendorDiscoveryService,
@@ -131,7 +131,7 @@ def test_distinct_venues_not_overmerged_within_350m():
     'Shree Ganesh Banquet Hall' vs 'Shree Krishna Banquet Hall')
     are NOT erroneously collapsed into one. Both must be preserved as separate pins.
     """
-    from backend.app.services.discovery_service import are_venues_duplicates
+    from backend.app.services.discovery import are_venues_duplicates
     
     # 1. Pure unit tests with are_venues_duplicates
     # Case A: Two different "X Banquet Hall" businesses sharing the honorific prefix 'Shree'

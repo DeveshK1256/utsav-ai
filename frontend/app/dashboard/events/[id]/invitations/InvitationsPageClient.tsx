@@ -24,41 +24,52 @@ export default function InvitationsPageClient() {
   const [startDate, setStartDate] = useState<string>("");
 
   useEffect(() => {
-    // Resolve real event ID from URL path or localStorage
-    let resolvedId = rawEventId;
-    if (typeof window !== "undefined") {
-      const segments = window.location.pathname.split("/").filter(Boolean);
-      const evIdx = segments.indexOf("events");
-      if (
-        evIdx !== -1 &&
-        segments[evIdx + 1] &&
-        segments[evIdx + 1] !== "default"
-      ) {
-        resolvedId = segments[evIdx + 1] ?? rawEventId;
-      } else if (!resolvedId || resolvedId === "default") {
-        const stored =
-          localStorage.getItem("current_event_id") ||
-          localStorage.getItem("last_event_id");
-        if (stored) resolvedId = stored;
-      }
-    }
+    let ignore = false;
+    const init = async () => {
+      await Promise.resolve();
+      if (ignore) return;
 
-    if (resolvedId && resolvedId !== "default") {
-      setEventId(resolvedId);
-      // Fetch basic event details
-      fetch(`${API_BASE_URL}/events/${resolvedId}`, {
-        headers: getAuthHeaders(resolvedId),
-      })
-        .then((r) => r.json())
-        .then((d) => {
-          if (d && d.name) {
-            setEventName(d.name);
-            setCity(d.city || "Mumbai");
-            setStartDate(d.start_date || "");
-          }
+      // Resolve real event ID from URL path or localStorage
+      let resolvedId = rawEventId;
+      if (typeof window !== "undefined") {
+        const segments = window.location.pathname.split("/").filter(Boolean);
+        const evIdx = segments.indexOf("events");
+        if (
+          evIdx !== -1 &&
+          segments[evIdx + 1] &&
+          segments[evIdx + 1] !== "default"
+        ) {
+          resolvedId = segments[evIdx + 1] ?? rawEventId;
+        } else if (!resolvedId || resolvedId === "default") {
+          const stored =
+            localStorage.getItem("current_event_id") ||
+            localStorage.getItem("last_event_id");
+          if (stored) resolvedId = stored;
+        }
+      }
+
+      if (resolvedId && resolvedId !== "default") {
+        setEventId(resolvedId);
+        // Fetch basic event details
+        fetch(`${API_BASE_URL}/events/${resolvedId}`, {
+          headers: getAuthHeaders(resolvedId),
         })
-        .catch(() => {});
-    }
+          .then((r) => r.json())
+          .then((d) => {
+            if (!ignore && d && d.name) {
+              setEventName(d.name);
+              setCity(d.city || "Mumbai");
+              setStartDate(d.start_date || "");
+            }
+          })
+          .catch(() => {});
+      }
+    };
+
+    init();
+    return () => {
+      ignore = true;
+    };
   }, [rawEventId]);
 
   return (

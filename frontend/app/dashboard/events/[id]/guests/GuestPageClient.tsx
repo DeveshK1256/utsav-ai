@@ -26,47 +26,58 @@ export default function GuestPageClient() {
   };
 
   useEffect(() => {
-    let resolvedId = rawEventId;
-    if (!resolvedId || resolvedId === "default") {
-      try {
-        const saved = localStorage.getItem("utsav_last_event_id");
-        if (saved && saved !== "default") {
-          resolvedId = saved;
-          router.replace(`/dashboard/events/${saved}/guests`);
-          return;
+    let ignore = false;
+    const init = async () => {
+      await Promise.resolve();
+      if (ignore) return;
+
+      let resolvedId = rawEventId;
+      if (!resolvedId || resolvedId === "default") {
+        try {
+          const saved = localStorage.getItem("utsav_last_event_id");
+          if (saved && saved !== "default") {
+            resolvedId = saved;
+            router.replace(`/dashboard/events/${saved}/guests`);
+            return;
+          }
+        } catch (e) {
+          // ignore
         }
-      } catch (e) {
-        // ignore
+        setIsLoading(false);
+        setErrorMessage(
+          "No celebration event selected. Please launch an event from the dashboard.",
+        );
+        return;
       }
-      setIsLoading(false);
-      setErrorMessage(
-        "No celebration event selected. Please launch an event from the dashboard.",
-      );
-      return;
-    }
 
-    setTargetId(resolvedId);
+      setTargetId(resolvedId);
 
-    // Fetch event basic metadata
-    const fetchMeta = async () => {
+      // Fetch event basic metadata
       try {
         const res = await fetch(`${getApiBase()}/events/${resolvedId}`, {
           headers: getAuthHeaders(resolvedId),
         });
-        if (res.ok) {
-          const data = await res.json();
-          setEventName(data.name || "Celebration");
-        } else if (res.status === 404) {
-          setErrorMessage(`Event "${resolvedId}" not found in database.`);
+        if (!ignore) {
+          if (res.ok) {
+            const data = await res.json();
+            setEventName(data.name || "Celebration");
+          } else if (res.status === 404) {
+            setErrorMessage(`Event "${resolvedId}" not found in database.`);
+          }
         }
       } catch (err: unknown) {
         console.error("Failed to fetch event:", err);
       } finally {
-        setIsLoading(false);
+        if (!ignore) {
+          setIsLoading(false);
+        }
       }
     };
 
-    fetchMeta();
+    init();
+    return () => {
+      ignore = true;
+    };
   }, [rawEventId, router]);
 
   if (errorMessage) {

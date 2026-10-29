@@ -10,11 +10,9 @@ dependencies = [
     "pydantic-settings>=2.7.0",
     "sqlalchemy>=2.0.36",
     "psycopg[binary]>=3.2.0",
-    "psycopg2-binary>=2.9.9",
     "alembic>=1.14.0",
     "python-multipart>=0.0.18",
     "httpx>=0.27.0",
-    "requests>=2.32.3",
     "Pillow>=10.0.0",
     "ephem>=4.2.0",
     "slowapi>=0.1.10",
@@ -28,6 +26,7 @@ dev = [
     "mypy>=1.14.0",
     "bandit>=1.8.0",
     "radon>=6.0.1",
+    "jsonschema>=4.23.0",
 ]
 
 [tool.ruff]
@@ -51,12 +50,29 @@ select = [
     "PTH",
     "T20",
     "C90",
+    "ANN",
+    "ARG",
+    "TRY",
+    "N",
+    "PL",
+    "RET",
+    "ERA",
 ]
 ignore = [
     "RUF001", # Ambiguous unicode character (Indian currency symbol, Devanagari script, em-dashes)
     "RUF002", # Docstring ambiguous unicode character
     "RUF003", # Comment ambiguous unicode character
 ]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["ANN", "S101", "ARG"]
+
+[tool.ruff.lint.pylint]
+max-args = 15
+max-positional-args = 15
+max-returns = 12
+max-statements = 100
+allow-magic-value-types = ["int", "float", "str", "bytes"]
 
 [tool.ruff.lint.mccabe]
 max-complexity = 10
@@ -93,7 +109,6 @@ strict_equality = true
 [[tool.mypy.overrides]]
 module = [
     "ephem",
-    "backend.app.services.providers.openai_provider",
 ]
 ignore_missing_imports = true
 

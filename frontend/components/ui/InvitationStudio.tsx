@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import Image from "next/image";
 import { getAuthHeaders } from "@/lib/auth";
 
 interface InvitationStudioProps {
@@ -554,9 +555,12 @@ export function InvitationStudio({
             {activePreviewCard ? (
               <div className="space-y-3">
                 <div className="rounded-2xl overflow-hidden border-2 border-amber-500/40 shadow-inner bg-stone-100 dark:bg-stone-950 flex items-center justify-center p-2">
-                  <img
+                  <Image
                     src={`${apiBase}${activePreviewCard.png_download_url}`}
                     alt="Rendered Invitation Card"
+                    width={800}
+                    height={1200}
+                    unoptimized
                     className="w-full max-h-[580px] object-contain rounded-xl shadow"
                   />
                 </div>
