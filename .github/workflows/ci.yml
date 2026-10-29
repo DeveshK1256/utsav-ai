@@ -40,7 +40,7 @@ jobs:
 
       - name: Python Static Type Check (MyPy Strict)
         run: |
-          mypy backend/app
+          mypy backend
 
       - name: Security Vulnerability Scan (Bandit)
         run: |

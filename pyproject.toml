@@ -104,6 +104,7 @@ extend-immutable-calls = [
 
 [tool.mypy]
 python_version = "3.12"
+mypy_path = "."
 explicit_package_bases = true
 warn_unused_configs = true
 check_untyped_defs = true
@@ -116,6 +117,7 @@ strict_equality = true
 [[tool.mypy.overrides]]
 module = [
     "ephem",
+    "slowapi.*",
 ]
 ignore_missing_imports = true
 
