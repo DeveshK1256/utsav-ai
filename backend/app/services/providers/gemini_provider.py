@@ -376,7 +376,8 @@ class GeminiVibeProvider(BaseVibeExtractionProvider, BaseThemeGenerationProvider
     ) -> VibeExtractionPayloadSchema:
         if not self.api_key:
             logger.warning(
-                "No GEMINI_API_KEY provided; fallback to deterministic stub for vibe extraction."
+                "No GEMINI_API_KEY provided; falling back to deterministic stub for "
+                "vibe extraction."
             )
             self.last_provider_used = "deterministic_stub"
             return self.fallback_stub.extract_vibe_from_images(images, text_description)
@@ -452,7 +453,8 @@ class GeminiVibeProvider(BaseVibeExtractionProvider, BaseThemeGenerationProvider
     ) -> ThemeGenerationPayloadSchema:
         if not self.api_key:
             logger.warning(
-                "No GEMINI_API_KEY provided; fallback to deterministic stub for theme generation."
+                "No GEMINI_API_KEY provided; falling back to deterministic stub for "
+                "theme generation."
             )
             self.last_provider_used = "deterministic_stub"
             return self.fallback_stub.generate_theme_proposal(style_profile, event_details)

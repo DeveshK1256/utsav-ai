@@ -195,8 +195,7 @@ class InvitationWordingAgent:
 
         prompt = f"""
 You are the Utsav Invitation Text Composer Agent.
-Write 3 distinct, culturally resonant invitation wording options for an Indian
-{event_type} celebration.
+Write 3 distinct, culturally resonant invitation wording options for an Indian {event_type} celebration.
 
 STRICT INVENTED-FACTS POLICY:
 - Use ONLY the confirmed details provided below.
@@ -237,10 +236,7 @@ OUTPUT JSON FORMAT ONLY:
 }}
 """
         gemini_model = "gemini-2.0-flash"
-        url = (
-            f"https://generativelanguage.googleapis.com/v1beta/models/"
-            f"{gemini_model}:generateContent?key={gemini_key}"
-        )
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/{gemini_model}:generateContent?key={gemini_key}"
         payload = {
             "contents": [{"parts": [{"text": prompt}]}],
             "generationConfig": {"temperature": 0.4, "responseMimeType": "application/json"},
