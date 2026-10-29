@@ -1,3 +1,4 @@
+from backend.app.core.config import settings
 import pytest
 import hmac
 import hashlib
@@ -587,3 +588,494 @@ def test_guest_privacy_deletion_endpoint(setup_m4_test_event):
     check_g = db.query(Guest).filter(Guest.id == guest_id).first()
     assert check_g is None
     db.close()
+
+import hashlib
+import hmac
+import json
+import uuid
+from datetime import datetime, timezone
+from unittest.mock import MagicMock, patch
+from starlette.requests import Request
+from backend.app.models.models import MessageLog, OptOut
+from backend.app.services.whatsapp.provider import MetaCloudWhatsAppProvider, get_whatsapp_provider
+from backend.app.services.whatsapp.send_service import WhatsAppSendService
+from backend.app.services.whatsapp.webhook_service import WhatsAppWebhookService
+
+
+def test_webhooks_signature_and_json_error_branches():
+    """Covers lines 53-54 and 58-59 in api/v1/webhooks.py."""
+    with patch.object(settings, "WHATSAPP_APP_SECRET", "secret_key_123"):
+        # 1. Invalid signature -> 403
+        res_sig = client.post(
+            "/api/v1/webhooks/whatsapp",
+            content=b'{"entry": []}',
+            headers={"X-Hub-Signature-256": "sha256=invalid_signature_hex"}
+        )
+        assert res_sig.status_code == 403
+
+    # 2. Invalid non-JSON payload -> 400
+    res_bad_json = client.post(
+        "/api/v1/webhooks/whatsapp",
+        content=b"Not a valid json string at all",
+        headers={"Content-Type": "application/json"}
+    )
+    assert res_bad_json.status_code == 400
+
+
+def test_whatsapp_webhook_signature_and_payload_branches(db, test_data, monkeypatch):
+    event, token = test_data
+    from backend.app.services.whatsapp.webhook_service import WhatsAppWebhookService
+    from backend.app.core.config import settings
+    import hmac
+    import hashlib
+
+    # 1. Signature verification branches
+    payload_bytes = b'{"object": "whatsapp_business_account"}'
+    
+    # Configure secret
+    old_secret = getattr(settings, "WHATSAPP_APP_SECRET", None)
+    settings.WHATSAPP_APP_SECRET = "test_meta_webhook_secret_key_123"
+    try:
+        # Missing header
+        assert WhatsAppWebhookService.verify_meta_signature(payload_bytes, None) is False
+        # Malformed header (no sha256= prefix)
+        assert WhatsAppWebhookService.verify_meta_signature(payload_bytes, "invalid_header") is False
+        
+        # Valid & invalid HMAC with configured secret
+        valid_hmac = "sha256=" + hmac.new(
+            b"test_meta_webhook_secret_key_123",
+            payload_bytes,
+            hashlib.sha256
+        ).hexdigest()
+        assert WhatsAppWebhookService.verify_meta_signature(payload_bytes, valid_hmac) is True
+        assert WhatsAppWebhookService.verify_meta_signature(payload_bytes, "sha256=forged_invalid_signature") is False
+    finally:
+        settings.WHATSAPP_APP_SECRET = old_secret
+
+    # When no secret configured in production (not test env) -> fail-closed
+    monkeypatch.delenv("PYTEST_CURRENT_TEST", raising=False)
+    old_env = getattr(settings, "ENVIRONMENT", "")
+    settings.ENVIRONMENT = "production"
+    settings.WHATSAPP_APP_SECRET = None
+    try:
+        assert WhatsAppWebhookService.verify_meta_signature(payload_bytes, "sha256=abc") is False
+    finally:
+        settings.ENVIRONMENT = old_env
+
+    # 2. Inbound Delivery Status Callback branches (sent, delivered, read, failed with/without errors)
+    from backend.app.models.models import MessageLog, OptOut
+    
+    unique_wamid = f"wamid.{uuid.uuid4().hex}"
+    msg_log = MessageLog(
+        event_id=event.id,
+        phone_number="+919876543210",
+        direction="outbound",
+        message_type="invitation",
+        content_snapshot="Standard Invitation Text",
+        whatsapp_message_id=unique_wamid,
+        delivery_status="sent"
+    )
+    db.add(msg_log)
+    db.commit()
+
+    # Status update: failed with errors
+    status_payload = {
+        "entry": [{
+            "changes": [{
+                "value": {
+                    "statuses": [{
+                        "id": unique_wamid,
+                        "status": "failed",
+                        "errors": [{"title": "Recipient phone unreachable"}]
+                    }]
+                }
+            }]
+        }]
+    }
+    res_status = WhatsAppWebhookService.handle_inbound_payload(db, status_payload)
+    assert res_status["statuses_updated"] == 1
+    db.refresh(msg_log)
+    assert msg_log.delivery_status == "failed"
+    assert msg_log.failure_reason == "Recipient phone unreachable"
+
+    # Status update: delivered without errors
+    status_payload_deliv = {
+        "entry": [{
+            "changes": [{
+                "value": {
+                    "statuses": [{
+                        "id": unique_wamid,
+                        "status": "delivered"
+                    }]
+                }
+            }]
+        }]
+    }
+    WhatsAppWebhookService.handle_inbound_payload(db, status_payload_deliv)
+    db.refresh(msg_log)
+    assert msg_log.delivery_status == "delivered"
+
+    # 3. Inbound Messages: STOP keyword opt-out (first time & duplicate)
+    stop_phone = "+919123456789"
+    stop_payload = {
+        "entry": [{
+            "changes": [{
+                "value": {
+                    "messages": [{
+                        "from": "919123456789",
+                        "id": "wamid.inbound.stop.1",
+                        "type": "text",
+                        "text": {"body": "STOP"}
+                    }]
+                }
+            }]
+        }]
+    }
+    res_stop = WhatsAppWebhookService.handle_inbound_payload(db, stop_payload)
+    assert res_stop["opt_outs_recorded"] == 1
+    opt_entry = db.query(OptOut).filter(OptOut.phone == stop_phone).first()
+    assert opt_entry is not None
+
+    # Duplicate STOP request should not duplicate row
+    res_stop2 = WhatsAppWebhookService.handle_inbound_payload(db, stop_payload)
+    assert res_stop2["opt_outs_recorded"] == 1
+
+    # 4. Inbound interactive quick-reply button RSVP
+    guest_rsvp = Guest(
+        event_id=event.id,
+        name="Rohan RSVP",
+        phone="+919988776655",
+        rsvp_status="pending"
+    )
+    db.add(guest_rsvp)
+    db.commit()
+
+    btn_payload = {
+        "entry": [{
+            "changes": [{
+                "value": {
+                    "messages": [{
+                        "from": "919988776655",
+                        "id": "wamid.inbound.btn.1",
+                        "type": "interactive",
+                        "interactive": {
+                            "type": "button_reply",
+                            "button_reply": {
+                                "id": "rsvp_attending_2",
+                                "title": "Attending (2)"
+                            }
+                        }
+                    }]
+                }
+            }]
+        }]
+    }
+    res_btn = WhatsAppWebhookService.handle_inbound_payload(db, btn_payload)
+    assert res_btn["rsvps_updated"] == 1
+    db.refresh(guest_rsvp)
+    assert guest_rsvp.rsvp_status == "attending"
+    assert guest_rsvp.headcount == 1
+
+    # 5. Inbound legacy button payload
+    btn_legacy_payload = {
+        "entry": [{
+            "changes": [{
+                "value": {
+                    "messages": [{
+                        "from": "919988776655",
+                        "id": "wamid.inbound.btn.legacy",
+                        "type": "button",
+                        "button": {
+                            "payload": "rsvp_declined",
+                            "text": "Cannot Attend"
+                        }
+                    }]
+                }
+            }]
+        }]
+    }
+    res_btn_legacy = WhatsAppWebhookService.handle_inbound_payload(db, btn_legacy_payload)
+    assert res_btn_legacy["rsvps_updated"] == 1
+    db.refresh(guest_rsvp)
+    assert guest_rsvp.rsvp_status == "declined"
+
+    # 6. Inbound free-text RSVP with diet
+    free_rsvp_payload = {
+        "entry": [{
+            "changes": [{
+                "value": {
+                    "messages": [{
+                        "from": "919988776655",
+                        "id": "wamid.inbound.freetext.1",
+                        "type": "text",
+                        "text": {"body": "Yes we are attending, count 3, Jain meal please"}
+                    }]
+                }
+            }]
+        }]
+    }
+    res_freetext = WhatsAppWebhookService.handle_inbound_payload(db, free_rsvp_payload)
+    assert res_freetext["rsvps_updated"] == 1
+    db.refresh(guest_rsvp)
+    assert guest_rsvp.rsvp_status == "attending"
+    assert guest_rsvp.headcount >= 1
+    assert guest_rsvp.diet == "jain"
+
+    # 7. Inbound FAQ Query with event fact sheet
+    fs = EventFactSheet(
+        event_id=event.id,
+        venue_address="Grand Palace Jaipur",
+        parking_info="Valet parking available at Gate 2",
+        dress_code="Traditional Royal",
+        timing_notes="Baraat arrives at 4 PM"
+    )
+    db.add(fs)
+    db.commit()
+
+    faq_payload = {
+        "entry": [{
+            "changes": [{
+                "value": {
+                    "messages": [{
+                        "from": "919988776655",
+                        "id": "wamid.inbound.faq.1",
+                        "type": "text",
+                        "text": {"body": "Is there parking available at the venue?"}
+                    }]
+                }
+            }]
+        }]
+    }
+    res_faq = WhatsAppWebhookService.handle_inbound_payload(db, faq_payload)
+    assert res_faq["faq_replies_sent"] >= 0
+
+    # 8. Empty 'from' message skipped
+    skip_payload = {
+        "entry": [{
+            "changes": [{
+                "value": {
+                    "messages": [{"id": "wamid.empty.1", "type": "text"}]
+                }
+            }]
+        }]
+    }
+    res_skip = WhatsAppWebhookService.handle_inbound_payload(db, skip_payload)
+    assert res_skip["statuses_updated"] == 0
+
+
+def test_whatsapp_send_service_batch_branches(db, test_data):
+    event, token = test_data
+    import random
+    from backend.app.services.whatsapp.send_service import WhatsAppSendService
+    from backend.app.models.models import OptOut
+
+    # 1. Add normal guest and opted-out guest with valid 10-digit Indian numbers starting with 9
+    r_suffix1 = random.randint(10000000, 99999999)
+    r_suffix2 = random.randint(10000000, 99999999)
+    opted_phone = f"+9198{r_suffix1}"
+    normal_phone = f"+9199{r_suffix2}"
+
+    db.add(OptOut(phone=opted_phone, reason="Host requested opt-out"))
+    db.commit()
+
+    g_normal = Guest(event_id=event.id, name="Active Guest", phone=normal_phone, rsvp_status="pending")
+    g_opted = Guest(event_id=event.id, name="Opted Out Guest", phone=opted_phone, rsvp_status="pending")
+    db.add_all([g_normal, g_opted])
+    db.commit()
+
+    # Batch send with guest_ids filter and rate_limit_delay_secs > 0
+    res = WhatsAppSendService.send_batch_invitations(
+        db=db,
+        event_id=event.id,
+        guest_ids=[g_normal.id, g_opted.id],
+        rate_limit_delay_secs=0.001
+    )
+    assert res.total_requested == 2
+    assert res.sent_count >= 1
+    assert res.blocked_opt_out_count >= 1
+    assert len(res.errors) >= 1
+
+
+def test_webhook_signature_verification():
+    secret = "test_meta_webhook_secret_key"
+    payload = b'{"object":"whatsapp_business_account"}'
+    valid_sig = "sha256=" + hmac.new(secret.encode("utf-8"), payload, hashlib.sha256).hexdigest()
+
+    with patch("backend.app.services.whatsapp.webhook_service.settings") as mock_settings, \
+         patch.dict("os.environ", {"PYTEST_CURRENT_TEST": ""}):
+        mock_settings.WHATSAPP_APP_SECRET = secret
+        mock_settings.ENVIRONMENT = "production"
+
+        assert WhatsAppWebhookService.verify_meta_signature(payload, valid_sig) is True
+        assert WhatsAppWebhookService.verify_meta_signature(payload, "sha256=forged_bad_signature") is False
+        assert WhatsAppWebhookService.verify_meta_signature(payload, None) is False
+        assert WhatsAppWebhookService.verify_meta_signature(payload, "invalid_prefix") is False
+
+
+def test_webhook_handle_status_updates():
+    db = SessionLocal()
+    wamid = f"wamid.test_delivery_{uuid.uuid4().hex}"
+    try:
+        # Create a test message log
+        msg = MessageLog(
+            event_id="test_ev",
+            guest_id="test_g",
+            whatsapp_message_id=wamid,
+            phone_number="+919876543210",
+            direction="outbound",
+            message_type="template",
+            content_snapshot="Your celebration invitation",
+            delivery_status="sent"
+        )
+        db.add(msg)
+        db.commit()
+        msg_id = str(msg.id)
+
+        # Simulate delivered callback
+        payload_delivered = {
+            "entry": [
+                {
+                    "changes": [
+                        {
+                            "value": {
+                                "statuses": [
+                                    {"id": wamid, "status": "delivered"}
+                                ]
+                            }
+                        }
+                    ]
+                }
+            ]
+        }
+        res = WhatsAppWebhookService.handle_inbound_payload(db, payload_delivered)
+        assert res["statuses_updated"] == 1
+
+        msg_check = db.query(MessageLog).filter(MessageLog.id == msg_id).first()
+        assert msg_check.delivery_status == "delivered"
+
+        # Simulate failed callback
+        payload_failed = {
+            "entry": [
+                {
+                    "changes": [
+                        {
+                            "value": {
+                                "statuses": [
+                                    {"id": wamid, "status": "failed", "errors": [{"title": "Number unreachable"}]}
+                                ]
+                            }
+                        }
+                    ]
+                }
+            ]
+        }
+        res_fail = WhatsAppWebhookService.handle_inbound_payload(db, payload_failed)
+        assert res_fail["statuses_updated"] == 1
+
+        msg_fail_check = db.query(MessageLog).filter(MessageLog.id == msg_id).first()
+        assert msg_fail_check.delivery_status == "failed"
+        assert "unreachable" in msg_fail_check.failure_reason.lower()
+    finally:
+        # Clean up
+        db.query(MessageLog).filter(MessageLog.whatsapp_message_id == wamid).delete()
+        db.commit()
+        db.close()
+
+
+def test_webhook_handle_stop_opt_out():
+    db = SessionLocal()
+    phone = f"+9198{uuid.uuid4().int % 100000000:08d}"
+    stop_id = f"wamid.stop_{uuid.uuid4().hex[:6]}"
+    try:
+        payload_stop = {
+            "entry": [
+                {
+                    "changes": [
+                        {
+                            "value": {
+                                "messages": [
+                                    {
+                                        "id": stop_id,
+                                        "from": phone.lstrip("+"),
+                                        "type": "text",
+                                        "text": {"body": "STOP"}
+                                    }
+                                ]
+                            }
+                        }
+                    ]
+                }
+            ]
+        }
+        res = WhatsAppWebhookService.handle_inbound_payload(db, payload_stop)
+        assert res["opt_outs_recorded"] == 1
+
+        opt_out = db.query(OptOut).filter(OptOut.phone == phone).first()
+        assert opt_out is not None
+        assert "STOP" in opt_out.reason
+    finally:
+        db.query(OptOut).filter(OptOut.phone == phone).delete()
+        db.commit()
+        db.close()
+
+
+def test_api_webhooks_whatsapp_hub_challenge():
+    # Meta webhook verification challenge
+    token = "utsav_webhook_verify_token_secure"
+    challenge = "1158201444"
+
+    resp = client.get(f"/api/v1/webhooks/whatsapp?hub.mode=subscribe&hub.challenge={challenge}&hub.verify_token={token}")
+    assert resp.status_code == 200
+    assert resp.text == challenge
+
+    # Invalid token rejection
+    resp_bad = client.get(f"/api/v1/webhooks/whatsapp?hub.mode=subscribe&hub.challenge={challenge}&hub.verify_token=wrong")
+    assert resp_bad.status_code == 403
+
+
+def test_meta_cloud_whatsapp_provider_deep():
+    provider = MetaCloudWhatsAppProvider(phone_number_id="123456", api_token="test_token")
+
+    # 1. Interactive buttons success
+    mock_success_resp = MagicMock()
+    mock_success_resp.status_code = 200
+    mock_success_resp.json.return_value = {"messages": [{"id": "wamid.interactive_123"}]}
+
+    with patch("httpx.post", return_value=mock_success_resp):
+        res = provider.send_interactive_buttons(
+            to_phone="+919876543210",
+            body="Please choose an RSVP option",
+            buttons=[{"id": "btn_yes", "title": "Attending"}, {"id": "btn_no", "title": "Declined"}]
+        )
+        assert res.success is True
+        assert res.message_id == "wamid.interactive_123"
+
+    # 2. Interactive buttons API error response
+    mock_err_resp = MagicMock()
+    mock_err_resp.status_code = 400
+    mock_err_resp.json.return_value = {"error": {"message": "Invalid recipient phone number"}}
+    mock_err_resp.text = "Error detail"
+
+    with patch("httpx.post", return_value=mock_err_resp):
+        res_err = provider.send_interactive_buttons(
+            to_phone="+919876543210",
+            body="Please choose an RSVP option",
+            buttons=[{"id": "btn_yes", "title": "Attending"}]
+        )
+        assert res_err.success is False
+        assert "Invalid recipient" in res_err.error
+
+    # 3. Interactive buttons network exception
+    with patch("httpx.post", side_effect=RuntimeError("Connection reset by peer")):
+        res_exc = provider.send_interactive_buttons(
+            to_phone="+919876543210",
+            body="Please choose an RSVP option",
+            buttons=[{"id": "btn_yes", "title": "Attending"}]
+        )
+        assert res_exc.success is False
+        assert "Connection reset" in res_exc.error
+
+    # 4. Provider factory resolution
+    with patch.dict("os.environ", {"WHATSAPP_PROVIDER": "cloud_api", "WHATSAPP_API_TOKEN": "tok", "WHATSAPP_PHONE_NUMBER_ID": "123"}):
+        prov = get_whatsapp_provider()
+        assert isinstance(prov, MetaCloudWhatsAppProvider)

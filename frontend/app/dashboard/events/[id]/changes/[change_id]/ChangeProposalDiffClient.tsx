@@ -1,16 +1,17 @@
-'use client';
+"use client";
 
-import React, { useState, useEffect, useCallback } from 'react';
-import Link from 'next/link';
-import { useParams } from 'next/navigation';
-import { Navbar } from '@/components/ui/Navbar';
-import { getAuthHeaders } from '@/lib/auth';
+import React, { useState, useEffect, useCallback } from "react";
+import Link from "next/link";
+import { useParams } from "next/navigation";
+import { Navbar } from "@/components/ui/Navbar";
+import { getAuthHeaders } from "@/lib/auth";
 
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL ||
-  (typeof window !== 'undefined' && window.location.hostname.includes('netlify.app')
-    ? '/api/v1'
-    : 'https://utsav-ai-ycg2.onrender.com/api/v1');
+  (typeof window !== "undefined" &&
+  window.location.hostname.includes("netlify.app")
+    ? "/api/v1"
+    : "https://utsav-ai-ycg2.onrender.com/api/v1");
 
 interface BudgetItemDiff {
   budget_item_id: string;
@@ -24,8 +25,20 @@ interface BudgetItemDiff {
 }
 
 interface TaskDiff {
-  added_tasks: Array<{ title: string; description?: string; assigned_role?: string; duration_minutes?: number }>;
-  moved_tasks: Array<{ task_id: string; title: string; old_start?: string; new_start?: string; days_shifted?: number; formula?: string }>;
+  added_tasks: Array<{
+    title: string;
+    description?: string;
+    assigned_role?: string;
+    duration_minutes?: number;
+  }>;
+  moved_tasks: Array<{
+    task_id: string;
+    title: string;
+    old_start?: string;
+    new_start?: string;
+    days_shifted?: number;
+    formula?: string;
+  }>;
   cancelled_tasks: string[];
 }
 
@@ -50,55 +63,75 @@ interface ChangeProposal {
 
 export default function ChangeProposalDiffClient() {
   const params = useParams();
-  const eventId = (params?.id as string) || '';
-  const changeId = (params?.change_id as string) || '';
+  const eventId = (params?.id as string) || "";
+  const changeId = (params?.change_id as string) || "";
 
   const [proposal, setProposal] = useState<ChangeProposal | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [actionLoading, setActionLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [overrides, setOverrides] = useState<Record<string, number>>({});
-  const [hasUnsavedOverrides, setHasUnsavedOverrides] = useState<boolean>(false);
+  const [hasUnsavedOverrides, setHasUnsavedOverrides] =
+    useState<boolean>(false);
 
   // Event Context & Simulator State
-  const [eventData, setEventData] = useState<{ name: string; guest_count: number; total_budget: number; city: string } | null>(null);
-  const [existingProposals, setExistingProposals] = useState<ChangeProposal[]>([]);
+  const [eventData, setEventData] = useState<{
+    name: string;
+    guest_count: number;
+    total_budget: number;
+    city: string;
+  } | null>(null);
+  const [existingProposals, setExistingProposals] = useState<ChangeProposal[]>(
+    [],
+  );
   const [isSimulating, setIsSimulating] = useState<boolean>(false);
   const [customGuestCount, setCustomGuestCount] = useState<number>(300);
 
-  const fetchProposal = useCallback(async (targetChangeId: string) => {
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await fetch(`${API_BASE_URL}/events/${eventId}/changes/${targetChangeId}`, {
-        headers: getAuthHeaders(eventId)
-      });
-      if (!res.ok) {
-        throw new Error(`Failed to load change proposal (${res.status})`);
+  const fetchProposal = useCallback(
+    async (targetChangeId: string) => {
+      setLoading(true);
+      setError(null);
+      try {
+        const res = await fetch(
+          `${API_BASE_URL}/events/${eventId}/changes/${targetChangeId}`,
+          {
+            headers: getAuthHeaders(eventId),
+          },
+        );
+        if (!res.ok) {
+          throw new Error(`Failed to load change proposal (${res.status})`);
+        }
+        const data: ChangeProposal = await res.json();
+        setProposal(data);
+        const initialOverrides: Record<string, number> = {};
+        data.budget_diff?.forEach((item) => {
+          initialOverrides[item.budget_item_id] = item.new_amount;
+        });
+        setOverrides(initialOverrides);
+      } catch (err: unknown) {
+        setError(
+          (err instanceof Error
+            ? err instanceof Error
+              ? err.message
+              : String(err)
+            : String(err)) || "Error loading replanning diff",
+        );
+      } finally {
+        setLoading(false);
       }
-      const data: ChangeProposal = await res.json();
-      setProposal(data);
-      const initialOverrides: Record<string, number> = {};
-      data.budget_diff?.forEach((item) => {
-        initialOverrides[item.budget_item_id] = item.new_amount;
-      });
-      setOverrides(initialOverrides);
-    } catch (err: any) {
-      setError(err.message || 'Error loading replanning diff');
-    } finally {
-      setLoading(false);
-    }
-  }, [eventId]);
+    },
+    [eventId],
+  );
 
   useEffect(() => {
-    if (!eventId || eventId === 'default') {
+    if (!eventId || eventId === "default") {
       setLoading(false);
       return;
     }
 
     // 1. Fetch Event Info
     fetch(`${API_BASE_URL}/events/${eventId}`, {
-      headers: getAuthHeaders(eventId)
+      headers: getAuthHeaders(eventId),
     })
       .then((r) => (r.ok ? r.json() : null))
       .then((data) => {
@@ -107,16 +140,16 @@ export default function ChangeProposalDiffClient() {
             name: data.name,
             guest_count: data.guest_count,
             total_budget: Number(data.total_budget),
-            city: data.city
+            city: data.city,
           });
           setCustomGuestCount((data.guest_count || 250) + 50);
         }
       })
-      .catch((e) => console.warn('Could not fetch event context:', e));
+      .catch((e) => console.warn("Could not fetch event context:", e));
 
     // 2. Fetch Existing Proposals for this Event
     fetch(`${API_BASE_URL}/events/${eventId}/changes`, {
-      headers: getAuthHeaders(eventId)
+      headers: getAuthHeaders(eventId),
     })
       .then((r) => (r.ok ? r.json() : []))
       .then((proposals) => {
@@ -127,39 +160,55 @@ export default function ChangeProposalDiffClient() {
       .catch(() => {});
 
     // 3. Fetch specific proposal if changeId is valid
-    if (changeId && changeId !== 'default') {
+    if (changeId && changeId !== "default") {
       fetchProposal(changeId);
     } else {
       setLoading(false);
     }
   }, [eventId, changeId, fetchProposal]);
 
-  const handleSimulateScenario = async (changeType: string, payload: Record<string, any>) => {
+  const handleSimulateScenario = async (
+    changeType: string,
+    payload: Record<string, unknown>,
+  ) => {
     setIsSimulating(true);
     setError(null);
     try {
       const res = await fetch(`${API_BASE_URL}/events/${eventId}/changes`, {
-        method: 'POST',
-        headers: getAuthHeaders(eventId, { 'Content-Type': 'application/json' }),
+        method: "POST",
+        headers: getAuthHeaders(eventId, {
+          "Content-Type": "application/json",
+        }),
         body: JSON.stringify({
           change_type: changeType,
-          payload: payload
-        })
+          payload: payload,
+        }),
       });
       if (!res.ok) {
         const errJson = await res.json().catch(() => ({}));
-        throw new Error(errJson.detail || `Replanning failed with status ${res.status}`);
+        throw new Error(
+          errJson.detail || `Replanning failed with status ${res.status}`,
+        );
       }
       const created: ChangeProposal = await res.json();
       setProposal(created);
-      setExistingProposals((prev) => [created, ...prev.filter((p) => p.change_id !== created.change_id)]);
+      setExistingProposals((prev) => [
+        created,
+        ...prev.filter((p) => p.change_id !== created.change_id),
+      ]);
       const initialOverrides: Record<string, number> = {};
       created.budget_diff?.forEach((item) => {
         initialOverrides[item.budget_item_id] = item.new_amount;
       });
       setOverrides(initialOverrides);
-    } catch (err: any) {
-      setError(err.message || 'Failed to simulate replanning scenario');
+    } catch (err: unknown) {
+      setError(
+        (err instanceof Error
+          ? err instanceof Error
+            ? err.message
+            : String(err)
+          : String(err)) || "Failed to simulate replanning scenario",
+      );
     } finally {
       setIsSimulating(false);
     }
@@ -169,17 +218,22 @@ export default function ChangeProposalDiffClient() {
     if (!proposal) return;
     setActionLoading(true);
     try {
-      const res = await fetch(`${API_BASE_URL}/events/${eventId}/changes/${changeId}/accept`, {
-        method: 'POST',
-        headers: getAuthHeaders(eventId),
-      });
+      const res = await fetch(
+        `${API_BASE_URL}/events/${eventId}/changes/${changeId}/accept`,
+        {
+          method: "POST",
+          headers: getAuthHeaders(eventId),
+        },
+      );
       if (!res.ok) {
         throw new Error(`Failed to apply proposal (${res.status})`);
       }
       const updated: ChangeProposal = await res.json();
       setProposal(updated);
-    } catch (err: any) {
-      alert(`Error accepting proposal: ${err.message}`);
+    } catch (err: unknown) {
+      alert(
+        `Error accepting proposal: ${err instanceof Error ? err.message : String(err)}`,
+      );
     } finally {
       setActionLoading(false);
     }
@@ -189,17 +243,22 @@ export default function ChangeProposalDiffClient() {
     if (!proposal) return;
     setActionLoading(true);
     try {
-      const res = await fetch(`${API_BASE_URL}/events/${eventId}/changes/${changeId}/reject`, {
-        method: 'POST',
-        headers: getAuthHeaders(eventId),
-      });
+      const res = await fetch(
+        `${API_BASE_URL}/events/${eventId}/changes/${changeId}/reject`,
+        {
+          method: "POST",
+          headers: getAuthHeaders(eventId),
+        },
+      );
       if (!res.ok) {
         throw new Error(`Failed to reject proposal (${res.status})`);
       }
       const updated: ChangeProposal = await res.json();
       setProposal(updated);
-    } catch (err: any) {
-      alert(`Error rejecting proposal: ${err.message}`);
+    } catch (err: unknown) {
+      alert(
+        `Error rejecting proposal: ${err instanceof Error ? err.message : String(err)}`,
+      );
     } finally {
       setActionLoading(false);
     }
@@ -209,19 +268,26 @@ export default function ChangeProposalDiffClient() {
     if (!proposal) return;
     setActionLoading(true);
     try {
-      const res = await fetch(`${API_BASE_URL}/events/${eventId}/changes/${changeId}/overrides`, {
-        method: 'PATCH',
-        headers: getAuthHeaders(eventId, { 'Content-Type': 'application/json' }),
-        body: JSON.stringify({ item_overrides: overrides }),
-      });
+      const res = await fetch(
+        `${API_BASE_URL}/events/${eventId}/changes/${changeId}/overrides`,
+        {
+          method: "PATCH",
+          headers: getAuthHeaders(eventId, {
+            "Content-Type": "application/json",
+          }),
+          body: JSON.stringify({ item_overrides: overrides }),
+        },
+      );
       if (!res.ok) {
         throw new Error(`Failed to save overrides (${res.status})`);
       }
       const updated: ChangeProposal = await res.json();
       setProposal(updated);
       setHasUnsavedOverrides(false);
-    } catch (err: any) {
-      alert(`Error saving overrides: ${err.message}`);
+    } catch (err: unknown) {
+      alert(
+        `Error saving overrides: ${err instanceof Error ? err.message : String(err)}`,
+      );
     } finally {
       setActionLoading(false);
     }
@@ -238,7 +304,9 @@ export default function ChangeProposalDiffClient() {
       <div className="min-h-screen flex items-center justify-center p-6">
         <div className="text-center">
           <div className="w-12 h-12 border-4 border-amber-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-stone-600 dark:text-stone-300 font-medium">Evaluating plan modifications & deterministic impact...</p>
+          <p className="text-stone-600 dark:text-stone-300 font-medium">
+            Evaluating plan modifications & deterministic impact...
+          </p>
         </div>
       </div>
     );
@@ -262,15 +330,23 @@ export default function ChangeProposalDiffClient() {
         <main className="max-w-7xl mx-auto px-4 sm:px-6 pt-8 space-y-8">
           {/* Breadcrumb Navigation */}
           <div className="flex items-center gap-2 text-xs text-stone-500 dark:text-stone-400 font-medium">
-            <Link href="/" className="hover:text-stone-900 dark:hover:text-white transition-colors">
+            <Link
+              href="/"
+              className="hover:text-stone-900 dark:hover:text-white transition-colors"
+            >
               Home
             </Link>
             <span>/</span>
-            <Link href={`/dashboard/events/${eventId}`} className="hover:text-stone-900 dark:hover:text-white transition-colors">
-              {eventData?.name || 'Celebration'}
+            <Link
+              href={`/dashboard/events/${eventId}`}
+              className="hover:text-stone-900 dark:hover:text-white transition-colors"
+            >
+              {eventData?.name || "Celebration"}
             </Link>
             <span>/</span>
-            <span className="text-stone-700 dark:text-stone-300">Plan B Replanning</span>
+            <span className="text-stone-700 dark:text-stone-300">
+              Plan B Replanning
+            </span>
           </div>
 
           {/* Header Hero */}
@@ -282,8 +358,10 @@ export default function ChangeProposalDiffClient() {
               Simulate Live Plan B Scenarios
             </h1>
             <p className="text-sm text-stone-600 dark:text-stone-300 max-w-3xl leading-relaxed">
-              Disruptions happen. Test schedule shifts, guest surges, or budget tightening with zero-LLM math.
-              Every rupee delta and task shift is computed strictly in deterministic Python code before requiring explicit human confirmation.
+              Disruptions happen. Test schedule shifts, guest surges, or budget
+              tightening with zero-LLM math. Every rupee delta and task shift is
+              computed strictly in deterministic Python code before requiring
+              explicit human confirmation.
             </p>
             {eventData && (
               <div className="flex flex-wrap gap-2 pt-2 text-xs font-mono text-stone-600 dark:text-stone-400">
@@ -294,7 +372,8 @@ export default function ChangeProposalDiffClient() {
                   Current Headcount: {eventData.guest_count}
                 </span>
                 <span className="px-2.5 py-1 rounded-md bg-stone-100 dark:bg-stone-800">
-                  Total Budget: ₹{eventData.total_budget.toLocaleString('en-IN')}
+                  Total Budget: ₹
+                  {eventData.total_budget.toLocaleString("en-IN")}
                 </span>
               </div>
             )}
@@ -303,7 +382,9 @@ export default function ChangeProposalDiffClient() {
           {error && (
             <div className="p-4 rounded-2xl bg-rose-50 dark:bg-rose-950/60 border border-rose-300 dark:border-rose-800 text-rose-800 dark:text-rose-200 text-xs flex justify-between items-center shadow-sm">
               <span>⚠️ {error}</span>
-              <button onClick={() => setError(null)} className="font-bold ml-2">✕</button>
+              <button onClick={() => setError(null)} className="font-bold ml-2">
+                ✕
+              </button>
             </div>
           )}
 
@@ -324,20 +405,23 @@ export default function ChangeProposalDiffClient() {
                     Guest Surge (+50)
                   </h3>
                   <p className="text-xs text-stone-600 dark:text-stone-400 leading-relaxed">
-                    Relatives arrive unexpectedly. Tests per-guest scaling on catering, seating, and venue capacity.
+                    Relatives arrive unexpectedly. Tests per-guest scaling on
+                    catering, seating, and venue capacity.
                   </p>
                 </div>
                 <button
                   onClick={() =>
-                    handleSimulateScenario('guest_count_changed', {
+                    handleSimulateScenario("guest_count_changed", {
                       from_guest_count: eventData?.guest_count || 250,
-                      to_guest_count: (eventData?.guest_count || 250) + 50
+                      to_guest_count: (eventData?.guest_count || 250) + 50,
                     })
                   }
                   disabled={isSimulating}
                   className="w-full py-2.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-semibold text-xs transition-all shadow-xs disabled:opacity-50"
                 >
-                  {isSimulating ? 'Computing Diff...' : 'Simulate Guest Surge →'}
+                  {isSimulating
+                    ? "Computing Diff..."
+                    : "Simulate Guest Surge →"}
                 </button>
               </div>
 
@@ -351,19 +435,22 @@ export default function ChangeProposalDiffClient() {
                     Budget Cut (-15%)
                   </h3>
                   <p className="text-xs text-stone-600 dark:text-stone-400 leading-relaxed">
-                    Envelope reduced by 15%. Rescales discretionary categories while protecting sacred rituals.
+                    Envelope reduced by 15%. Rescales discretionary categories
+                    while protecting sacred rituals.
                   </p>
                 </div>
                 <button
                   onClick={() =>
-                    handleSimulateScenario('budget_cut', {
-                      new_budget: Math.round((eventData?.total_budget || 3500000) * 0.85)
+                    handleSimulateScenario("budget_cut", {
+                      new_budget: Math.round(
+                        (eventData?.total_budget || 3500000) * 0.85,
+                      ),
                     })
                   }
                   disabled={isSimulating}
                   className="w-full py-2.5 rounded-xl bg-stone-900 text-white dark:bg-stone-100 dark:text-stone-900 font-semibold text-xs transition-all shadow-xs disabled:opacity-50"
                 >
-                  {isSimulating ? 'Computing Diff...' : 'Simulate Budget Cut →'}
+                  {isSimulating ? "Computing Diff..." : "Simulate Budget Cut →"}
                 </button>
               </div>
 
@@ -377,19 +464,20 @@ export default function ChangeProposalDiffClient() {
                     Date Shift (+2 Days)
                   </h3>
                   <p className="text-xs text-stone-600 dark:text-stone-400 leading-relaxed">
-                    Severe rain or travel delay. Shifts DAG schedule while locking sacred muhurat anchors.
+                    Severe rain or travel delay. Shifts DAG schedule while
+                    locking sacred muhurat anchors.
                   </p>
                 </div>
                 <button
                   onClick={() =>
-                    handleSimulateScenario('date_moved', {
-                      days_shifted: 2
+                    handleSimulateScenario("date_moved", {
+                      days_shifted: 2,
                     })
                   }
                   disabled={isSimulating}
                   className="w-full py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs transition-all shadow-xs disabled:opacity-50"
                 >
-                  {isSimulating ? 'Computing Diff...' : 'Simulate Date Shift →'}
+                  {isSimulating ? "Computing Diff..." : "Simulate Date Shift →"}
                 </button>
               </div>
 
@@ -403,19 +491,22 @@ export default function ChangeProposalDiffClient() {
                     Caterer Cancelled
                   </h3>
                   <p className="text-xs text-stone-600 dark:text-stone-400 leading-relaxed">
-                    Primary vendor defaults 10 days before wedding. Triggers emergency RFP & re-quote workflow.
+                    Primary vendor defaults 10 days before wedding. Triggers
+                    emergency RFP & re-quote workflow.
                   </p>
                 </div>
                 <button
                   onClick={() =>
-                    handleSimulateScenario('vendor_cancelled', {
-                      category: 'catering'
+                    handleSimulateScenario("vendor_cancelled", {
+                      category: "catering",
                     })
                   }
                   disabled={isSimulating}
                   className="w-full py-2.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-semibold text-xs transition-all shadow-xs disabled:opacity-50"
                 >
-                  {isSimulating ? 'Computing Diff...' : 'Simulate Cancellation →'}
+                  {isSimulating
+                    ? "Computing Diff..."
+                    : "Simulate Cancellation →"}
                 </button>
               </div>
             </div>
@@ -444,15 +535,15 @@ export default function ChangeProposalDiffClient() {
                     <div>
                       <div className="flex items-center gap-2">
                         <span className="font-bold text-xs uppercase px-2 py-0.5 rounded-md bg-stone-100 dark:bg-stone-800 text-stone-700 dark:text-stone-300">
-                          {p.change_type.replace('_', ' ')}
+                          {p.change_type.replace("_", " ")}
                         </span>
                         <span
                           className={`text-[10px] font-bold font-mono px-2 py-0.5 rounded-full ${
-                            p.status === 'applied'
-                              ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
-                              : p.status === 'rejected'
-                              ? 'bg-stone-100 text-stone-600 dark:bg-stone-800 dark:text-stone-400'
-                              : 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300'
+                            p.status === "applied"
+                              ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300"
+                              : p.status === "rejected"
+                                ? "bg-stone-100 text-stone-600 dark:bg-stone-800 dark:text-stone-400"
+                                : "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300"
                           }`}
                         >
                           {p.status.toUpperCase()}
@@ -476,8 +567,8 @@ export default function ChangeProposalDiffClient() {
     );
   }
 
-  const isPending = proposal.status === 'pending';
-  const isInfeasible = proposal.status === 'blocked_infeasible';
+  const isPending = proposal.status === "pending";
+  const isInfeasible = proposal.status === "blocked_infeasible";
 
   return (
     <div className="min-h-screen pb-20">
@@ -512,18 +603,18 @@ export default function ChangeProposalDiffClient() {
               </span>
               <span
                 className={`px-3 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider border ${
-                  proposal.status === 'applied'
-                    ? 'bg-emerald-100 dark:bg-emerald-950/80 border-emerald-300 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300'
-                    : proposal.status === 'rejected'
-                    ? 'bg-stone-200 dark:bg-stone-800 border-stone-300 dark:border-stone-700 text-stone-700 dark:text-stone-300'
-                    : proposal.status === 'blocked_infeasible'
-                    ? 'bg-rose-100 dark:bg-rose-950/80 border-rose-300 dark:border-rose-800 text-rose-800 dark:text-rose-300'
-                    : proposal.status === 'queued'
-                    ? 'bg-amber-100 dark:bg-amber-950/80 border-amber-300 dark:border-amber-800 text-amber-800 dark:text-amber-300'
-                    : 'bg-blue-100 dark:bg-blue-950/80 border-blue-300 dark:border-blue-800 text-blue-800 dark:text-blue-300'
+                  proposal.status === "applied"
+                    ? "bg-emerald-100 dark:bg-emerald-950/80 border-emerald-300 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300"
+                    : proposal.status === "rejected"
+                      ? "bg-stone-200 dark:bg-stone-800 border-stone-300 dark:border-stone-700 text-stone-700 dark:text-stone-300"
+                      : proposal.status === "blocked_infeasible"
+                        ? "bg-rose-100 dark:bg-rose-950/80 border-rose-300 dark:border-rose-800 text-rose-800 dark:text-rose-300"
+                        : proposal.status === "queued"
+                          ? "bg-amber-100 dark:bg-amber-950/80 border-amber-300 dark:border-amber-800 text-amber-800 dark:text-amber-300"
+                          : "bg-blue-100 dark:bg-blue-950/80 border-blue-300 dark:border-blue-800 text-blue-800 dark:text-blue-300"
                 }`}
               >
-                {proposal.status.replace('_', ' ')}
+                {proposal.status.replace("_", " ")}
               </span>
             </div>
             <h1 className="text-2xl font-serif font-bold text-stone-900 dark:text-stone-50">
@@ -567,7 +658,9 @@ export default function ChangeProposalDiffClient() {
         {proposal.capacity_warning && (
           <div className="bg-amber-50 dark:bg-amber-950/50 border-l-4 border-amber-500 p-4 rounded-2xl shadow-sm">
             <div className="flex items-start">
-              <span className="text-amber-600 dark:text-amber-400 text-xl font-bold mr-3">⚠️</span>
+              <span className="text-amber-600 dark:text-amber-400 text-xl font-bold mr-3">
+                ⚠️
+              </span>
               <div>
                 <h3 className="text-amber-900 dark:text-amber-200 font-bold text-sm uppercase tracking-wide">
                   Capacity Constraint Exceeded
@@ -584,7 +677,9 @@ export default function ChangeProposalDiffClient() {
         {isInfeasible && proposal.infeasibility_reason && (
           <div className="bg-rose-50 dark:bg-rose-950/60 border-l-4 border-rose-500 p-4 rounded-2xl shadow-sm">
             <div className="flex items-start">
-              <span className="text-rose-600 dark:text-rose-400 text-xl font-bold mr-3">🚫</span>
+              <span className="text-rose-600 dark:text-rose-400 text-xl font-bold mr-3">
+                🚫
+              </span>
               <div>
                 <h3 className="text-rose-900 dark:text-rose-200 font-bold text-sm uppercase tracking-wide">
                   Proposal Blocked as Infeasible
@@ -607,18 +702,19 @@ export default function ChangeProposalDiffClient() {
           </p>
 
           {/* Mitigation Suggestions */}
-          {proposal.mitigation_suggestions && proposal.mitigation_suggestions.length > 0 && (
-            <div className="mt-4 pt-4 border-t border-stone-200 dark:border-stone-800">
-              <h4 className="text-xs font-bold text-stone-700 dark:text-stone-300 uppercase tracking-wider mb-2.5">
-                Recommended Mitigations:
-              </h4>
-              <ul className="list-disc pl-5 text-xs sm:text-sm text-stone-600 dark:text-stone-300 space-y-1.5">
-                {proposal.mitigation_suggestions.map((sug, idx) => (
-                  <li key={idx}>{sug}</li>
-                ))}
-              </ul>
-            </div>
-          )}
+          {proposal.mitigation_suggestions &&
+            proposal.mitigation_suggestions.length > 0 && (
+              <div className="mt-4 pt-4 border-t border-stone-200 dark:border-stone-800">
+                <h4 className="text-xs font-bold text-stone-700 dark:text-stone-300 uppercase tracking-wider mb-2.5">
+                  Recommended Mitigations:
+                </h4>
+                <ul className="list-disc pl-5 text-xs sm:text-sm text-stone-600 dark:text-stone-300 space-y-1.5">
+                  {proposal.mitigation_suggestions.map((sug, idx) => (
+                    <li key={idx}>{sug}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
         </section>
 
         {/* Budget Items Diff Table */}
@@ -629,21 +725,27 @@ export default function ChangeProposalDiffClient() {
                 Budget Impact Breakdown
               </h2>
               <p className="text-xs text-stone-500 dark:text-stone-400 mt-0.5">
-                Calculated strictly in Python via BudgetScalingEngine (Zero LLM math)
+                Calculated strictly in Python via BudgetScalingEngine (Zero LLM
+                math)
               </p>
             </div>
             <div className="text-right">
-              <span className="text-xs text-stone-500 dark:text-stone-400 mr-2">Total Delta:</span>
+              <span className="text-xs text-stone-500 dark:text-stone-400 mr-2">
+                Total Delta:
+              </span>
               <span
                 className={`font-mono font-bold text-base ${
                   proposal.budget_total_delta > 0
-                    ? 'text-rose-600 dark:text-rose-400'
+                    ? "text-rose-600 dark:text-rose-400"
                     : proposal.budget_total_delta < 0
-                    ? 'text-emerald-600 dark:text-emerald-400'
-                    : 'text-stone-700 dark:text-stone-300'
+                      ? "text-emerald-600 dark:text-emerald-400"
+                      : "text-stone-700 dark:text-stone-300"
                 }`}
               >
-                {proposal.budget_total_delta >= 0 ? '+' : ''}₹{proposal.budget_total_delta.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                {proposal.budget_total_delta >= 0 ? "+" : ""}₹
+                {proposal.budget_total_delta.toLocaleString("en-IN", {
+                  minimumFractionDigits: 2,
+                })}
               </span>
             </div>
           </div>
@@ -663,7 +765,10 @@ export default function ChangeProposalDiffClient() {
               <tbody className="divide-y divide-stone-200 dark:divide-stone-800">
                 {proposal.budget_diff && proposal.budget_diff.length > 0 ? (
                   proposal.budget_diff.map((item) => (
-                    <tr key={item.budget_item_id} className="hover:bg-stone-50/60 dark:hover:bg-stone-800/40 transition-colors">
+                    <tr
+                      key={item.budget_item_id}
+                      className="hover:bg-stone-50/60 dark:hover:bg-stone-800/40 transition-colors"
+                    >
                       <td className="px-6 py-4 font-semibold text-stone-900 dark:text-stone-100">
                         {item.name}
                       </td>
@@ -673,28 +778,48 @@ export default function ChangeProposalDiffClient() {
                         </span>
                       </td>
                       <td className="px-4 py-4 text-right font-mono text-stone-600 dark:text-stone-300">
-                        ₹{item.old_amount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                        ₹
+                        {item.old_amount.toLocaleString("en-IN", {
+                          minimumFractionDigits: 2,
+                        })}
                       </td>
                       <td className="px-4 py-4 text-right">
                         {isPending ? (
                           <input
                             type="number"
-                            value={overrides[item.budget_item_id] ?? item.new_amount}
-                            onChange={(e) => handleAmountChange(item.budget_item_id, e.target.value)}
+                            value={
+                              overrides[item.budget_item_id] ?? item.new_amount
+                            }
+                            onChange={(e) =>
+                              handleAmountChange(
+                                item.budget_item_id,
+                                e.target.value,
+                              )
+                            }
                             className="w-32 px-2.5 py-1 text-right font-mono text-stone-900 dark:text-stone-100 bg-white dark:bg-stone-900 border border-stone-300 dark:border-stone-700 rounded-lg focus:ring-2 focus:ring-amber-500 focus:outline-none transition-colors"
                           />
                         ) : (
                           <span className="font-mono text-stone-900 dark:text-stone-100 font-bold">
-                            ₹{item.new_amount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                            ₹
+                            {item.new_amount.toLocaleString("en-IN", {
+                              minimumFractionDigits: 2,
+                            })}
                           </span>
                         )}
                       </td>
                       <td
                         className={`px-4 py-4 text-right font-mono font-bold ${
-                          item.difference > 0 ? 'text-rose-600 dark:text-rose-400' : item.difference < 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-stone-400'
+                          item.difference > 0
+                            ? "text-rose-600 dark:text-rose-400"
+                            : item.difference < 0
+                              ? "text-emerald-600 dark:text-emerald-400"
+                              : "text-stone-400"
                         }`}
                       >
-                        {item.difference >= 0 ? '+' : ''}₹{item.difference.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                        {item.difference >= 0 ? "+" : ""}₹
+                        {item.difference.toLocaleString("en-IN", {
+                          minimumFractionDigits: 2,
+                        })}
                       </td>
                       <td className="px-6 py-4 font-mono text-[11px] text-stone-500 dark:text-stone-400">
                         {item.formula}
@@ -703,7 +828,10 @@ export default function ChangeProposalDiffClient() {
                   ))
                 ) : (
                   <tr>
-                    <td colSpan={6} className="px-6 py-8 text-center text-stone-500 dark:text-stone-400">
+                    <td
+                      colSpan={6}
+                      className="px-6 py-8 text-center text-stone-500 dark:text-stone-400"
+                    >
                       No budget items altered in this proposal.
                     </td>
                   </tr>
@@ -711,25 +839,37 @@ export default function ChangeProposalDiffClient() {
               </tbody>
               <tfoot className="bg-stone-100/70 dark:bg-stone-800/60 font-semibold border-t-2 border-stone-200 dark:border-stone-800">
                 <tr>
-                  <td colSpan={2} className="px-6 py-3.5 text-stone-900 dark:text-stone-100 font-serif">
+                  <td
+                    colSpan={2}
+                    className="px-6 py-3.5 text-stone-900 dark:text-stone-100 font-serif"
+                  >
                     Total Budget Summary
                   </td>
                   <td className="px-4 py-3.5 text-right font-mono text-stone-700 dark:text-stone-300">
-                    ₹{proposal.budget_total_old.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                    ₹
+                    {proposal.budget_total_old.toLocaleString("en-IN", {
+                      minimumFractionDigits: 2,
+                    })}
                   </td>
                   <td className="px-4 py-3.5 text-right font-mono text-stone-900 dark:text-stone-100 font-bold text-sm">
-                    ₹{proposal.budget_total_new.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                    ₹
+                    {proposal.budget_total_new.toLocaleString("en-IN", {
+                      minimumFractionDigits: 2,
+                    })}
                   </td>
                   <td
                     className={`px-4 py-3.5 text-right font-mono font-bold text-sm ${
                       proposal.budget_total_delta > 0
-                        ? 'text-rose-600 dark:text-rose-400'
+                        ? "text-rose-600 dark:text-rose-400"
                         : proposal.budget_total_delta < 0
-                        ? 'text-emerald-600 dark:text-emerald-400'
-                        : 'text-stone-700 dark:text-stone-300'
+                          ? "text-emerald-600 dark:text-emerald-400"
+                          : "text-stone-700 dark:text-stone-300"
                     }`}
                   >
-                    {proposal.budget_total_delta >= 0 ? '+' : ''}₹{proposal.budget_total_delta.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                    {proposal.budget_total_delta >= 0 ? "+" : ""}₹
+                    {proposal.budget_total_delta.toLocaleString("en-IN", {
+                      minimumFractionDigits: 2,
+                    })}
                   </td>
                   <td className="px-6 py-3.5"></td>
                 </tr>
@@ -746,75 +886,92 @@ export default function ChangeProposalDiffClient() {
             </h2>
 
             {/* Moved Tasks */}
-            {proposal.task_diff.moved_tasks && proposal.task_diff.moved_tasks.length > 0 && (
-              <div>
-                <h3 className="text-xs font-bold uppercase tracking-wider text-amber-700 dark:text-amber-400 mb-2.5">
-                  Shifted Milestones
-                </h3>
-                <div className="space-y-2">
-                  {proposal.task_diff.moved_tasks.map((task) => (
-                    <div
-                      key={task.task_id}
-                      className="p-3.5 rounded-xl bg-stone-50 dark:bg-stone-900/60 border border-stone-200 dark:border-stone-800 flex items-center justify-between text-xs"
-                    >
-                      <span className="font-semibold text-stone-900 dark:text-stone-100">{task.title}</span>
-                      <div className="flex items-center space-x-3 text-stone-600 dark:text-stone-300 font-mono">
-                        <span className="line-through text-stone-400">{task.old_start}</span>
-                        <span>&rarr;</span>
-                        <span className="font-bold text-amber-700 dark:text-amber-400">{task.new_start}</span>
-                        <span className="px-2 py-0.5 rounded bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 font-bold">
-                          {task.days_shifted && task.days_shifted > 0 ? `+${task.days_shifted}d` : `${task.days_shifted}d`}
+            {proposal.task_diff.moved_tasks &&
+              proposal.task_diff.moved_tasks.length > 0 && (
+                <div>
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-amber-700 dark:text-amber-400 mb-2.5">
+                    Shifted Milestones
+                  </h3>
+                  <div className="space-y-2">
+                    {proposal.task_diff.moved_tasks.map((task) => (
+                      <div
+                        key={task.task_id}
+                        className="p-3.5 rounded-xl bg-stone-50 dark:bg-stone-900/60 border border-stone-200 dark:border-stone-800 flex items-center justify-between text-xs"
+                      >
+                        <span className="font-semibold text-stone-900 dark:text-stone-100">
+                          {task.title}
                         </span>
+                        <div className="flex items-center space-x-3 text-stone-600 dark:text-stone-300 font-mono">
+                          <span className="line-through text-stone-400">
+                            {task.old_start}
+                          </span>
+                          <span>&rarr;</span>
+                          <span className="font-bold text-amber-700 dark:text-amber-400">
+                            {task.new_start}
+                          </span>
+                          <span className="px-2 py-0.5 rounded bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 font-bold">
+                            {task.days_shifted && task.days_shifted > 0
+                              ? `+${task.days_shifted}d`
+                              : `${task.days_shifted}d`}
+                          </span>
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
 
             {/* Added Tasks */}
-            {proposal.task_diff.added_tasks && proposal.task_diff.added_tasks.length > 0 && (
-              <div className="pt-2">
-                <h3 className="text-xs font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-400 mb-2.5">
-                  Newly Inserted Verification Tasks
-                </h3>
-                <div className="space-y-2">
-                  {proposal.task_diff.added_tasks.map((task, idx) => (
-                    <div
-                      key={idx}
-                      className="p-3.5 rounded-xl bg-emerald-50/70 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-xs flex justify-between items-center"
-                    >
-                      <div>
-                        <h4 className="font-semibold text-emerald-950 dark:text-emerald-200">{task.title}</h4>
-                        {task.description && <p className="text-emerald-800/80 dark:text-emerald-300 text-[11px] mt-0.5">{task.description}</p>}
+            {proposal.task_diff.added_tasks &&
+              proposal.task_diff.added_tasks.length > 0 && (
+                <div className="pt-2">
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-400 mb-2.5">
+                    Newly Inserted Verification Tasks
+                  </h3>
+                  <div className="space-y-2">
+                    {proposal.task_diff.added_tasks.map((task, idx) => (
+                      <div
+                        key={idx}
+                        className="p-3.5 rounded-xl bg-emerald-50/70 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-xs flex justify-between items-center"
+                      >
+                        <div>
+                          <h4 className="font-semibold text-emerald-950 dark:text-emerald-200">
+                            {task.title}
+                          </h4>
+                          {task.description && (
+                            <p className="text-emerald-800/80 dark:text-emerald-300 text-[11px] mt-0.5">
+                              {task.description}
+                            </p>
+                          )}
+                        </div>
+                        <span className="font-mono text-emerald-800 dark:text-emerald-300 px-2.5 py-0.5 rounded bg-emerald-100 dark:bg-emerald-900/60 font-semibold">
+                          {task.assigned_role}
+                        </span>
                       </div>
-                      <span className="font-mono text-emerald-800 dark:text-emerald-300 px-2.5 py-0.5 rounded bg-emerald-100 dark:bg-emerald-900/60 font-semibold">
-                        {task.assigned_role}
-                      </span>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
 
             {/* Vendor Re-Quote Flags */}
-            {proposal.vendor_re_quote_categories && proposal.vendor_re_quote_categories.length > 0 && (
-              <div className="pt-2">
-                <h3 className="text-xs font-bold uppercase tracking-wider text-rose-700 dark:text-rose-400 mb-2">
-                  Vendors Requiring Re-Quote / Capacity Check
-                </h3>
-                <div className="flex flex-wrap gap-2">
-                  {proposal.vendor_re_quote_categories.map((cat, idx) => (
-                    <span
-                      key={idx}
-                      className="px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-rose-100 dark:bg-rose-950/80 border border-rose-300 dark:border-rose-900 text-rose-800 dark:text-rose-300"
-                    >
-                      ⚠️ {cat}
-                    </span>
-                  ))}
+            {proposal.vendor_re_quote_categories &&
+              proposal.vendor_re_quote_categories.length > 0 && (
+                <div className="pt-2">
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-rose-700 dark:text-rose-400 mb-2">
+                    Vendors Requiring Re-Quote / Capacity Check
+                  </h3>
+                  <div className="flex flex-wrap gap-2">
+                    {proposal.vendor_re_quote_categories.map((cat, idx) => (
+                      <span
+                        key={idx}
+                        className="px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-rose-100 dark:bg-rose-950/80 border border-rose-300 dark:border-rose-900 text-rose-800 dark:text-rose-300"
+                      >
+                        ⚠️ {cat}
+                      </span>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
           </section>
         )}
       </main>

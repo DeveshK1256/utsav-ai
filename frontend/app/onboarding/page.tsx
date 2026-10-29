@@ -1,18 +1,18 @@
-'use client';
+"use client";
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import Link from 'next/link';
-import { ThemeToggle } from '@/components/ui/ThemeToggle';
-import { ElderDisclaimerBanner } from '@/components/ui/ElderDisclaimerBanner';
-import { WakingUpNotice } from '@/components/ui/WakingUpNotice';
-import { setEventOwnerToken } from '@/lib/auth';
+import React, { useState, useEffect, useCallback, useMemo } from "react";
+import Link from "next/link";
+import { ThemeToggle } from "@/components/ui/ThemeToggle";
+import { ElderDisclaimerBanner } from "@/components/ui/ElderDisclaimerBanner";
+import { WakingUpNotice } from "@/components/ui/WakingUpNotice";
+import { setEventOwnerToken } from "@/lib/auth";
 
 // Currency Formatter
 const formatINR = (val: number) => {
-  return new Intl.NumberFormat('en-IN', {
-    style: 'currency',
-    currency: 'INR',
-    maximumFractionDigits: 0
+  return new Intl.NumberFormat("en-IN", {
+    style: "currency",
+    currency: "INR",
+    maximumFractionDigits: 0,
   }).format(val);
 };
 
@@ -86,61 +86,61 @@ interface MasterPlanResponse {
 
 const CELEBRATION_TYPES = [
   {
-    type: 'wedding',
-    label: 'Wedding',
-    icon: '💍',
-    description: 'Vedic & regional wedding orchestrations',
+    type: "wedding",
+    label: "Wedding",
+    icon: "💍",
+    description: "Vedic & regional wedding orchestrations",
     defaultGuests: 350,
     defaultBudget: 3500000,
     defaultName: "Ananya & Rohan's Wedding",
-    defaultTradition: 'maharashtrian_vedic'
+    defaultTradition: "maharashtrian_vedic",
   },
   {
-    type: 'birthday',
-    label: 'Birthday Party',
-    icon: '🎂',
-    description: 'Kids carnival, milestone jubilee & birthday celebrations',
+    type: "birthday",
+    label: "Birthday Party",
+    icon: "🎂",
+    description: "Kids carnival, milestone jubilee & birthday celebrations",
     defaultGuests: 75,
     defaultBudget: 175000,
     defaultName: "Aarav's 5th Birthday Carnival",
-    defaultTradition: 'birthday_kids_carnival'
+    defaultTradition: "birthday_kids_carnival",
   },
   {
-    type: 'community_festival',
-    label: 'Community Event',
-    icon: '👥',
-    description: 'Sarvajanik pandals, Navratri Garba, society cultural melas',
+    type: "community_festival",
+    label: "Community Event",
+    icon: "👥",
+    description: "Sarvajanik pandals, Navratri Garba, society cultural melas",
     defaultGuests: 600,
     defaultBudget: 550000,
     defaultName: "Sarvajanik Utsav & Pandal Celebration",
-    defaultTradition: 'community_sarvajanik'
+    defaultTradition: "community_sarvajanik",
   },
   {
-    type: 'puja',
-    label: 'Sacred Puja',
-    icon: '🙏',
-    description: 'Satyanarayan Katha, Griha Pravesh, Vastu Shanti',
+    type: "puja",
+    label: "Sacred Puja",
+    icon: "🙏",
+    description: "Satyanarayan Katha, Griha Pravesh, Vastu Shanti",
     defaultGuests: 50,
     defaultBudget: 85000,
     defaultName: "Family Griha Pravesh & Blessing Puja",
-    defaultTradition: 'satyanarayan_puja'
+    defaultTradition: "satyanarayan_puja",
   },
   {
-    type: 'milestone_anniversary',
-    label: 'Anniversary',
-    icon: '🥂',
-    description: 'Silver & golden milestone wedding anniversaries',
+    type: "milestone_anniversary",
+    label: "Anniversary",
+    icon: "🥂",
+    description: "Silver & golden milestone wedding anniversaries",
     defaultGuests: 150,
     defaultBudget: 600000,
     defaultName: "Sunita & Arvind's 25th Silver Anniversary",
-    defaultTradition: 'milestone_anniversary'
-  }
+    defaultTradition: "milestone_anniversary",
+  },
 ];
 
 interface TraditionConfig {
   code: string;
   name: string;
-  category: 'wedding' | 'birthday' | 'community' | 'puja' | 'anniversary';
+  category: "wedding" | "birthday" | "community" | "puja" | "anniversary";
   highlights: string;
   icon: string;
   recommendedGuests: number;
@@ -151,222 +151,235 @@ interface TraditionConfig {
 const TRADITIONS: TraditionConfig[] = [
   // --- WEDDINGS ---
   {
-    code: 'maharashtrian_vedic',
-    name: 'Maharashtrian Vedic Lagna',
-    category: 'wedding',
-    highlights: 'Sakharpuda, Haldi, Mandap Muhurat, Saptapadi, Reception',
-    icon: '🕉️',
+    code: "maharashtrian_vedic",
+    name: "Maharashtrian Vedic Lagna",
+    category: "wedding",
+    highlights: "Sakharpuda, Haldi, Mandap Muhurat, Saptapadi, Reception",
+    icon: "🕉️",
     recommendedGuests: 350,
     recommendedBudget: 3500000,
-    defaultName: "Ananya & Rohan's Maharashtrian Lagna"
+    defaultName: "Ananya & Rohan's Maharashtrian Lagna",
   },
   {
-    code: 'punjabi_traditional',
-    name: 'Punjabi Traditional Vivah / Anand Karaj',
-    category: 'wedding',
-    highlights: 'Maiyan, Jaggo Night, Milni, Anand Karaj 4 Laavan, Gala Reception',
-    icon: '✨',
+    code: "punjabi_traditional",
+    name: "Punjabi Traditional Vivah / Anand Karaj",
+    category: "wedding",
+    highlights:
+      "Maiyan, Jaggo Night, Milni, Anand Karaj 4 Laavan, Gala Reception",
+    icon: "✨",
     recommendedGuests: 450,
     recommendedBudget: 5000000,
-    defaultName: "Simran & Kabir's Punjabi Vivah"
+    defaultName: "Simran & Kabir's Punjabi Vivah",
   },
   {
-    code: 'bengali_vedic',
-    name: 'Bengali Vedic Bibaho',
-    category: 'wedding',
-    highlights: 'Gaye Holud, Bor Jatri, Saat Paake Ghomar, Shubho Drishti, Sampradan',
-    icon: '🐚',
+    code: "bengali_vedic",
+    name: "Bengali Vedic Bibaho",
+    category: "wedding",
+    highlights:
+      "Gaye Holud, Bor Jatri, Saat Paake Ghomar, Shubho Drishti, Sampradan",
+    icon: "🐚",
     recommendedGuests: 350,
     recommendedBudget: 3200000,
-    defaultName: "Debolina & Soumyo's Bengali Bibaho"
+    defaultName: "Debolina & Soumyo's Bengali Bibaho",
   },
   {
-    code: 'tamil_brahmin_hindu',
-    name: 'Tamil Brahmin Iyer Kalyanam',
-    category: 'wedding',
-    highlights: 'Vratham, Janavasam, Kasi Yatra, Oonjal, Mangalya Dharanam',
-    icon: '🌸',
+    code: "tamil_brahmin_hindu",
+    name: "Tamil Brahmin Iyer Kalyanam",
+    category: "wedding",
+    highlights: "Vratham, Janavasam, Kasi Yatra, Oonjal, Mangalya Dharanam",
+    icon: "🌸",
     recommendedGuests: 300,
     recommendedBudget: 2800000,
-    defaultName: "Deepa & Karthik's Iyer Kalyanam"
+    defaultName: "Deepa & Karthik's Iyer Kalyanam",
   },
   {
-    code: 'gujarati_hindu',
-    name: 'Gujarati Hindu Vivah',
-    category: 'wedding',
-    highlights: 'Gol Dhana, Mameru, Dandiya Raas, Mandap, 4 Mangal Pheras',
-    icon: '🪔',
+    code: "gujarati_hindu",
+    name: "Gujarati Hindu Vivah",
+    category: "wedding",
+    highlights: "Gol Dhana, Mameru, Dandiya Raas, Mandap, 4 Mangal Pheras",
+    icon: "🪔",
     recommendedGuests: 400,
     recommendedBudget: 4200000,
-    defaultName: "Pooja & Harsh's Gujarati Vivah"
+    defaultName: "Pooja & Harsh's Gujarati Vivah",
   },
   {
-    code: 'muslim_nikah',
-    name: 'Muslim Traditional Nikah',
-    category: 'wedding',
-    highlights: 'Manjha, Istiqbal, Nikahnama Ijab-o-Qubool, Arsi Mushaf, Walima',
-    icon: '🌙',
+    code: "muslim_nikah",
+    name: "Muslim Traditional Nikah",
+    category: "wedding",
+    highlights:
+      "Manjha, Istiqbal, Nikahnama Ijab-o-Qubool, Arsi Mushaf, Walima",
+    icon: "🌙",
     recommendedGuests: 400,
     recommendedBudget: 3800000,
-    defaultName: "Zoya & Farhan's Nikah & Walima"
+    defaultName: "Zoya & Farhan's Nikah & Walima",
   },
   {
-    code: 'christian_traditional',
-    name: 'Indian Christian Traditional Wedding',
-    category: 'wedding',
-    highlights: 'Roce Bath, Church Nuptial Mass, Ring & Minnu Tying, Gala Toast',
-    icon: '⛪',
+    code: "christian_traditional",
+    name: "Indian Christian Traditional Wedding",
+    category: "wedding",
+    highlights:
+      "Roce Bath, Church Nuptial Mass, Ring & Minnu Tying, Gala Toast",
+    icon: "⛪",
     recommendedGuests: 350,
     recommendedBudget: 3000000,
-    defaultName: "Rhea & Kevin's Christian Wedding"
+    defaultName: "Rhea & Kevin's Christian Wedding",
   },
   {
-    code: 'telugu_hindu',
-    name: 'Telugu Vaidika Kalyanam',
-    category: 'wedding',
-    highlights: 'Pellikuthuru, Snathakam, Jeelakarra Bellam, Talambralu, Reception',
-    icon: '🪷',
+    code: "telugu_hindu",
+    name: "Telugu Vaidika Kalyanam",
+    category: "wedding",
+    highlights:
+      "Pellikuthuru, Snathakam, Jeelakarra Bellam, Talambralu, Reception",
+    icon: "🪷",
     recommendedGuests: 350,
     recommendedBudget: 3400000,
-    defaultName: "Sravani & Vamsi's Telugu Kalyanam"
+    defaultName: "Sravani & Vamsi's Telugu Kalyanam",
   },
   {
-    code: 'marwari_traditional',
-    name: 'Marwari Traditional Vivah',
-    category: 'wedding',
-    highlights: 'Mudha Tika, Pithi, Bhaat/Mayera, Toran Bandhan, Royal Feast',
-    icon: '👑',
+    code: "marwari_traditional",
+    name: "Marwari Traditional Vivah",
+    category: "wedding",
+    highlights: "Mudha Tika, Pithi, Bhaat/Mayera, Toran Bandhan, Royal Feast",
+    icon: "👑",
     recommendedGuests: 500,
     recommendedBudget: 5500000,
-    defaultName: "Aditi & Shreyas's Royal Marwari Vivah"
+    defaultName: "Aditi & Shreyas's Royal Marwari Vivah",
   },
 
   // --- BIRTHDAYS ---
   {
-    code: 'birthday_kids_carnival',
-    name: 'Kids Themed Carnival Birthday',
-    category: 'birthday',
-    highlights: 'Magic Show, Mascot & Puppet Theatre, Themed Cake, Kids Buffet, Party Favors',
-    icon: '🎈',
+    code: "birthday_kids_carnival",
+    name: "Kids Themed Carnival Birthday",
+    category: "birthday",
+    highlights:
+      "Magic Show, Mascot & Puppet Theatre, Themed Cake, Kids Buffet, Party Favors",
+    icon: "🎈",
     recommendedGuests: 65,
     recommendedBudget: 150000,
-    defaultName: "Aarav's 5th Birthday Carnival"
+    defaultName: "Aarav's 5th Birthday Carnival",
   },
   {
-    code: 'birthday_milestone',
-    name: 'Milestone Jubilee Birthday (18th/50th/60th)',
-    category: 'birthday',
-    highlights: 'Ayushya Homa, Family Toasts, Retrospective Memory Walk, Live Band, Gala Dinner',
-    icon: '🥂',
+    code: "birthday_milestone",
+    name: "Milestone Jubilee Birthday (18th/50th/60th)",
+    category: "birthday",
+    highlights:
+      "Ayushya Homa, Family Toasts, Retrospective Memory Walk, Live Band, Gala Dinner",
+    icon: "🥂",
     recommendedGuests: 120,
     recommendedBudget: 350000,
-    defaultName: "Rajesh's 50th Golden Jubilee Birthday"
+    defaultName: "Rajesh's 50th Golden Jubilee Birthday",
   },
   {
-    code: 'birthday_traditional',
-    name: 'Traditional Vedic Ayushya Homa',
-    category: 'birthday',
-    highlights: 'Vedic Ayushya Homa, Elder Tilak & Blessings, Satvik Banana Leaf Feast',
-    icon: '🕉️',
+    code: "birthday_traditional",
+    name: "Traditional Vedic Ayushya Homa",
+    category: "birthday",
+    highlights:
+      "Vedic Ayushya Homa, Elder Tilak & Blessings, Satvik Banana Leaf Feast",
+    icon: "🕉️",
     recommendedGuests: 45,
     recommendedBudget: 75000,
-    defaultName: "Family Ayushya Homa & Birthday Puja"
+    defaultName: "Family Ayushya Homa & Birthday Puja",
   },
 
   // --- COMMUNITY EVENTS & FESTIVALS ---
   {
-    code: 'community_sarvajanik',
-    name: 'Sarvajanik Utsav & Pandal (Ganesh / Durga Puja)',
-    category: 'community',
-    highlights: 'Grand Murti Sthapana, Maha Aarti, Cultural Night, Annadan Bhandara, Visarjan',
-    icon: '🚩',
+    code: "community_sarvajanik",
+    name: "Sarvajanik Utsav & Pandal (Ganesh / Durga Puja)",
+    category: "community",
+    highlights:
+      "Grand Murti Sthapana, Maha Aarti, Cultural Night, Annadan Bhandara, Visarjan",
+    icon: "🚩",
     recommendedGuests: 800,
     recommendedBudget: 600000,
-    defaultName: "Sarvajanik Utsav & Pandal Celebration"
+    defaultName: "Sarvajanik Utsav & Pandal Celebration",
   },
   {
-    code: 'community_navratri',
-    name: 'Navratri Garba & Dandiya Mahotsav',
-    category: 'community',
-    highlights: 'Maa Durga Aarti, Traditional Dandiya Raas, Live Orchestra, Attire Awards & Prasad',
-    icon: '🪘',
+    code: "community_navratri",
+    name: "Navratri Garba & Dandiya Mahotsav",
+    category: "community",
+    highlights:
+      "Maa Durga Aarti, Traditional Dandiya Raas, Live Orchestra, Attire Awards & Prasad",
+    icon: "🪘",
     recommendedGuests: 500,
     recommendedBudget: 450000,
-    defaultName: "Navratri Dandiya Raas & Garba Mahotsav"
+    defaultName: "Navratri Dandiya Raas & Garba Mahotsav",
   },
   {
-    code: 'community_society_mela',
-    name: 'Housing Society Cultural Mela & Carnival',
-    category: 'community',
-    highlights: 'Resident Food & Game Stalls, Musical Tambola, Talent Showcase, Community Feast',
-    icon: '🎪',
+    code: "community_society_mela",
+    name: "Housing Society Cultural Mela & Carnival",
+    category: "community",
+    highlights:
+      "Resident Food & Game Stalls, Musical Tambola, Talent Showcase, Community Feast",
+    icon: "🎪",
     recommendedGuests: 350,
     recommendedBudget: 250000,
-    defaultName: "Greenwood Society Annual Cultural Mela"
+    defaultName: "Greenwood Society Annual Cultural Mela",
   },
 
   // --- SACRED PUJAS ---
   {
-    code: 'satyanarayan_puja',
-    name: 'Satyanarayan Vrat & Griha Pravesh',
-    category: 'puja',
-    highlights: 'Veda Pathan, Katha, Mahaprasad, Family Blessing, Vastu Shanti',
-    icon: '🙏',
+    code: "satyanarayan_puja",
+    name: "Satyanarayan Vrat & Griha Pravesh",
+    category: "puja",
+    highlights: "Veda Pathan, Katha, Mahaprasad, Family Blessing, Vastu Shanti",
+    icon: "🙏",
     recommendedGuests: 50,
     recommendedBudget: 85000,
-    defaultName: "Family Griha Pravesh & Satyanarayan Puja"
-  }
+    defaultName: "Family Griha Pravesh & Satyanarayan Puja",
+  },
 ];
 
 // Single source of API endpoint configuration: use Netlify proxy /api/v1 if on netlify, otherwise fallback
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL ||
-  (typeof window !== 'undefined' && window.location.hostname.includes('netlify.app')
-    ? '/api/v1'
-    : 'https://utsav-ai-ycg2.onrender.com/api/v1');
+  (typeof window !== "undefined" &&
+  window.location.hostname.includes("netlify.app")
+    ? "/api/v1"
+    : "https://utsav-ai-ycg2.onrender.com/api/v1");
 
 const inputClasses =
-  'w-full px-4 py-3 rounded-xl bg-white dark:bg-stone-900 border border-stone-300 dark:border-stone-700 text-stone-900 dark:text-stone-100 placeholder:text-stone-400 dark:placeholder:text-stone-500 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 dark:focus:ring-amber-400 focus:border-amber-500 transition-colors shadow-sm dark:[color-scheme:dark]';
+  "w-full px-4 py-3 rounded-xl bg-white dark:bg-stone-900 border border-stone-300 dark:border-stone-700 text-stone-900 dark:text-stone-100 placeholder:text-stone-400 dark:placeholder:text-stone-500 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 dark:focus:ring-amber-400 focus:border-amber-500 transition-colors shadow-sm dark:[color-scheme:dark]";
 
 const labelClasses =
-  'block text-xs font-semibold uppercase tracking-wider text-stone-700 dark:text-stone-300 mb-1.5';
+  "block text-xs font-semibold uppercase tracking-wider text-stone-700 dark:text-stone-300 mb-1.5";
 
 export default function OnboardingPage() {
   const [step, setStep] = useState<number>(1);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [isLoadingBudget, setIsLoadingBudget] = useState<boolean>(false);
   const [apiError, setApiError] = useState<string | null>(null);
-  const [traditionFilter, setTraditionFilter] = useState<string>('auto');
+  const [traditionFilter, setTraditionFilter] = useState<string>("auto");
 
   // Form State
   const [formData, setFormData] = useState({
     name: "Ananya & Rohan's Wedding",
-    hostName: 'Rohan Joshi',
-    phone: '+91 98220 12345',
-    eventType: 'wedding',
-    traditionCode: 'maharashtrian_vedic',
-    city: 'Pune',
-    pincode: '411001',
-    startDate: '2027-11-12',
-    endDate: '2027-11-14',
+    hostName: "Rohan Joshi",
+    phone: "+91 98220 12345",
+    eventType: "wedding",
+    traditionCode: "maharashtrian_vedic",
+    city: "Pune",
+    pincode: "411001",
+    startDate: "2027-11-12",
+    endDate: "2027-11-14",
     guestCount: 350,
-    budget: 3500000
+    budget: 3500000,
   });
 
   // State populated STRICTLY by the backend API
-  const [budgetCalc, setBudgetCalc] = useState<BudgetCalculationResponse | null>(null);
+  const [budgetCalc, setBudgetCalc] =
+    useState<BudgetCalculationResponse | null>(null);
   const [masterPlan, setMasterPlan] = useState<MasterPlanResponse | null>(null);
 
   // Target tradition category from eventType
   const currentCategory = useMemo(() => {
-    if (formData.eventType === 'community_festival') return 'community';
+    if (formData.eventType === "community_festival") return "community";
     return formData.eventType;
   }, [formData.eventType]);
 
   // Filtered traditions based on active selection or filter tab
   const displayedTraditions = useMemo(() => {
-    if (traditionFilter === 'all') return TRADITIONS;
-    const cat = traditionFilter === 'auto' ? currentCategory : traditionFilter;
+    if (traditionFilter === "all") return TRADITIONS;
+    const cat = traditionFilter === "auto" ? currentCategory : traditionFilter;
     const matched = TRADITIONS.filter((t) => t.category === cat);
     return matched.length > 0 ? matched : TRADITIONS;
   }, [traditionFilter, currentCategory]);
@@ -377,17 +390,17 @@ export default function OnboardingPage() {
     setApiError(null);
     try {
       const res = await fetch(`${API_BASE_URL}/intake/calculate-budget`, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
-          'Bypass-Tunnel-Reminder': 'true'
+          "Content-Type": "application/json",
+          "Bypass-Tunnel-Reminder": "true",
         },
         body: JSON.stringify({
           total_budget: formData.budget,
           event_type: formData.eventType,
           city: formData.city,
-          guest_count: formData.guestCount
-        })
+          guest_count: formData.guestCount,
+        }),
       });
 
       if (!res.ok) {
@@ -396,9 +409,11 @@ export default function OnboardingPage() {
 
       const data: BudgetCalculationResponse = await res.json();
       setBudgetCalc(data);
-    } catch (err: any) {
-      console.error('Failed to load budget from backend:', err);
-      setApiError('Live calculation engine unavailable. Ensure backend server is reachable.');
+    } catch (err: unknown) {
+      console.error("Failed to load budget from backend:", err);
+      setApiError(
+        "Live calculation engine unavailable. Ensure backend server is reachable.",
+      );
     } finally {
       setIsLoadingBudget(false);
     }
@@ -418,10 +433,10 @@ export default function OnboardingPage() {
     setApiError(null);
     try {
       const res = await fetch(`${API_BASE_URL}/intake/generate`, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
-          'Bypass-Tunnel-Reminder': 'true'
+          "Content-Type": "application/json",
+          "Bypass-Tunnel-Reminder": "true",
         },
         body: JSON.stringify({
           name: formData.name,
@@ -434,13 +449,15 @@ export default function OnboardingPage() {
           city: formData.city,
           pincode: formData.pincode,
           start_date: formData.startDate,
-          end_date: formData.endDate
-        })
+          end_date: formData.endDate,
+        }),
       });
 
       if (!res.ok) {
         const errorData = await res.json().catch(() => ({}));
-        throw new Error(errorData.detail || `Synthesis failed with status ${res.status}`);
+        throw new Error(
+          errorData.detail || `Synthesis failed with status ${res.status}`,
+        );
       }
 
       const planData: MasterPlanResponse = await res.json();
@@ -449,25 +466,28 @@ export default function OnboardingPage() {
       }
       setMasterPlan(planData);
       setStep(5);
-    } catch (err: any) {
-      console.error('Failed to synthesize plan:', err);
-      setApiError(err.message || 'Synthesis failed. Please verify inputs.');
+    } catch (err: unknown) {
+      console.error("Failed to synthesize plan:", err);
+      setApiError(
+        (err instanceof Error ? err.message : String(err)) ||
+          "Synthesis failed. Please verify inputs.",
+      );
     } finally {
       setIsSubmitting(false);
     }
   };
 
   // Switch celebration type with adaptive defaults
-  const handleSelectEventType = (typeObj: typeof CELEBRATION_TYPES[0]) => {
+  const handleSelectEventType = (typeObj: (typeof CELEBRATION_TYPES)[0]) => {
     setFormData((prev) => ({
       ...prev,
       eventType: typeObj.type,
       name: typeObj.defaultName,
       guestCount: typeObj.defaultGuests,
       budget: typeObj.defaultBudget,
-      traditionCode: typeObj.defaultTradition
+      traditionCode: typeObj.defaultTradition,
     }));
-    setTraditionFilter('auto');
+    setTraditionFilter("auto");
   };
 
   return (
@@ -481,18 +501,22 @@ export default function OnboardingPage() {
             </div>
             <div>
               <div className="flex items-center space-x-2">
-                <span className="text-xl font-serif font-bold tracking-wider text-stone-900 dark:text-stone-50">UTSAV</span>
+                <span className="text-xl font-serif font-bold tracking-wider text-stone-900 dark:text-stone-50">
+                  UTSAV
+                </span>
                 <span className="text-[11px] px-2.5 py-0.5 rounded-full bg-amber-100 dark:bg-amber-950/70 border border-amber-300 dark:border-amber-800 text-amber-800 dark:text-amber-300 font-semibold uppercase tracking-wider">
                   Intake Studio
                 </span>
               </div>
-              <p className="text-[11px] text-stone-500 dark:text-stone-400">Culture-Native Event Orchestrator</p>
+              <p className="text-[11px] text-stone-500 dark:text-stone-400">
+                Culture-Native Event Orchestrator
+              </p>
             </div>
           </Link>
 
           <div className="flex items-center space-x-4">
             <div className="text-xs text-stone-600 dark:text-stone-400 font-mono font-medium">
-              {step <= 4 ? `Step ${step} of 4` : 'Plan Composed'}
+              {step <= 4 ? `Step ${step} of 4` : "Plan Composed"}
             </div>
             <ThemeToggle />
           </div>
@@ -523,17 +547,49 @@ export default function OnboardingPage() {
                   key={s}
                   className={`h-2 rounded-full transition-all duration-300 ${
                     s <= step
-                      ? 'bg-gradient-to-r from-[#8B1E28] via-[#E67E22] to-[#F4B41A]'
-                      : 'bg-stone-200 dark:bg-stone-800'
+                      ? "bg-gradient-to-r from-[#8B1E28] via-[#E67E22] to-[#F4B41A]"
+                      : "bg-stone-200 dark:bg-stone-800"
                   }`}
                 />
               ))}
             </div>
             <div className="flex justify-between text-xs text-stone-600 dark:text-stone-400 font-medium px-0.5">
-              <span className={step === 1 ? 'font-bold text-[#8B1E28] dark:text-[#F4B41A]' : ''}>1. Celebration Type</span>
-              <span className={step === 2 ? 'font-bold text-[#8B1E28] dark:text-[#F4B41A]' : ''}>2. Format & Heritage</span>
-              <span className={step === 3 ? 'font-bold text-[#8B1E28] dark:text-[#F4B41A]' : ''}>3. Scale & Budget</span>
-              <span className={step === 4 ? 'font-bold text-[#8B1E28] dark:text-[#F4B41A]' : ''}>4. Review</span>
+              <span
+                className={
+                  step === 1
+                    ? "font-bold text-[#8B1E28] dark:text-[#F4B41A]"
+                    : ""
+                }
+              >
+                1. Celebration Type
+              </span>
+              <span
+                className={
+                  step === 2
+                    ? "font-bold text-[#8B1E28] dark:text-[#F4B41A]"
+                    : ""
+                }
+              >
+                2. Format & Heritage
+              </span>
+              <span
+                className={
+                  step === 3
+                    ? "font-bold text-[#8B1E28] dark:text-[#F4B41A]"
+                    : ""
+                }
+              >
+                3. Scale & Budget
+              </span>
+              <span
+                className={
+                  step === 4
+                    ? "font-bold text-[#8B1E28] dark:text-[#F4B41A]"
+                    : ""
+                }
+              >
+                4. Review
+              </span>
             </div>
           </div>
         )}
@@ -546,7 +602,8 @@ export default function OnboardingPage() {
                 Choose Celebration Type
               </h2>
               <p className="text-stone-600 dark:text-stone-300 text-sm">
-                Select your celebration format. Utsav configures dedicated budget allocations, timelines, and vendor checklists.
+                Select your celebration format. Utsav configures dedicated
+                budget allocations, timelines, and vendor checklists.
               </p>
             </div>
 
@@ -563,12 +620,14 @@ export default function OnboardingPage() {
                       onClick={() => handleSelectEventType(ct)}
                       className={`p-3.5 rounded-2xl flex flex-col items-center justify-center text-center transition-all border ${
                         isSelected
-                          ? 'border-2 border-amber-600 bg-amber-50/90 dark:border-amber-400 dark:bg-amber-950/50 shadow-md ring-2 ring-amber-500/20'
-                          : 'border-stone-200 dark:border-stone-800 bg-white dark:bg-stone-900/60 hover:border-amber-400/50 hover:bg-stone-50 dark:hover:bg-stone-800/40'
+                          ? "border-2 border-amber-600 bg-amber-50/90 dark:border-amber-400 dark:bg-amber-950/50 shadow-md ring-2 ring-amber-500/20"
+                          : "border-stone-200 dark:border-stone-800 bg-white dark:bg-stone-900/60 hover:border-amber-400/50 hover:bg-stone-50 dark:hover:bg-stone-800/40"
                       }`}
                     >
                       <span className="text-2xl mb-1.5">{ct.icon}</span>
-                      <span className="font-semibold text-xs text-stone-900 dark:text-stone-100">{ct.label}</span>
+                      <span className="font-semibold text-xs text-stone-900 dark:text-stone-100">
+                        {ct.label}
+                      </span>
                       <span className="text-[10px] text-stone-500 dark:text-stone-400 mt-1 line-clamp-2 leading-tight">
                         {ct.description}
                       </span>
@@ -580,97 +639,129 @@ export default function OnboardingPage() {
 
             <div className="grid sm:grid-cols-2 gap-5 pt-2">
               <div className="sm:col-span-2">
-                <label htmlFor="celebration-name" className={labelClasses}>Celebration Name</label>
+                <label htmlFor="celebration-name" className={labelClasses}>
+                  Celebration Name
+                </label>
                 <input
                   id="celebration-name"
                   aria-label="Celebration Name"
                   type="text"
                   value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, name: e.target.value })
+                  }
                   className={inputClasses}
                   placeholder="e.g. Aarav's 5th Birthday Carnival"
                 />
               </div>
 
               <div>
-                <label htmlFor="host-name" className={labelClasses}>Primary Host / Committee Lead</label>
+                <label htmlFor="host-name" className={labelClasses}>
+                  Primary Host / Committee Lead
+                </label>
                 <input
                   id="host-name"
                   aria-label="Primary Host / Committee Lead"
                   type="text"
                   value={formData.hostName}
-                  onChange={(e) => setFormData({ ...formData, hostName: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, hostName: e.target.value })
+                  }
                   className={inputClasses}
                   placeholder="e.g. Rohan Joshi"
                 />
               </div>
 
               <div>
-                <label htmlFor="host-phone" className={labelClasses}>Host WhatsApp Number (for call sheets & alerts)</label>
+                <label htmlFor="host-phone" className={labelClasses}>
+                  Host WhatsApp Number (for call sheets & alerts)
+                </label>
                 <input
                   id="host-phone"
                   aria-label="Host WhatsApp Number"
                   type="text"
                   value={formData.phone}
-                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, phone: e.target.value })
+                  }
                   className={inputClasses}
                   placeholder="+91 98220 12345"
                 />
               </div>
 
               <div>
-                <label htmlFor="celebration-city" className={labelClasses}>Celebration City</label>
+                <label htmlFor="celebration-city" className={labelClasses}>
+                  Celebration City
+                </label>
                 <div className="relative">
                   <input
                     id="celebration-city"
                     aria-label="Celebration City"
                     type="text"
                     value={formData.city}
-                    onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, city: e.target.value })
+                    }
                     className={inputClasses}
                     placeholder="e.g. Pune, Jaipur, Mumbai"
                   />
                   {budgetCalc && (
                     <span className="absolute right-3 top-3 text-[11px] px-2 py-0.5 rounded-md bg-stone-100 dark:bg-stone-800 text-stone-700 dark:text-stone-300 font-mono border border-stone-200 dark:border-stone-700">
-                      {budgetCalc.city_tier} ({budgetCalc.city_tier_multiplier}x)
+                      {budgetCalc.city_tier} ({budgetCalc.city_tier_multiplier}
+                      x)
                     </span>
                   )}
                 </div>
               </div>
 
               <div>
-                <label htmlFor="venue-pincode" className={labelClasses}>Venue Pincode</label>
+                <label htmlFor="venue-pincode" className={labelClasses}>
+                  Venue Pincode
+                </label>
                 <input
                   id="venue-pincode"
                   aria-label="Venue Pincode"
                   type="text"
                   value={formData.pincode}
-                  onChange={(e) => setFormData({ ...formData, pincode: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, pincode: e.target.value })
+                  }
                   className={inputClasses}
                   placeholder="411001"
                 />
               </div>
 
               <div>
-                <label htmlFor="celebration-start-date" className={labelClasses}>Celebration Start Date</label>
+                <label
+                  htmlFor="celebration-start-date"
+                  className={labelClasses}
+                >
+                  Celebration Start Date
+                </label>
                 <input
                   id="celebration-start-date"
                   aria-label="Celebration Start Date"
                   type="date"
                   value={formData.startDate}
-                  onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, startDate: e.target.value })
+                  }
                   className={inputClasses}
                 />
               </div>
 
               <div>
-                <label htmlFor="celebration-end-date" className={labelClasses}>Celebration End Date</label>
+                <label htmlFor="celebration-end-date" className={labelClasses}>
+                  Celebration End Date
+                </label>
                 <input
                   id="celebration-end-date"
                   aria-label="Celebration End Date"
                   type="date"
                   value={formData.endDate}
-                  onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, endDate: e.target.value })
+                  }
                   className={inputClasses}
                 />
               </div>
@@ -698,7 +789,8 @@ export default function OnboardingPage() {
                     Select Event Format & Heritage
                   </h2>
                   <p className="text-stone-600 dark:text-stone-300 text-sm">
-                    Utsav pre-loads verified ritual sequencing, samagri checklists, and solar-lunar alignments.
+                    Utsav pre-loads verified ritual sequencing, samagri
+                    checklists, and solar-lunar alignments.
                   </p>
                 </div>
               </div>
@@ -707,55 +799,60 @@ export default function OnboardingPage() {
               <div className="flex flex-wrap gap-2 mt-4 pt-2 border-t border-stone-200/60 dark:border-stone-800">
                 <button
                   type="button"
-                  onClick={() => setTraditionFilter('auto')}
+                  onClick={() => setTraditionFilter("auto")}
                   className={`px-3 py-1 rounded-full text-xs font-semibold transition-all ${
-                    traditionFilter === 'auto'
-                      ? 'bg-amber-600 text-white dark:bg-amber-400 dark:text-stone-950'
-                      : 'bg-stone-100 dark:bg-stone-800 text-stone-600 dark:text-stone-400 hover:bg-stone-200'
+                    traditionFilter === "auto"
+                      ? "bg-amber-600 text-white dark:bg-amber-400 dark:text-stone-950"
+                      : "bg-stone-100 dark:bg-stone-800 text-stone-600 dark:text-stone-400 hover:bg-stone-200"
                   }`}
                 >
-                  Matching {formData.eventType === 'birthday' ? '🎂 Birthday' : formData.eventType === 'community_festival' ? '👥 Community' : 'Celebration'}
+                  Matching{" "}
+                  {formData.eventType === "birthday"
+                    ? "🎂 Birthday"
+                    : formData.eventType === "community_festival"
+                      ? "👥 Community"
+                      : "Celebration"}
                 </button>
                 <button
                   type="button"
-                  onClick={() => setTraditionFilter('birthday')}
+                  onClick={() => setTraditionFilter("birthday")}
                   className={`px-3 py-1 rounded-full text-xs font-semibold transition-all ${
-                    traditionFilter === 'birthday'
-                      ? 'bg-amber-600 text-white dark:bg-amber-400 dark:text-stone-950'
-                      : 'bg-stone-100 dark:bg-stone-800 text-stone-600 dark:text-stone-400 hover:bg-stone-200'
+                    traditionFilter === "birthday"
+                      ? "bg-amber-600 text-white dark:bg-amber-400 dark:text-stone-950"
+                      : "bg-stone-100 dark:bg-stone-800 text-stone-600 dark:text-stone-400 hover:bg-stone-200"
                   }`}
                 >
                   🎂 Birthdays (3)
                 </button>
                 <button
                   type="button"
-                  onClick={() => setTraditionFilter('community')}
+                  onClick={() => setTraditionFilter("community")}
                   className={`px-3 py-1 rounded-full text-xs font-semibold transition-all ${
-                    traditionFilter === 'community'
-                      ? 'bg-amber-600 text-white dark:bg-amber-400 dark:text-stone-950'
-                      : 'bg-stone-100 dark:bg-stone-800 text-stone-600 dark:text-stone-400 hover:bg-stone-200'
+                    traditionFilter === "community"
+                      ? "bg-amber-600 text-white dark:bg-amber-400 dark:text-stone-950"
+                      : "bg-stone-100 dark:bg-stone-800 text-stone-600 dark:text-stone-400 hover:bg-stone-200"
                   }`}
                 >
                   👥 Community Events (3)
                 </button>
                 <button
                   type="button"
-                  onClick={() => setTraditionFilter('wedding')}
+                  onClick={() => setTraditionFilter("wedding")}
                   className={`px-3 py-1 rounded-full text-xs font-semibold transition-all ${
-                    traditionFilter === 'wedding'
-                      ? 'bg-amber-600 text-white dark:bg-amber-400 dark:text-stone-950'
-                      : 'bg-stone-100 dark:bg-stone-800 text-stone-600 dark:text-stone-400 hover:bg-stone-200'
+                    traditionFilter === "wedding"
+                      ? "bg-amber-600 text-white dark:bg-amber-400 dark:text-stone-950"
+                      : "bg-stone-100 dark:bg-stone-800 text-stone-600 dark:text-stone-400 hover:bg-stone-200"
                   }`}
                 >
                   💍 Weddings (5)
                 </button>
                 <button
                   type="button"
-                  onClick={() => setTraditionFilter('all')}
+                  onClick={() => setTraditionFilter("all")}
                   className={`px-3 py-1 rounded-full text-xs font-semibold transition-all ${
-                    traditionFilter === 'all'
-                      ? 'bg-amber-600 text-white dark:bg-amber-400 dark:text-stone-950'
-                      : 'bg-stone-100 dark:bg-stone-800 text-stone-600 dark:text-stone-400 hover:bg-stone-200'
+                    traditionFilter === "all"
+                      ? "bg-amber-600 text-white dark:bg-amber-400 dark:text-stone-950"
+                      : "bg-stone-100 dark:bg-stone-800 text-stone-600 dark:text-stone-400 hover:bg-stone-200"
                   }`}
                 >
                   All Formats ({TRADITIONS.length})
@@ -773,21 +870,36 @@ export default function OnboardingPage() {
                       setFormData((prev) => ({
                         ...prev,
                         traditionCode: trad.code,
-                        eventType: trad.category === 'community' ? 'community_festival' : trad.category === 'puja' ? 'puja' : trad.category === 'birthday' ? 'birthday' : 'wedding',
-                        guestCount: prev.guestCount === 350 && trad.category !== 'wedding' ? trad.recommendedGuests : prev.guestCount,
-                        budget: prev.budget === 3500000 && trad.category !== 'wedding' ? trad.recommendedBudget : prev.budget
+                        eventType:
+                          trad.category === "community"
+                            ? "community_festival"
+                            : trad.category === "puja"
+                              ? "puja"
+                              : trad.category === "birthday"
+                                ? "birthday"
+                                : "wedding",
+                        guestCount:
+                          prev.guestCount === 350 && trad.category !== "wedding"
+                            ? trad.recommendedGuests
+                            : prev.guestCount,
+                        budget:
+                          prev.budget === 3500000 && trad.category !== "wedding"
+                            ? trad.recommendedBudget
+                            : prev.budget,
                       }));
                     }}
                     className={`p-5 rounded-2xl cursor-pointer transition-all border text-left active:scale-[0.99] ${
                       isSelected
-                        ? 'border-2 border-amber-600 bg-amber-50/80 dark:border-amber-400 dark:bg-amber-950/40 shadow-md ring-1 ring-amber-500/30'
-                        : 'border-stone-200/90 dark:border-stone-800 hover:border-amber-400/50 bg-white dark:bg-stone-900/60'
+                        ? "border-2 border-amber-600 bg-amber-50/80 dark:border-amber-400 dark:bg-amber-950/40 shadow-md ring-1 ring-amber-500/30"
+                        : "border-stone-200/90 dark:border-stone-800 hover:border-amber-400/50 bg-white dark:bg-stone-900/60"
                     }`}
                   >
                     <div className="flex items-center justify-between mb-2">
                       <div className="flex items-center space-x-3">
                         <span className="text-2xl">{trad.icon}</span>
-                        <h4 className="font-semibold text-sm text-stone-900 dark:text-stone-100">{trad.name}</h4>
+                        <h4 className="font-semibold text-sm text-stone-900 dark:text-stone-100">
+                          {trad.name}
+                        </h4>
                       </div>
                       <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded-full bg-stone-100 dark:bg-stone-800 text-stone-600 dark:text-stone-300">
                         {trad.category}
@@ -833,33 +945,52 @@ export default function OnboardingPage() {
                 Scale & Budget Envelope
               </h2>
               <p className="text-stone-600 dark:text-stone-300 text-sm">
-                Calibrated in real time via FastAPI backend ({budgetCalc?.city_tier || 'tier_1'} • {budgetCalc?.city_tier_multiplier || 1.0}x) for <strong>{formData.eventType.replace('_', ' ')}</strong>. Zero client-side guesswork.
+                Calibrated in real time via FastAPI backend (
+                {budgetCalc?.city_tier || "tier_1"} •{" "}
+                {budgetCalc?.city_tier_multiplier || 1.0}x) for{" "}
+                <strong>{formData.eventType.replace("_", " ")}</strong>. Zero
+                client-side guesswork.
               </p>
             </div>
 
             <div>
               <label className="block text-xs font-semibold uppercase tracking-wider text-stone-700 dark:text-stone-300 mb-2">
-                {formData.eventType === 'birthday' ? 'Attendee Count (Kids & Adults)' : formData.eventType === 'community_festival' ? 'Estimated Community Footfall' : 'Estimated Guest Headcount'}:
-                <strong className="text-stone-900 dark:text-stone-100 text-base ml-1">{formData.guestCount} {formData.eventType === 'community_festival' ? 'Footfall' : 'Guests'}</strong>
+                {formData.eventType === "birthday"
+                  ? "Attendee Count (Kids & Adults)"
+                  : formData.eventType === "community_festival"
+                    ? "Estimated Community Footfall"
+                    : "Estimated Guest Headcount"}
+                :
+                <strong className="text-stone-900 dark:text-stone-100 text-base ml-1">
+                  {formData.guestCount}{" "}
+                  {formData.eventType === "community_festival"
+                    ? "Footfall"
+                    : "Guests"}
+                </strong>
               </label>
               <div className="flex flex-wrap gap-2 mb-3">
-                {(formData.eventType === 'birthday'
+                {(formData.eventType === "birthday"
                   ? [40, 65, 80, 120, 180]
-                  : formData.eventType === 'community_festival'
-                  ? [250, 500, 800, 1200, 2500]
-                  : [150, 250, 350, 500, 800]
+                  : formData.eventType === "community_festival"
+                    ? [250, 500, 800, 1200, 2500]
+                    : [150, 250, 350, 500, 800]
                 ).map((count) => (
                   <button
                     key={count}
                     type="button"
-                    onClick={() => setFormData({ ...formData, guestCount: count })}
+                    onClick={() =>
+                      setFormData({ ...formData, guestCount: count })
+                    }
                     className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold border transition-all active:scale-95 ${
                       formData.guestCount === count
-                        ? 'bg-[#8B1E28] text-white border-[#8B1E28] dark:bg-[#F4B41A] dark:text-stone-950 dark:border-[#F4B41A] shadow-sm'
-                        : 'border-stone-300 dark:border-stone-700 text-stone-700 dark:text-stone-300 hover:bg-stone-100 dark:hover:bg-stone-800 bg-white dark:bg-stone-900/60'
+                        ? "bg-[#8B1E28] text-white border-[#8B1E28] dark:bg-[#F4B41A] dark:text-stone-950 dark:border-[#F4B41A] shadow-sm"
+                        : "border-stone-300 dark:border-stone-700 text-stone-700 dark:text-stone-300 hover:bg-stone-100 dark:hover:bg-stone-800 bg-white dark:bg-stone-900/60"
                     }`}
                   >
-                    {count} {formData.eventType === 'community_festival' ? 'Footfall' : 'Guests'}
+                    {count}{" "}
+                    {formData.eventType === "community_festival"
+                      ? "Footfall"
+                      : "Guests"}
                   </button>
                 ))}
               </div>
@@ -876,11 +1007,34 @@ export default function OnboardingPage() {
               </div>
               <input
                 type="range"
-                min={formData.eventType === 'birthday' ? '50000' : formData.eventType === 'community_festival' ? '150000' : '500000'}
-                max={formData.eventType === 'birthday' ? '1000000' : formData.eventType === 'community_festival' ? '3000000' : '15000000'}
-                step={formData.eventType === 'birthday' ? '25000' : formData.eventType === 'community_festival' ? '50000' : '250000'}
+                min={
+                  formData.eventType === "birthday"
+                    ? "50000"
+                    : formData.eventType === "community_festival"
+                      ? "150000"
+                      : "500000"
+                }
+                max={
+                  formData.eventType === "birthday"
+                    ? "1000000"
+                    : formData.eventType === "community_festival"
+                      ? "3000000"
+                      : "15000000"
+                }
+                step={
+                  formData.eventType === "birthday"
+                    ? "25000"
+                    : formData.eventType === "community_festival"
+                      ? "50000"
+                      : "250000"
+                }
                 value={formData.budget}
-                onChange={(e) => setFormData({ ...formData, budget: parseFloat(e.target.value) })}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    budget: parseFloat(e.target.value),
+                  })
+                }
                 className="w-full accent-amber-600 dark:accent-amber-400 cursor-pointer h-2 bg-stone-200 dark:bg-stone-800 rounded-lg"
               />
             </div>
@@ -889,7 +1043,8 @@ export default function OnboardingPage() {
             <div className="p-5 rounded-2xl bg-stone-100/80 dark:bg-stone-900/70 border border-stone-200 dark:border-stone-800 shadow-inner">
               <div className="flex items-center justify-between mb-3">
                 <div className="text-xs font-semibold uppercase tracking-wider text-stone-700 dark:text-stone-300">
-                  Authoritative Backend Allocation ({formData.eventType.replace('_', ' ').toUpperCase()})
+                  Authoritative Backend Allocation (
+                  {formData.eventType.replace("_", " ").toUpperCase()})
                 </div>
                 {isLoadingBudget && (
                   <span className="text-xs text-amber-600 dark:text-amber-400 animate-pulse font-mono font-medium">
@@ -901,9 +1056,12 @@ export default function OnboardingPage() {
               {budgetCalc ? (
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                   {budgetCalc.items.map((item, idx) => (
-                    <div key={idx} className="p-3.5 rounded-xl bg-white dark:bg-stone-950 border border-stone-200/90 dark:border-stone-800 shadow-sm">
+                    <div
+                      key={idx}
+                      className="p-3.5 rounded-xl bg-white dark:bg-stone-950 border border-stone-200/90 dark:border-stone-800 shadow-sm"
+                    >
                       <div className="text-xs text-stone-500 dark:text-stone-400 capitalize font-medium">
-                        {item.category.replace(/_/g, ' ')} ({item.percentage}%)
+                        {item.category.replace(/_/g, " ")} ({item.percentage}%)
                       </div>
                       <div className="font-bold text-sm text-stone-900 dark:text-stone-100 mt-1">
                         {formatINR(item.planned_amount)}
@@ -944,42 +1102,75 @@ export default function OnboardingPage() {
                 Review Celebration Blueprint
               </h2>
               <p className="text-stone-600 dark:text-stone-300 text-sm">
-                Confirm your parameters before our backend engines assemble the master itinerary and vendor checklists.
+                Confirm your parameters before our backend engines assemble the
+                master itinerary and vendor checklists.
               </p>
             </div>
 
             <div className="p-6 rounded-2xl bg-stone-50/80 dark:bg-stone-900/60 border border-stone-200 dark:border-stone-800 space-y-4">
               <div className="grid sm:grid-cols-2 gap-4 text-sm">
                 <div>
-                  <span className="text-stone-500 dark:text-stone-400 block text-xs font-medium">Event Format:</span>
-                  <strong className="text-stone-900 dark:text-stone-100 text-base capitalize">{formData.eventType.replace('_', ' ')}</strong>
-                </div>
-                <div>
-                  <span className="text-stone-500 dark:text-stone-400 block text-xs font-medium">Celebration Title:</span>
-                  <strong className="text-stone-900 dark:text-stone-100 text-base">{formData.name}</strong>
-                </div>
-                <div>
-                  <span className="text-stone-500 dark:text-stone-400 block text-xs font-medium">Primary Host / Lead:</span>
-                  <strong className="text-stone-900 dark:text-stone-100 text-base">{formData.hostName} ({formData.phone})</strong>
-                </div>
-                <div>
-                  <span className="text-stone-500 dark:text-stone-400 block text-xs font-medium">Location & Tier:</span>
-                  <strong className="text-stone-900 dark:text-stone-100">
-                    {formData.city} • {budgetCalc ? `${budgetCalc.city_tier} (${budgetCalc.city_tier_multiplier}x)` : 'Tier 1'}
+                  <span className="text-stone-500 dark:text-stone-400 block text-xs font-medium">
+                    Event Format:
+                  </span>
+                  <strong className="text-stone-900 dark:text-stone-100 text-base capitalize">
+                    {formData.eventType.replace("_", " ")}
                   </strong>
                 </div>
                 <div>
-                  <span className="text-stone-500 dark:text-stone-400 block text-xs font-medium">Schedule Dates:</span>
-                  <strong className="text-stone-900 dark:text-stone-100">{formData.startDate} to {formData.endDate}</strong>
+                  <span className="text-stone-500 dark:text-stone-400 block text-xs font-medium">
+                    Celebration Title:
+                  </span>
+                  <strong className="text-stone-900 dark:text-stone-100 text-base">
+                    {formData.name}
+                  </strong>
                 </div>
                 <div>
-                  <span className="text-stone-500 dark:text-stone-400 block text-xs font-medium">Scale / Headcount:</span>
-                  <strong className="text-stone-900 dark:text-stone-100">{formData.guestCount} {formData.eventType === 'community_festival' ? 'Footfall' : 'Guests'}</strong>
+                  <span className="text-stone-500 dark:text-stone-400 block text-xs font-medium">
+                    Primary Host / Lead:
+                  </span>
+                  <strong className="text-stone-900 dark:text-stone-100 text-base">
+                    {formData.hostName} ({formData.phone})
+                  </strong>
                 </div>
                 <div>
-                  <span className="text-stone-500 dark:text-stone-400 block text-xs font-medium">Scaled Budget Envelope:</span>
+                  <span className="text-stone-500 dark:text-stone-400 block text-xs font-medium">
+                    Location & Tier:
+                  </span>
+                  <strong className="text-stone-900 dark:text-stone-100">
+                    {formData.city} •{" "}
+                    {budgetCalc
+                      ? `${budgetCalc.city_tier} (${budgetCalc.city_tier_multiplier}x)`
+                      : "Tier 1"}
+                  </strong>
+                </div>
+                <div>
+                  <span className="text-stone-500 dark:text-stone-400 block text-xs font-medium">
+                    Schedule Dates:
+                  </span>
+                  <strong className="text-stone-900 dark:text-stone-100">
+                    {formData.startDate} to {formData.endDate}
+                  </strong>
+                </div>
+                <div>
+                  <span className="text-stone-500 dark:text-stone-400 block text-xs font-medium">
+                    Scale / Headcount:
+                  </span>
+                  <strong className="text-stone-900 dark:text-stone-100">
+                    {formData.guestCount}{" "}
+                    {formData.eventType === "community_festival"
+                      ? "Footfall"
+                      : "Guests"}
+                  </strong>
+                </div>
+                <div>
+                  <span className="text-stone-500 dark:text-stone-400 block text-xs font-medium">
+                    Scaled Budget Envelope:
+                  </span>
                   <strong className="text-stone-900 dark:text-stone-100 text-lg font-mono text-[#8B1E28] dark:text-[#F4B41A]">
-                    {budgetCalc ? formatINR(budgetCalc.scaled_envelope) : formatINR(formData.budget)}
+                    {budgetCalc
+                      ? formatINR(budgetCalc.scaled_envelope)
+                      : formatINR(formData.budget)}
                   </strong>
                 </div>
               </div>
@@ -991,12 +1182,24 @@ export default function OnboardingPage() {
                 Personalized Ideas & Cultural Inclusions
               </h4>
               <p className="text-xs text-stone-700 dark:text-stone-300 leading-relaxed">
-                {formData.eventType === 'birthday' ? (
-                  <span>🎂 Custom cake ordering timeline, themed balloon arch specs, party entertainer booking milestones, and curated return gifts.</span>
-                ) : formData.eventType === 'community_festival' ? (
-                  <span>🚩 Municipal & police NOC permits, fire-retardant pandal fabrication, mahaprasad procurement, volunteer crowd management, and dhol-tasha aarti scheduling.</span>
+                {formData.eventType === "birthday" ? (
+                  <span>
+                    🎂 Custom cake ordering timeline, themed balloon arch specs,
+                    party entertainer booking milestones, and curated return
+                    gifts.
+                  </span>
+                ) : formData.eventType === "community_festival" ? (
+                  <span>
+                    🚩 Municipal & police NOC permits, fire-retardant pandal
+                    fabrication, mahaprasad procurement, volunteer crowd
+                    management, and dhol-tasha aarti scheduling.
+                  </span>
                 ) : (
-                  <span>🕉️ Astronomical ephemeris solar-lunar muhurats, priest samagri checklist, and traditional wedding run-of-show call sheets.</span>
+                  <span>
+                    🕉️ Astronomical ephemeris solar-lunar muhurats, priest
+                    samagri checklist, and traditional wedding run-of-show call
+                    sheets.
+                  </span>
                 )}
               </p>
             </div>
@@ -1019,9 +1222,24 @@ export default function OnboardingPage() {
               >
                 {isSubmitting ? (
                   <>
-                    <svg className="animate-spin h-5 w-5 text-white" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+                    <svg
+                      className="animate-spin h-5 w-5 text-white"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                    >
+                      <circle
+                        className="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        strokeWidth="4"
+                      ></circle>
+                      <path
+                        className="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8v8H4z"
+                      ></path>
                     </svg>
                     <span>Synthesizing via FastAPI Backend...</span>
                   </>
@@ -1030,7 +1248,11 @@ export default function OnboardingPage() {
                 )}
               </button>
             </div>
-            <WakingUpNotice isLoading={isSubmitting} timeoutMs={3500} className="mt-4" />
+            <WakingUpNotice
+              isLoading={isSubmitting}
+              timeoutMs={3500}
+              className="mt-4"
+            />
           </div>
         )}
 
@@ -1042,11 +1264,20 @@ export default function OnboardingPage() {
                 <div>
                   <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-emerald-100 dark:bg-emerald-950/70 text-emerald-800 dark:text-emerald-300 text-xs font-semibold mb-2">
                     <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                    <span>Backend Plan Synthesized • ID: {masterPlan.event_id}</span>
+                    <span>
+                      Backend Plan Synthesized • ID: {masterPlan.event_id}
+                    </span>
                   </div>
-                  <h1 className="text-3xl font-serif font-bold text-stone-900 dark:text-stone-50">{masterPlan.name}</h1>
+                  <h1 className="text-3xl font-serif font-bold text-stone-900 dark:text-stone-50">
+                    {masterPlan.name}
+                  </h1>
                   <p className="text-stone-600 dark:text-stone-300 text-sm mt-1">
-                    Host: {masterPlan.owner_name} • {masterPlan.city_tier} • {masterPlan.guest_count} {formData.eventType === 'community_festival' ? 'Footfall' : 'Guests'} • Total Budget: {formatINR(masterPlan.total_budget)}
+                    Host: {masterPlan.owner_name} • {masterPlan.city_tier} •{" "}
+                    {masterPlan.guest_count}{" "}
+                    {formData.eventType === "community_festival"
+                      ? "Footfall"
+                      : "Guests"}{" "}
+                    • Total Budget: {formatINR(masterPlan.total_budget)}
                   </p>
                 </div>
                 <div className="flex flex-wrap gap-2.5">
@@ -1073,49 +1304,94 @@ export default function OnboardingPage() {
                   <span>Curated Personalized Ideas for this Celebration</span>
                 </h3>
                 <div className="grid sm:grid-cols-3 gap-3 text-xs">
-                  {formData.eventType === 'birthday' ? (
+                  {formData.eventType === "birthday" ? (
                     <>
                       <div className="p-3 bg-white dark:bg-stone-900 rounded-xl border border-amber-200/80 dark:border-amber-800/60">
-                        <strong className="block text-stone-900 dark:text-stone-100 mb-1">🎂 Signature Cake & Treats</strong>
-                        <p className="text-stone-600 dark:text-stone-300">Custom 3D theme fondant cake with matching cupcake tower and nitrogen mocktail station.</p>
+                        <strong className="block text-stone-900 dark:text-stone-100 mb-1">
+                          🎂 Signature Cake & Treats
+                        </strong>
+                        <p className="text-stone-600 dark:text-stone-300">
+                          Custom 3D theme fondant cake with matching cupcake
+                          tower and nitrogen mocktail station.
+                        </p>
                       </div>
                       <div className="p-3 bg-white dark:bg-stone-900 rounded-xl border border-amber-200/80 dark:border-amber-800/60">
-                        <strong className="block text-stone-900 dark:text-stone-100 mb-1">🎈 Interactive Fun Zone</strong>
-                        <p className="text-stone-600 dark:text-stone-300">Airbrush tattoo bar, magician illusionist, mascot photo-op, and DIY crafting corner.</p>
+                        <strong className="block text-stone-900 dark:text-stone-100 mb-1">
+                          🎈 Interactive Fun Zone
+                        </strong>
+                        <p className="text-stone-600 dark:text-stone-300">
+                          Airbrush tattoo bar, magician illusionist, mascot
+                          photo-op, and DIY crafting corner.
+                        </p>
                       </div>
                       <div className="p-3 bg-white dark:bg-stone-900 rounded-xl border border-amber-200/80 dark:border-amber-800/60">
-                        <strong className="block text-stone-900 dark:text-stone-100 mb-1">🎁 Return Favors</strong>
-                        <p className="text-stone-600 dark:text-stone-300">Personalized keepsake kits and eco-friendly plantable stationery sets for all young guests.</p>
+                        <strong className="block text-stone-900 dark:text-stone-100 mb-1">
+                          🎁 Return Favors
+                        </strong>
+                        <p className="text-stone-600 dark:text-stone-300">
+                          Personalized keepsake kits and eco-friendly plantable
+                          stationery sets for all young guests.
+                        </p>
                       </div>
                     </>
-                  ) : formData.eventType === 'community_festival' ? (
+                  ) : formData.eventType === "community_festival" ? (
                     <>
                       <div className="p-3 bg-white dark:bg-stone-900 rounded-xl border border-amber-200/80 dark:border-amber-800/60">
-                        <strong className="block text-stone-900 dark:text-stone-100 mb-1">🚩 Eco-Sanctum & Pandal</strong>
-                        <p className="text-stone-600 dark:text-stone-300">Biodegradable sholapith mandap, brass samai oil lamps, and fragrant marigold torans.</p>
+                        <strong className="block text-stone-900 dark:text-stone-100 mb-1">
+                          🚩 Eco-Sanctum & Pandal
+                        </strong>
+                        <p className="text-stone-600 dark:text-stone-300">
+                          Biodegradable sholapith mandap, brass samai oil lamps,
+                          and fragrant marigold torans.
+                        </p>
                       </div>
                       <div className="p-3 bg-white dark:bg-stone-900 rounded-xl border border-amber-200/80 dark:border-amber-800/60">
-                        <strong className="block text-stone-900 dark:text-stone-100 mb-1">🍲 Mahaprasad Logistics</strong>
-                        <p className="text-stone-600 dark:text-stone-300">Token-based queue management, eco areca nut plates, and warm sheera/khichdi bhandara.</p>
+                        <strong className="block text-stone-900 dark:text-stone-100 mb-1">
+                          🍲 Mahaprasad Logistics
+                        </strong>
+                        <p className="text-stone-600 dark:text-stone-300">
+                          Token-based queue management, eco areca nut plates,
+                          and warm sheera/khichdi bhandara.
+                        </p>
                       </div>
                       <div className="p-3 bg-white dark:bg-stone-900 rounded-xl border border-amber-200/80 dark:border-amber-800/60">
-                        <strong className="block text-stone-900 dark:text-stone-100 mb-1">🎶 Aarti & Sound Control</strong>
-                        <p className="text-stone-600 dark:text-stone-300">Acoustically calibrated line-array, live Dhol Tasha troupe, and residential noise-norm compliance.</p>
+                        <strong className="block text-stone-900 dark:text-stone-100 mb-1">
+                          🎶 Aarti & Sound Control
+                        </strong>
+                        <p className="text-stone-600 dark:text-stone-300">
+                          Acoustically calibrated line-array, live Dhol Tasha
+                          troupe, and residential noise-norm compliance.
+                        </p>
                       </div>
                     </>
                   ) : (
                     <>
                       <div className="p-3 bg-white dark:bg-stone-900 rounded-xl border border-amber-200/80 dark:border-amber-800/60">
-                        <strong className="block text-stone-900 dark:text-stone-100 mb-1">👑 Royal Mandap & Florals</strong>
-                        <p className="text-stone-600 dark:text-stone-300">Heritage brass urli, mogra chandeliers, and cascading rajnigandha entrance arches.</p>
+                        <strong className="block text-stone-900 dark:text-stone-100 mb-1">
+                          👑 Royal Mandap & Florals
+                        </strong>
+                        <p className="text-stone-600 dark:text-stone-300">
+                          Heritage brass urli, mogra chandeliers, and cascading
+                          rajnigandha entrance arches.
+                        </p>
                       </div>
                       <div className="p-3 bg-white dark:bg-stone-900 rounded-xl border border-amber-200/80 dark:border-amber-800/60">
-                        <strong className="block text-stone-900 dark:text-stone-100 mb-1">🥁 Sangeet & Folk Troupe</strong>
-                        <p className="text-stone-600 dark:text-stone-300">Curated DJ line-up, traditional Shehnai/Nagada welcome, and sangeet choreography.</p>
+                        <strong className="block text-stone-900 dark:text-stone-100 mb-1">
+                          🥁 Sangeet & Folk Troupe
+                        </strong>
+                        <p className="text-stone-600 dark:text-stone-300">
+                          Curated DJ line-up, traditional Shehnai/Nagada
+                          welcome, and sangeet choreography.
+                        </p>
                       </div>
                       <div className="p-3 bg-white dark:bg-stone-900 rounded-xl border border-amber-200/80 dark:border-amber-800/60">
-                        <strong className="block text-stone-900 dark:text-stone-100 mb-1">🌸 Vedic Muhurat Protocol</strong>
-                        <p className="text-stone-600 dark:text-stone-300">Strict astronomical alignment for sacred saat phere and customized elder samagri tray.</p>
+                        <strong className="block text-stone-900 dark:text-stone-100 mb-1">
+                          🌸 Vedic Muhurat Protocol
+                        </strong>
+                        <p className="text-stone-600 dark:text-stone-300">
+                          Strict astronomical alignment for sacred saat phere
+                          and customized elder samagri tray.
+                        </p>
                       </div>
                     </>
                   )}
@@ -1129,18 +1405,32 @@ export default function OnboardingPage() {
                 </h3>
                 <div className="grid sm:grid-cols-2 gap-4">
                   {masterPlan.sub_events.map((se) => (
-                    <div key={se.id} className="p-5 rounded-2xl bg-white dark:bg-stone-900/60 border border-stone-200 dark:border-stone-800 relative shadow-sm">
+                    <div
+                      key={se.id}
+                      className="p-5 rounded-2xl bg-white dark:bg-stone-900/60 border border-stone-200 dark:border-stone-800 relative shadow-sm"
+                    >
                       {se.is_muhurat_locked && (
                         <span className="absolute top-4 right-4 px-2.5 py-0.5 rounded-full bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 text-xs font-bold font-mono">
                           🕉️ Muhurat Locked
                         </span>
                       )}
-                      <h4 className="font-semibold text-base text-stone-900 dark:text-stone-100 mb-1">{se.name}</h4>
+                      <h4 className="font-semibold text-base text-stone-900 dark:text-stone-100 mb-1">
+                        {se.name}
+                      </h4>
                       <div className="text-xs text-stone-500 dark:text-stone-400 mb-2 font-mono">
-                        {new Date(se.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - {new Date(se.end_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        {new Date(se.start_time).toLocaleTimeString([], {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}{" "}
+                        -{" "}
+                        {new Date(se.end_time).toLocaleTimeString([], {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
                       </div>
                       <div className="text-xs text-stone-600 dark:text-stone-300">
-                        📍 Venue: {se.venue_name} {se.is_outdoor ? '(Outdoor)' : '(Indoor)'}
+                        📍 Venue: {se.venue_name}{" "}
+                        {se.is_outdoor ? "(Outdoor)" : "(Indoor)"}
                       </div>
                       {se.muhurat_notes && (
                         <div className="mt-2 text-xs text-amber-700 dark:text-amber-400 font-medium">
@@ -1159,9 +1449,16 @@ export default function OnboardingPage() {
                 </h3>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                   {masterPlan.budget_breakdown.map((b) => (
-                    <div key={b.id} className="p-4 rounded-xl bg-stone-50 dark:bg-stone-950 border border-stone-200 dark:border-stone-800 shadow-sm">
-                      <div className="text-xs text-stone-500 dark:text-stone-400 capitalize font-medium">{b.name} ({b.percentage}%)</div>
-                      <div className="font-bold text-sm text-stone-900 dark:text-stone-100 mt-1">{formatINR(b.planned_amount)}</div>
+                    <div
+                      key={b.id}
+                      className="p-4 rounded-xl bg-stone-50 dark:bg-stone-950 border border-stone-200 dark:border-stone-800 shadow-sm"
+                    >
+                      <div className="text-xs text-stone-500 dark:text-stone-400 capitalize font-medium">
+                        {b.name} ({b.percentage}%)
+                      </div>
+                      <div className="font-bold text-sm text-stone-900 dark:text-stone-100 mt-1">
+                        {formatINR(b.planned_amount)}
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -1174,12 +1471,23 @@ export default function OnboardingPage() {
                 </h3>
                 <div className="space-y-2">
                   {masterPlan.tasks.map((task) => (
-                    <div key={task.id} className="p-3.5 rounded-xl bg-white dark:bg-stone-900/60 border border-stone-200 dark:border-stone-800 flex items-center justify-between text-xs shadow-sm">
-                      <span className="font-medium text-stone-800 dark:text-stone-200">{task.title}</span>
+                    <div
+                      key={task.id}
+                      className="p-3.5 rounded-xl bg-white dark:bg-stone-900/60 border border-stone-200 dark:border-stone-800 flex items-center justify-between text-xs shadow-sm"
+                    >
+                      <span className="font-medium text-stone-800 dark:text-stone-200">
+                        {task.title}
+                      </span>
                       <div className="flex items-center space-x-3 text-stone-500 dark:text-stone-400">
-                        <span className="px-2 py-0.5 rounded bg-stone-100 dark:bg-stone-800 font-mono text-stone-700 dark:text-stone-300">{task.assigned_role}</span>
+                        <span className="px-2 py-0.5 rounded bg-stone-100 dark:bg-stone-800 font-mono text-stone-700 dark:text-stone-300">
+                          {task.assigned_role}
+                        </span>
                         <span className="font-semibold text-[#8B1E28] dark:text-[#F4B41A]">
-                          {task.scheduled_start ? new Date(task.scheduled_start).toLocaleDateString() : 'Pending'}
+                          {task.scheduled_start
+                            ? new Date(
+                                task.scheduled_start,
+                              ).toLocaleDateString()
+                            : "Pending"}
                         </span>
                       </div>
                     </div>
@@ -1188,7 +1496,9 @@ export default function OnboardingPage() {
               </div>
 
               <div className="mt-8">
-                <ElderDisclaimerBanner customText={masterPlan.elder_verification_disclaimer} />
+                <ElderDisclaimerBanner
+                  customText={masterPlan.elder_verification_disclaimer}
+                />
               </div>
             </div>
           </div>

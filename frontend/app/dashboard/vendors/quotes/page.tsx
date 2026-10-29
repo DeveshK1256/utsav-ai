@@ -1,17 +1,17 @@
-'use client';
+"use client";
 
-import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import Link from 'next/link';
-import { Navbar } from '@/components/ui/Navbar';
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { Navbar } from "@/components/ui/Navbar";
 
 export default function GenericQuotesRedirect() {
   const router = useRouter();
 
   useEffect(() => {
     try {
-      const saved = localStorage.getItem('utsav_last_event_id');
-      if (saved && saved !== 'default') {
+      const saved = localStorage.getItem("utsav_last_event_id");
+      if (saved && saved !== "default") {
         router.replace(`/dashboard/events/${saved}/vendors/quotes`);
         return;
       }
@@ -31,7 +31,8 @@ export default function GenericQuotesRedirect() {
           Select Celebration to Manage Quotes
         </h2>
         <p className="text-xs text-stone-600 dark:text-stone-400 leading-relaxed">
-          Vendor quotations, OCR line item audits, and benchmark comparisons are strictly scoped to specific celebration events.
+          Vendor quotations, OCR line item audits, and benchmark comparisons are
+          strictly scoped to specific celebration events.
         </p>
         <div className="pt-2">
           <Link

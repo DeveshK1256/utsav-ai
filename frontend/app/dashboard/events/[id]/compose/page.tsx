@@ -1,9 +1,7 @@
-import ComposePageClient from './ComposePageClient';
+import ComposePageClient from "./ComposePageClient";
 
 export function generateStaticParams() {
-  return [
-    { id: 'default' }
-  ];
+  return [{ id: "default" }];
 }
 
 export default function ComposePage() {

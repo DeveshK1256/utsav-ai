@@ -153,3 +153,108 @@ def test_intake_service_generates_community_festival_master_plan(db_session):
     # Check tasks include municipal permission/NOC
     task_titles = [t.title for t in plan.tasks]
     assert any("NOC" in t or "Permission" in t for t in task_titles)
+
+import json
+import uuid
+from unittest.mock import MagicMock, patch
+from backend.app.services.budget_engine import BudgetScalingEngine
+
+
+def test_budget_engine_fuzzy_event_type_branches():
+    """Covers lines 117-126 of budget_engine.py for string matching branches."""
+    # 1. Birthday
+    b_items = BudgetScalingEngine.compute_budget_allocation(500000.0, "grand birthday party", "Mumbai", 100)
+    assert len(b_items) > 0
+
+    # 2. Community / Festival / Mela / Ganesh
+    f_items = BudgetScalingEngine.compute_budget_allocation(500000.0, "society ganesh festival", "Pune", 500)
+    assert len(f_items) > 0
+
+    # 3. Milestone Anniversary
+    a_items = BudgetScalingEngine.compute_budget_allocation(500000.0, "silver anniversary gala", "Delhi", 150)
+    assert len(a_items) > 0
+
+    # 4. Puja / Pooja / Havan
+    p_items = BudgetScalingEngine.compute_budget_allocation(200000.0, "griha pravesh pooja", "Jaipur", 50)
+    assert len(p_items) > 0
+
+    # 5. Generic fallback -> wedding
+    w_items = BudgetScalingEngine.compute_budget_allocation(1000000.0, "unrecognized custom gathering", "Bangalore", 200)
+    assert len(w_items) > 0
+
+
+def test_api_intake_budget_and_traditions(client):
+    # 1. Budget calculation endpoint
+    payload = {
+        "event_type": "wedding",
+        "city": "Pune",
+        "guest_count": 200,
+        "total_budget": 800000.0
+    }
+    resp = client.post("/api/v1/intake/calculate-budget", json=payload)
+    assert resp.status_code == 200
+    data = resp.json()
+    assert "tier" in data["city_tier"]
+    assert len(data["items"]) >= 5
+
+    # Bad request validation
+    resp_bad = client.post("/api/v1/intake/calculate-budget", json={"event_type": "wedding", "city": "Pune", "guest_count": -5, "total_budget": 800000.0})
+    assert resp_bad.status_code == 422
+
+    # 2. Traditions endpoint
+    t_resp = client.get("/api/v1/intake/traditions")
+    assert t_resp.status_code == 200
+    assert isinstance(t_resp.json(), list)
+
+
+def test_budget_scaling_engine_allocation_models():
+    # Test all event models (birthday, puja, community_festival, anniversary)
+    for evt_type in ["birthday", "puja", "community_festival", "milestone_anniversary", "wedding"]:
+        items = BudgetScalingEngine.compute_budget_allocation(
+            total_envelope=500000.0,
+            event_type=evt_type,
+            city="Mumbai",
+            guest_count=150
+        )
+        assert len(items) >= 4
+        total_pct = sum(item["percentage"] for item in items)
+        assert abs(total_pct - 100.0) < 0.1
+
+    # Invalid cases
+    with pytest.raises(ValueError):
+        BudgetScalingEngine.compute_budget_allocation(total_envelope=-100)
+
+    with pytest.raises(ValueError):
+        BudgetScalingEngine.compute_budget_allocation(total_envelope=1000, guest_count=-5)
+
+
+def test_api_intake_and_replanning_errors(client):
+    # 1. Traditions endpoint
+    res_trad = client.get("/api/v1/intake/traditions")
+    assert res_trad.status_code == 200
+    assert len(res_trad.json()) >= 1
+
+    # 2. Intake calculate-budget error
+    bad_calc = client.post("/api/v1/intake/calculate-budget", json={
+        "total_budget": -500,
+        "city": "Pune",
+        "guest_count": 100,
+        "event_type": "wedding"
+    })
+    assert bad_calc.status_code in (400, 422)
+
+    # 3. Intake generate error
+    bad_gen = client.post("/api/v1/intake/generate", json={
+        "event_name": "Too Short Event",
+        "event_type": "wedding",
+        "city": "Pune",
+        "total_budget": -50000,
+        "guest_count": 0,
+        "start_date": "2026-11-20",
+        "end_date": "2026-11-22"
+    })
+    assert bad_gen.status_code in (400, 422)
+
+    # 4. Replanning 404 change proposal
+    res_404 = client.get("/api/v1/events/non_existent_evt/changes/fake_change_id")
+    assert res_404.status_code == 404

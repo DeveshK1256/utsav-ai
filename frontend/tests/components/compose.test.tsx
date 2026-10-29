@@ -57,7 +57,7 @@ describe('ComposePageClient Component', () => {
   beforeEach(() => {
     window.history.pushState({}, '', '/dashboard/events/evt-compose-101/compose');
     localStorage.setItem('current_event_id', 'evt-compose-101');
-    vi.stubGlobal('fetch', vi.fn((url: string, options?: any) => {
+    vi.stubGlobal('fetch', vi.fn((url: string, options?: RequestInit) => {
       const urlStr = String(url);
       if (urlStr.includes('/discovery/vendors')) {
         return Promise.resolve({

@@ -1,3 +1,5 @@
+from backend.app.services.budget_engine import BudgetScalingEngine
+import datetime
 """
 Unit tests for Milestone M5 - F2 Cultural & Ritual Intelligence.
 Tests astronomical panchang provider (DEC-027), 8 curated traditions validation,
@@ -11,7 +13,7 @@ from fastapi.testclient import TestClient
 from backend.app.main import app
 from backend.app.services.panchang_service import default_panchang_provider
 from backend.app.db.session import SessionLocal
-from backend.app.models.models import Tradition, RitualItem, Event, User, Task
+from backend.app.models.models import SubEvent, Tradition, RitualItem, Event, User, Task
 
 
 @pytest.fixture(scope="module")
@@ -263,3 +265,134 @@ def test_muhurat_candidates_endpoint(client):
     # Elevated disclaimer must be prominent
     assert "ALWAYS confirm your final wedding pheras" in data["elevated_disclaimer"]
     assert "prohibited_window" in data["rahu_kaal_prohibited_window"] or "-" in data["rahu_kaal_prohibited_window"]
+
+import json
+import uuid
+from unittest.mock import MagicMock, patch
+
+
+def test_tradition_merge_service_branches(db, monkeypatch):
+    from backend.app.services.tradition_merge_service import TraditionMergeService, get_tradition_merge_agent, GeminiTraditionMergeAgent, DeterministicStubTraditionMergeAgent
+
+    # 1. get_tradition_merge_agent with and without GEMINI_API_KEY
+    monkeypatch.setenv("GEMINI_API_KEY", "test_gemini_key_abc")
+    agent = get_tradition_merge_agent()
+    assert isinstance(agent, GeminiTraditionMergeAgent)
+
+    monkeypatch.delenv("GEMINI_API_KEY", raising=False)
+    monkeypatch.delenv("GOOGLE_API_KEY", raising=False)
+    agent_stub = get_tradition_merge_agent()
+    assert isinstance(agent_stub, DeterministicStubTraditionMergeAgent)
+
+    # 2. Invalid tradition codes -> ValueError
+    svc = TraditionMergeService(db=db)
+    with pytest.raises(ValueError) as exc_info:
+        svc.merge_traditions(primary_code="nonexistent_tradition_1", secondary_code="nonexistent_tradition_2")
+    assert "Invalid tradition codes" in str(exc_info.value)
+
+
+def test_api_rituals_muhurat_and_traditions(client):
+    # 1. Muhurat candidates
+    resp = client.get("/api/v1/rituals/muhurat-candidates?event_date=2026-12-15&latitude=18.5204&longitude=73.8567")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert "candidates" in data
+
+    # 2. Traditions list
+    t_resp = client.get("/api/v1/rituals/traditions")
+    assert t_resp.status_code == 200
+    t_data = t_resp.json()
+    assert isinstance(t_data, list)
+
+
+def test_api_rituals_pandit_guide_and_merge(client):
+    db = SessionLocal()
+    ev_id = f"ev_rit_{uuid.uuid4().hex[:8]}"
+    try:
+        ev = Event(
+            id=ev_id,
+            owner_id="test_owner_rit",
+            name="Ritual Test Wedding",
+            event_type="wedding",
+            city="Mumbai",
+            pincode="400001",
+            owner_token="test_tok_rit",
+            start_date=date(2026, 12, 10),
+            end_date=date(2026, 12, 12),
+            tradition_code="maharashtrian_vedic",
+            secondary_tradition_code="tamil_brahmin_hindu",
+            total_budget=1000000,
+            guest_count=200
+        )
+        db.add(ev)
+        db.commit()
+
+        # Add a sub-event
+        se = SubEvent(
+            event_id=ev_id,
+            name="Varmala Ceremony",
+            sort_order=1,
+            venue_name="Main Mandap",
+            start_time=datetime.datetime(2026, 12, 10, 10, 0, 0),
+            end_time=datetime.datetime(2026, 12, 10, 12, 0, 0),
+            is_outdoor=False
+        )
+        db.add(se)
+        db.commit()
+
+        # Call pandit guide endpoint
+        resp = client.get(f"/api/v1/rituals/events/{ev_id}/pandit-guide")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert "panchang_and_muhurat" in data
+        assert "samagri_checklist" in data
+        assert "tradition" in data
+
+        # Pandit guide 404 test
+        resp_404 = client.get(f"/api/v1/rituals/events/nonexistent_ev/pandit-guide")
+        assert resp_404.status_code == 404
+
+        # Samagri 404 test
+        resp_sam_404 = client.get("/api/v1/rituals/traditions/unknown_tradition/samagri")
+        assert resp_sam_404.status_code == 404
+
+        # Dual traditions merge endpoint
+        merge_payload = {
+            "primary_tradition_code": "maharashtrian_vedic",
+            "secondary_tradition_code": "tamil_brahmin_hindu",
+            "start_date": "2026-12-10",
+            "event_id": ev_id
+        }
+        merge_resp = client.post("/api/v1/rituals/merge-traditions", json=merge_payload)
+        assert merge_resp.status_code == 200
+        merge_data = merge_resp.json()
+        assert "run_of_show" in merge_data
+        assert "samagri_items" in merge_data
+    finally:
+        db.query(SubEvent).filter(SubEvent.event_id == ev_id).delete()
+        db.query(Event).filter(Event.id == ev_id).delete()
+        db.commit()
+        db.close()
+
+
+def test_intake_and_rituals_extra_branches(client):
+    # 1. Rituals panchang valid and invalid coordinates
+    res_panch = client.get("/api/v1/rituals/panchang?event_date=2026-11-20&latitude=18.5204&longitude=73.8567")
+    assert res_panch.status_code == 200
+    pdata = res_panch.json()
+    assert "tithi" in pdata
+    assert "nakshatra" in pdata
+
+    res_panch_bad = client.get("/api/v1/rituals/panchang?event_date=2026-11-20&latitude=999.0&longitude=73.8567")
+    assert res_panch_bad.status_code == 400
+
+    # 2. Intake calculate-budget error path
+    with patch.object(BudgetScalingEngine, "compute_budget_allocation", side_effect=ValueError("Invalid allocation parameter")):
+        res_calc_err = client.post("/api/v1/intake/calculate-budget", json={
+            "total_budget": 500000.0,
+            "city": "Pune",
+            "guest_count": 100,
+            "event_type": "wedding"
+        })
+        assert res_calc_err.status_code == 400
+        assert "Invalid allocation parameter" in res_calc_err.json()["detail"]

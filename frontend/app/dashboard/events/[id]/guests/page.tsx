@@ -1,9 +1,7 @@
-import GuestPageClient from './GuestPageClient';
+import GuestPageClient from "./GuestPageClient";
 
 export function generateStaticParams() {
-  return [
-    { id: 'default' }
-  ];
+  return [{ id: "default" }];
 }
 
 export default function GuestPage() {

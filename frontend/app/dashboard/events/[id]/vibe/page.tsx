@@ -1,9 +1,7 @@
-import VibeToPlanClient from './VibeToPlanClient';
+import VibeToPlanClient from "./VibeToPlanClient";
 
 export function generateStaticParams() {
-  return [
-    { id: 'default' }
-  ];
+  return [{ id: "default" }];
 }
 
 export default function VibeToPlanPage() {

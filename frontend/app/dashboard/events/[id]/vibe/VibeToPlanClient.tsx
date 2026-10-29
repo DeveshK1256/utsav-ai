@@ -1,16 +1,17 @@
-'use client';
+"use client";
 
-import React, { useState, useEffect, useCallback } from 'react';
-import Link from 'next/link';
-import { useParams } from 'next/navigation';
-import { Navbar } from '@/components/ui/Navbar';
-import { getAuthHeaders } from '@/lib/auth';
+import React, { useState, useEffect, useCallback } from "react";
+import Link from "next/link";
+import { useParams } from "next/navigation";
+import { Navbar } from "@/components/ui/Navbar";
+import { getAuthHeaders } from "@/lib/auth";
 
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL ||
-  (typeof window !== 'undefined' && window.location.hostname.includes('netlify.app')
-    ? '/api/v1'
-    : 'https://utsav-ai-ycg2.onrender.com/api/v1');
+  (typeof window !== "undefined" &&
+  window.location.hostname.includes("netlify.app")
+    ? "/api/v1"
+    : "https://utsav-ai-ycg2.onrender.com/api/v1");
 
 interface StyleProfile {
   profile_id: string;
@@ -29,14 +30,14 @@ interface DecorItem {
   name: string;
   quantity_formula: string;
   computed_quantity: number;
-  cost_tier: 'low' | 'medium' | 'high';
+  cost_tier: "low" | "medium" | "high";
   cost_range_low: number;
   cost_range_high: number;
-  sourcing_type: 'rent' | 'diy' | 'buy';
+  sourcing_type: "rent" | "diy" | "buy";
   status: string; // proposed, accepted, rejected
   budget_item_id?: string | null;
   task_id?: string | null;
-  reasoning: Record<string, any>;
+  reasoning: { aesthetic?: string; [key: string]: unknown };
 }
 
 interface ThemeProposal {
@@ -57,10 +58,10 @@ interface ThemeProposal {
 
 export default function VibeToPlanClient() {
   const params = useParams();
-  const eventId = (params?.id as string) || '';
+  const eventId = (params?.id as string) || "";
 
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
-  const [textDescription, setTextDescription] = useState<string>('');
+  const [textDescription, setTextDescription] = useState<string>("");
   const [isUploading, setIsUploading] = useState<boolean>(false);
   const [isGeneratingTheme, setIsGeneratingTheme] = useState<boolean>(false);
   const [acceptingItemId, setAcceptingItemId] = useState<string | null>(null);
@@ -71,34 +72,37 @@ export default function VibeToPlanClient() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   // Fetch existing profiles on mount
-  const loadThemes = useCallback((profileId: string) => {
-    fetch(`${API_BASE_URL}/events/${eventId}/vibe/${profileId}/themes`, {
-      headers: getAuthHeaders(eventId)
-    })
-      .then(res => res.ok ? res.json() : [])
-      .then((data: ThemeProposal[]) => {
-        if (data && data.length > 0) {
-          setActiveTheme(data[0]);
-        }
+  const loadThemes = useCallback(
+    (profileId: string) => {
+      fetch(`${API_BASE_URL}/events/${eventId}/vibe/${profileId}/themes`, {
+        headers: getAuthHeaders(eventId),
       })
-      .catch(err => console.error("Error loading themes:", err));
-  }, [eventId]);
+        .then((res) => (res.ok ? res.json() : []))
+        .then((data: ThemeProposal[]) => {
+          if (data && data.length > 0) {
+            if (data[0]) setActiveTheme(data[0]);
+          }
+        })
+        .catch((err) => console.error("Error loading themes:", err));
+    },
+    [eventId],
+  );
 
   useEffect(() => {
-    if (!eventId || eventId === 'default') return;
+    if (!eventId || eventId === "default") return;
 
     fetch(`${API_BASE_URL}/events/${eventId}/vibe/profiles`, {
-      headers: getAuthHeaders(eventId)
+      headers: getAuthHeaders(eventId),
     })
-      .then(res => res.ok ? res.json() : [])
+      .then((res) => (res.ok ? res.json() : []))
       .then((data: StyleProfile[]) => {
         setProfiles(data);
         if (data.length > 0) {
-          setActiveProfile(data[0]);
-          loadThemes(data[0].profile_id);
+          if (data[0]) setActiveProfile(data[0]);
+          if (data[0]) loadThemes(data[0].profile_id);
         }
       })
-      .catch(err => console.error("Error loading profiles:", err));
+      .catch((err) => console.error("Error loading profiles:", err));
   }, [eventId, loadThemes]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -110,7 +114,9 @@ export default function VibeToPlanClient() {
   const handleUploadAndExtract = async (e: React.FormEvent) => {
     e.preventDefault();
     if (selectedFiles.length === 0) {
-      setErrorMessage("Please select at least 1 image to extract aesthetic vibe.");
+      setErrorMessage(
+        "Please select at least 1 image to extract aesthetic vibe.",
+      );
       return;
     }
 
@@ -134,16 +140,18 @@ export default function VibeToPlanClient() {
 
       if (!res.ok) {
         const errData = await res.json().catch(() => ({}));
-        throw new Error(errData.detail || "Failed to upload and extract aesthetic vibe.");
+        throw new Error(
+          errData.detail || "Failed to upload and extract aesthetic vibe.",
+        );
       }
 
       const newProfile: StyleProfile = await res.json();
-      setProfiles(prev => [newProfile, ...prev]);
+      setProfiles((prev) => [newProfile, ...prev]);
       setActiveProfile(newProfile);
       setSelectedFiles([]);
       loadThemes(newProfile.profile_id);
-    } catch (err: any) {
-      setErrorMessage(err.message);
+    } catch (err: unknown) {
+      setErrorMessage(err instanceof Error ? err.message : String(err));
     } finally {
       setIsUploading(false);
     }
@@ -155,10 +163,13 @@ export default function VibeToPlanClient() {
     setErrorMessage(null);
 
     try {
-      const res = await fetch(`${API_BASE_URL}/events/${eventId}/vibe/${activeProfile.profile_id}/generate-theme`, {
-        method: "POST",
-        headers: getAuthHeaders(eventId),
-      });
+      const res = await fetch(
+        `${API_BASE_URL}/events/${eventId}/vibe/${activeProfile.profile_id}/generate-theme`,
+        {
+          method: "POST",
+          headers: getAuthHeaders(eventId),
+        },
+      );
 
       if (!res.ok) {
         const errData = await res.json().catch(() => ({}));
@@ -167,8 +178,8 @@ export default function VibeToPlanClient() {
 
       const proposal: ThemeProposal = await res.json();
       setActiveTheme(proposal);
-    } catch (err: any) {
-      setErrorMessage(err.message);
+    } catch (err: unknown) {
+      setErrorMessage(err instanceof Error ? err.message : String(err));
     } finally {
       setIsGeneratingTheme(false);
     }
@@ -177,17 +188,22 @@ export default function VibeToPlanClient() {
   const handleAcceptItem = async (itemId: string) => {
     setAcceptingItemId(itemId);
     try {
-      const res = await fetch(`${API_BASE_URL}/events/${eventId}/vibe/decor-items/${itemId}/accept`, {
-        method: "POST",
-        headers: getAuthHeaders(eventId),
-      });
+      const res = await fetch(
+        `${API_BASE_URL}/events/${eventId}/vibe/decor-items/${itemId}/accept`,
+        {
+          method: "POST",
+          headers: getAuthHeaders(eventId),
+        },
+      );
       if (res.ok) {
         const updatedItem: DecorItem = await res.json();
-        setActiveTheme(prev => {
+        setActiveTheme((prev) => {
           if (!prev) return prev;
           return {
             ...prev,
-            decor_items: prev.decor_items.map(it => it.id === itemId ? updatedItem : it)
+            decor_items: prev.decor_items.map((it) =>
+              it.id === itemId ? updatedItem : it,
+            ),
           };
         });
       }
@@ -200,17 +216,22 @@ export default function VibeToPlanClient() {
 
   const handleRejectItem = async (itemId: string) => {
     try {
-      const res = await fetch(`${API_BASE_URL}/events/${eventId}/vibe/decor-items/${itemId}/reject`, {
-        method: "POST",
-        headers: getAuthHeaders(eventId),
-      });
+      const res = await fetch(
+        `${API_BASE_URL}/events/${eventId}/vibe/decor-items/${itemId}/reject`,
+        {
+          method: "POST",
+          headers: getAuthHeaders(eventId),
+        },
+      );
       if (res.ok) {
         const updatedItem: DecorItem = await res.json();
-        setActiveTheme(prev => {
+        setActiveTheme((prev) => {
           if (!prev) return prev;
           return {
             ...prev,
-            decor_items: prev.decor_items.map(it => it.id === itemId ? updatedItem : it)
+            decor_items: prev.decor_items.map((it) =>
+              it.id === itemId ? updatedItem : it,
+            ),
           };
         });
       }
@@ -241,14 +262,21 @@ export default function VibeToPlanClient() {
             Vibe-to-Plan Engine
           </h1>
           <p className="text-stone-600 dark:text-stone-300 mt-1 text-sm max-w-2xl leading-relaxed">
-            Upload inspiration images or mood notes. Real multimodal AI extracts color palettes, aesthetic tags, and cultural materials, translating visual dreams into concrete itemized decor proposals.
+            Upload inspiration images or mood notes. Real multimodal AI extracts
+            color palettes, aesthetic tags, and cultural materials, translating
+            visual dreams into concrete itemized decor proposals.
           </p>
         </div>
 
         {errorMessage && (
           <div className="p-4 bg-rose-50 dark:bg-rose-950/60 border border-rose-300 dark:border-rose-800 text-rose-800 dark:text-rose-200 text-sm rounded-2xl shadow-sm flex items-center justify-between">
             <span>⚠️ {errorMessage}</span>
-            <button onClick={() => setErrorMessage(null)} className="font-bold ml-2">✕</button>
+            <button
+              onClick={() => setErrorMessage(null)}
+              className="font-bold ml-2"
+            >
+              ✕
+            </button>
           </div>
         )}
 
@@ -260,7 +288,10 @@ export default function VibeToPlanClient() {
 
           <form onSubmit={handleUploadAndExtract} className="space-y-5">
             <div>
-              <label htmlFor="inspiration-photos-input" className="block text-xs font-semibold uppercase tracking-wider text-stone-700 dark:text-stone-300 mb-2">
+              <label
+                htmlFor="inspiration-photos-input"
+                className="block text-xs font-semibold uppercase tracking-wider text-stone-700 dark:text-stone-300 mb-2"
+              >
                 Inspiration Photos / Mood Board Stills
               </label>
               <input
@@ -273,7 +304,8 @@ export default function VibeToPlanClient() {
                 className="block w-full text-sm text-stone-700 dark:text-stone-300 file:mr-4 file:py-2.5 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-[#8B1E28] file:text-white dark:file:bg-[#F4B41A] dark:file:text-stone-950 hover:file:opacity-90 cursor-pointer border border-stone-200 dark:border-stone-800 rounded-xl p-2 bg-stone-50/50 dark:bg-stone-900/50"
               />
               <p className="text-xs text-stone-500 dark:text-stone-400 mt-1.5">
-                Supported formats: JPG, PNG, WEBP. Batched into a single multimodal Gemini call (DEC-023).
+                Supported formats: JPG, PNG, WEBP. Batched into a single
+                multimodal Gemini call (DEC-023).
               </p>
             </div>
 
@@ -283,7 +315,7 @@ export default function VibeToPlanClient() {
               </label>
               <textarea
                 value={textDescription}
-                onChange={e => setTextDescription(e.target.value)}
+                onChange={(e) => setTextDescription(e.target.value)}
                 placeholder="e.g. Royal Rajasthani heritage palace vibe, vibrant marigold yellow, antique brass diyas, raw silk fabrics..."
                 rows={3}
                 className="w-full text-sm p-3.5 rounded-xl border border-stone-300 dark:border-stone-700 bg-white dark:bg-stone-900 text-stone-900 dark:text-stone-100 placeholder:text-stone-400 dark:placeholder:text-stone-500 focus:outline-none focus:ring-2 focus:ring-amber-500 transition-colors shadow-sm"
@@ -295,7 +327,11 @@ export default function VibeToPlanClient() {
               disabled={isUploading}
               className="px-6 py-3 bg-[#8B1E28] hover:bg-stone-900 text-white dark:bg-[#F4B41A] dark:hover:bg-amber-300 dark:text-stone-950 text-xs font-bold uppercase tracking-wider rounded-xl shadow-sm disabled:opacity-50 transition-all active:scale-95 flex items-center space-x-2"
             >
-              <span>{isUploading ? "Analyzing Aesthetic & Extracting Palette..." : "Extract Vibe & Generate Palette"}</span>
+              <span>
+                {isUploading
+                  ? "Analyzing Aesthetic & Extracting Palette..."
+                  : "Extract Vibe & Generate Palette"}
+              </span>
               <span>→</span>
             </button>
           </form>
@@ -310,7 +346,8 @@ export default function VibeToPlanClient() {
                   <span>🎨</span> 2. Extracted Style Profile
                 </h2>
                 <p className="text-xs text-stone-500 dark:text-stone-400 mt-0.5">
-                  Extracted from {activeProfile.uploaded_image_count} photos via Gemini 2.5 Flash
+                  Extracted from {activeProfile.uploaded_image_count} photos via
+                  Gemini 2.5 Flash
                 </p>
               </div>
 
@@ -330,7 +367,11 @@ export default function VibeToPlanClient() {
                   className="px-5 py-2 bg-[#8B1E28] hover:bg-stone-900 text-white dark:bg-[#F4B41A] dark:hover:bg-amber-300 dark:text-stone-950 text-xs font-bold uppercase tracking-wider rounded-xl shadow-sm disabled:opacity-50 transition-all active:scale-95 flex items-center gap-1.5"
                 >
                   <span>✨</span>
-                  <span>{isGeneratingTheme ? "Composing Theme..." : "Generate Concrete Theme (>=10 items)"}</span>
+                  <span>
+                    {isGeneratingTheme
+                      ? "Composing Theme..."
+                      : "Generate Concrete Theme (>=10 items)"}
+                  </span>
                 </button>
               </div>
             </div>
@@ -347,7 +388,9 @@ export default function VibeToPlanClient() {
                       className="h-16 rounded-2xl shadow-sm border border-stone-200 dark:border-stone-700 transition-transform hover:scale-105"
                       style={{ backgroundColor: hex }}
                     />
-                    <span className="text-[11px] font-mono font-semibold text-stone-700 dark:text-stone-300 block">{hex}</span>
+                    <span className="text-[11px] font-mono font-semibold text-stone-700 dark:text-stone-300 block">
+                      {hex}
+                    </span>
                   </div>
                 ))}
               </div>
@@ -361,7 +404,10 @@ export default function VibeToPlanClient() {
                 </span>
                 <div className="flex flex-wrap gap-1.5">
                   {activeProfile.style_tags.map((tag, idx) => (
-                    <span key={idx} className="text-xs bg-white dark:bg-stone-800 text-stone-800 dark:text-stone-200 px-2.5 py-1 rounded-lg border border-stone-200 dark:border-stone-700 font-medium">
+                    <span
+                      key={idx}
+                      className="text-xs bg-white dark:bg-stone-800 text-stone-800 dark:text-stone-200 px-2.5 py-1 rounded-lg border border-stone-200 dark:border-stone-700 font-medium"
+                    >
                       #{tag}
                     </span>
                   ))}
@@ -374,7 +420,10 @@ export default function VibeToPlanClient() {
                 </span>
                 <div className="flex flex-wrap gap-1.5">
                   {activeProfile.mood_words.map((w, idx) => (
-                    <span key={idx} className="text-xs bg-white dark:bg-stone-800 text-stone-800 dark:text-stone-200 px-2.5 py-1 rounded-lg border border-stone-200 dark:border-stone-700 font-medium">
+                    <span
+                      key={idx}
+                      className="text-xs bg-white dark:bg-stone-800 text-stone-800 dark:text-stone-200 px-2.5 py-1 rounded-lg border border-stone-200 dark:border-stone-700 font-medium"
+                    >
                       ✨ {w}
                     </span>
                   ))}
@@ -398,7 +447,9 @@ export default function VibeToPlanClient() {
                   </span>
                 </div>
                 <div className="flex items-center gap-3 text-xs text-stone-500 dark:text-stone-400 mt-1 font-mono">
-                  <span>Provider: <strong>{activeTheme.provider_used}</strong></span>
+                  <span>
+                    Provider: <strong>{activeTheme.provider_used}</strong>
+                  </span>
                   {activeTheme.fallback_warning && (
                     <span className="text-amber-800 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/80 px-2 py-0.5 rounded border border-amber-200 dark:border-amber-800 font-sans">
                       ⚠️ {activeTheme.fallback_warning}
@@ -415,7 +466,8 @@ export default function VibeToPlanClient() {
                   🍽️ Culinary Direction
                 </h3>
                 <p className="text-xs text-stone-700 dark:text-stone-300 leading-relaxed">
-                  {activeTheme.menu_direction || "Traditional regional feast with interactive live stations."}
+                  {activeTheme.menu_direction ||
+                    "Traditional regional feast with interactive live stations."}
                 </p>
               </div>
 
@@ -425,7 +477,10 @@ export default function VibeToPlanClient() {
                 </h3>
                 <div className="flex flex-wrap gap-1.5 mt-1">
                   {activeTheme.playlist_genres.map((g, idx) => (
-                    <span key={idx} className="text-xs bg-white dark:bg-stone-800 text-stone-700 dark:text-stone-300 border border-stone-200 dark:border-stone-700 px-2.5 py-0.5 rounded-md font-medium">
+                    <span
+                      key={idx}
+                      className="text-xs bg-white dark:bg-stone-800 text-stone-700 dark:text-stone-300 border border-stone-200 dark:border-stone-700 px-2.5 py-0.5 rounded-md font-medium"
+                    >
                       {g}
                     </span>
                   ))}
@@ -437,7 +492,8 @@ export default function VibeToPlanClient() {
                   👗 Dress Code Recommendation
                 </h3>
                 <p className="text-xs text-stone-700 dark:text-stone-300 leading-relaxed">
-                  {activeTheme.dress_code_suggestion || "Royal traditional attire matching the palette."}
+                  {activeTheme.dress_code_suggestion ||
+                    "Royal traditional attire matching the palette."}
                 </p>
               </div>
 
@@ -446,7 +502,8 @@ export default function VibeToPlanClient() {
                   💌 Invitation Design Brief
                 </h3>
                 <p className="text-xs text-stone-700 dark:text-stone-300 leading-relaxed">
-                  {activeTheme.invitation_design_brief || "Handmade paper textures with gold foil accents."}
+                  {activeTheme.invitation_design_brief ||
+                    "Handmade paper textures with gold foil accents."}
                 </p>
               </div>
             </div>
@@ -458,7 +515,8 @@ export default function VibeToPlanClient() {
                   Itemized Decor Elements (Zero LLM Math • Exact City Tiers)
                 </h3>
                 <span className="text-xs text-stone-500 dark:text-stone-400">
-                  Click <strong>Accept</strong> to add individual items into budget & task list.
+                  Click <strong>Accept</strong> to add individual items into
+                  budget & task list.
                 </span>
               </div>
 
@@ -476,7 +534,16 @@ export default function VibeToPlanClient() {
                   </thead>
                   <tbody className="divide-y divide-stone-200 dark:divide-stone-800">
                     {activeTheme.decor_items.map((item) => (
-                      <tr key={item.id} className={item.status === 'accepted' ? 'bg-emerald-50/60 dark:bg-emerald-950/30' : item.status === 'rejected' ? 'bg-stone-50 dark:bg-stone-900/30 opacity-60' : 'hover:bg-amber-50/30 dark:hover:bg-amber-950/20 transition-colors'}>
+                      <tr
+                        key={item.id}
+                        className={
+                          item.status === "accepted"
+                            ? "bg-emerald-50/60 dark:bg-emerald-950/30"
+                            : item.status === "rejected"
+                              ? "bg-stone-50 dark:bg-stone-900/30 opacity-60"
+                              : "hover:bg-amber-50/30 dark:hover:bg-amber-950/20 transition-colors"
+                        }
+                      >
                         <td className="p-3 font-mono font-medium text-stone-700 dark:text-stone-300">
                           <span className="bg-stone-100 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 px-2 py-0.5 rounded text-[11px]">
                             {item.category}
@@ -491,14 +558,21 @@ export default function VibeToPlanClient() {
                           )}
                         </td>
                         <td className="p-3">
-                          <div className="font-semibold text-stone-900 dark:text-stone-100">{item.computed_quantity} units</div>
-                          <div className="text-[11px] text-stone-500 dark:text-stone-400 font-mono">({item.quantity_formula})</div>
+                          <div className="font-semibold text-stone-900 dark:text-stone-100">
+                            {item.computed_quantity} units
+                          </div>
+                          <div className="text-[11px] text-stone-500 dark:text-stone-400 font-mono">
+                            ({item.quantity_formula})
+                          </div>
                         </td>
                         <td className="p-3">
                           <div className="font-bold font-mono text-stone-900 dark:text-stone-100">
-                            ₹{item.cost_range_low.toLocaleString('en-IN')} - ₹{item.cost_range_high.toLocaleString('en-IN')}
+                            ₹{item.cost_range_low.toLocaleString("en-IN")} - ₹
+                            {item.cost_range_high.toLocaleString("en-IN")}
                           </div>
-                          <div className="text-[11px] uppercase font-semibold text-amber-700 dark:text-amber-400">{item.cost_tier} tier</div>
+                          <div className="text-[11px] uppercase font-semibold text-amber-700 dark:text-amber-400">
+                            {item.cost_tier} tier
+                          </div>
                         </td>
                         <td className="p-3">
                           <span className="uppercase text-[11px] font-mono px-2 py-0.5 bg-stone-100 dark:bg-stone-800 rounded border border-stone-200 dark:border-stone-700 text-stone-700 dark:text-stone-300 font-medium">
@@ -506,12 +580,14 @@ export default function VibeToPlanClient() {
                           </span>
                         </td>
                         <td className="p-3">
-                          {item.status === 'accepted' ? (
+                          {item.status === "accepted" ? (
                             <span className="inline-flex items-center gap-1 text-emerald-800 dark:text-emerald-300 font-bold bg-emerald-100 dark:bg-emerald-950/70 border border-emerald-300 dark:border-emerald-800 px-2.5 py-1 rounded-lg">
                               ✓ Accepted
                             </span>
-                          ) : item.status === 'rejected' ? (
-                            <span className="text-stone-400 font-medium">Excluded</span>
+                          ) : item.status === "rejected" ? (
+                            <span className="text-stone-400 font-medium">
+                              Excluded
+                            </span>
                           ) : (
                             <div className="flex items-center gap-2">
                               <button
@@ -519,7 +595,9 @@ export default function VibeToPlanClient() {
                                 disabled={acceptingItemId === item.id}
                                 className="px-3 py-1 bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg font-semibold text-xs shadow-sm disabled:opacity-50 transition-colors active:scale-95"
                               >
-                                {acceptingItemId === item.id ? "Adding..." : "Accept"}
+                                {acceptingItemId === item.id
+                                  ? "Adding..."
+                                  : "Accept"}
                               </button>
                               <button
                                 onClick={() => handleRejectItem(item.id)}

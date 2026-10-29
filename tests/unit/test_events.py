@@ -1,3 +1,5 @@
+from datetime import datetime, timezone, timedelta
+from backend.app.models.models import SubEvent
 import pytest
 from fastapi.testclient import TestClient
 from backend.app.main import app
@@ -55,3 +57,46 @@ def test_events_crud_endpoints():
     # 5. Verify Deleted
     get_again = client.get(f"/api/v1/events/{event_id}")
     assert get_again.status_code == 404
+
+import json
+import uuid
+from unittest.mock import MagicMock, patch
+
+
+def test_events_api_compose_and_delete_branches(client, test_data, db):
+    event, token = test_data
+    headers = {"X-Event-Owner-Token": token}
+
+    # 1. Add sub-event
+    se = SubEvent(
+        event_id=event.id,
+        name="Hastamelap Ceremony",
+        venue_name="Main Hall",
+        start_time=datetime.now(timezone.utc),
+        end_time=datetime.now(timezone.utc) + timedelta(hours=2)
+    )
+    db.add(se)
+    db.commit()
+
+    # 2. Compose with muhurat_time, sub_event_name, and muhurat_notes
+    compose_payload = {
+        "step": "timing",
+        "muhurat_time": "10:30 AM",
+        "sub_event_name": "Hastamelap",
+        "muhurat_notes": "Godhuli Bela auspicious window"
+    }
+    r_comp = client.post(f"/api/v1/events/{event.id}/compose", json=compose_payload, headers=headers)
+    assert r_comp.status_code == 200
+
+    db.refresh(se)
+    assert se.is_muhurat_locked is True
+    assert se.muhurat_notes == "Godhuli Bela auspicious window"
+
+    # 3. Compose with skip_timing
+    r_skip = client.post(f"/api/v1/events/{event.id}/compose", json={"step": "timing", "skip_timing": True}, headers=headers)
+    assert r_skip.status_code == 200
+
+    # 4. Delete event (cleans up user when 0 events remaining)
+    r_del = client.delete(f"/api/v1/events/{event.id}", headers=headers)
+    assert r_del.status_code == 200
+    assert r_del.json()["deleted"] is True

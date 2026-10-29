@@ -1,9 +1,7 @@
-import EventDashboardClient from './EventDashboardClient';
+import EventDashboardClient from "./EventDashboardClient";
 
 export function generateStaticParams() {
-  return [
-    { id: 'default' }
-  ];
+  return [{ id: "default" }];
 }
 
 export default function EventDashboardPage() {

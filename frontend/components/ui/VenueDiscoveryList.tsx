@@ -2,7 +2,14 @@
 
 import React, { useState, useEffect, useCallback } from "react";
 import dynamic from "next/dynamic";
-import { Search, MapPin, Navigation, ListFilter, AlertCircle, Sparkles } from "lucide-react";
+import {
+  Search,
+  MapPin,
+  Navigation,
+  ListFilter,
+  AlertCircle,
+  Sparkles,
+} from "lucide-react";
 import { WakingUpNotice } from "./WakingUpNotice";
 
 // Dynamically import Leaflet map to guarantee zero SSR 'window is not defined' crashes
@@ -15,7 +22,7 @@ const LeafletVenueMap = dynamic(
         <span>🗺️ Loading OpenStreetMap canvas...</span>
       </div>
     ),
-  }
+  },
 );
 
 export interface CostEstimate {
@@ -80,7 +87,8 @@ export const VenueDiscoveryList: React.FC<VenueDiscoveryListProps> = ({
 
   const apiBase =
     process.env.NEXT_PUBLIC_API_URL ||
-    (typeof window !== "undefined" && window.location.hostname.includes("netlify.app")
+    (typeof window !== "undefined" &&
+    window.location.hostname.includes("netlify.app")
       ? "/api/v1"
       : "https://utsav-ai-ycg2.onrender.com/api/v1");
 
@@ -90,12 +98,17 @@ export const VenueDiscoveryList: React.FC<VenueDiscoveryListProps> = ({
       setGeoState((prev) => ({
         ...prev,
         status: "denied",
-        errorMsg: "Browser geolocation is not supported on this device. Please enter city or pincode below.",
+        errorMsg:
+          "Browser geolocation is not supported on this device. Please enter city or pincode below.",
       }));
       return;
     }
 
-    setGeoState((prev) => ({ ...prev, status: "requesting", errorMsg: undefined }));
+    setGeoState((prev) => ({
+      ...prev,
+      status: "requesting",
+      errorMsg: undefined,
+    }));
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         const lat = pos.coords.latitude;
@@ -117,7 +130,7 @@ export const VenueDiscoveryList: React.FC<VenueDiscoveryListProps> = ({
               : "Unable to retrieve GPS coordinates. Using fallback search.",
         }));
       },
-      { timeout: 8000 }
+      { timeout: 8000 },
     );
   };
 
@@ -132,7 +145,9 @@ export const VenueDiscoveryList: React.FC<VenueDiscoveryListProps> = ({
 
     try {
       // First try backend Nominatim proxy (which caches & honors 1 req/sec policy)
-      const res = await fetch(`${apiBase}/discovery/geocode?q=${encodeURIComponent(query)}`);
+      const res = await fetch(
+        `${apiBase}/discovery/geocode?q=${encodeURIComponent(query)}`,
+      );
       if (res.ok) {
         const data = await res.json();
         setGeoState({
@@ -146,13 +161,14 @@ export const VenueDiscoveryList: React.FC<VenueDiscoveryListProps> = ({
         // Direct Nominatim fallback with compliant User-Agent
         const directRes = await fetch(
           `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(
-            query
+            query,
           )}&format=json&countrycodes=in&limit=1`,
           {
             headers: {
-              "User-Agent": "UtsavCelebrationApp/1.0 (utsav.celebrations@gmail.com)",
+              "User-Agent":
+                "UtsavCelebrationApp/1.0 (utsav.celebrations@gmail.com)",
             },
-          }
+          },
         );
         const directData = await directRes.json();
         if (directData && directData.length > 0) {
@@ -166,11 +182,15 @@ export const VenueDiscoveryList: React.FC<VenueDiscoveryListProps> = ({
           });
           setCity(directData[0].display_name.split(",")[0]);
         } else {
-          setError(`No location found in OpenStreetMap for "${query}". Try another city name or pincode.`);
+          setError(
+            `No location found in OpenStreetMap for "${query}". Try another city name or pincode.`,
+          );
         }
       }
-    } catch (err: any) {
-      setError(`Geocoding error: ${err.message || "Failed to resolve coordinates"}`);
+    } catch (err: unknown) {
+      setError(
+        `Geocoding error: ${(err instanceof Error ? err.message : String(err)) || "Failed to resolve coordinates"}`,
+      );
     } finally {
       setGeocoding(false);
     }
@@ -195,14 +215,19 @@ export const VenueDiscoveryList: React.FC<VenueDiscoveryListProps> = ({
         params.append("category", categoryFilter);
       }
 
-      const res = await fetch(`${apiBase}/discovery/vendors?${params.toString()}`);
+      const res = await fetch(
+        `${apiBase}/discovery/vendors?${params.toString()}`,
+      );
       if (!res.ok) {
         throw new Error(`Failed to load venues (${res.status})`);
       }
       const data = await res.json();
       setVenues(data.results || []);
-    } catch (err: any) {
-      setError(err.message || "Failed to fetch venue listings");
+    } catch (err: unknown) {
+      setError(
+        (err instanceof Error ? err.message : String(err)) ||
+          "Failed to fetch venue listings",
+      );
     } finally {
       setLoading(false);
     }
@@ -227,7 +252,8 @@ export const VenueDiscoveryList: React.FC<VenueDiscoveryListProps> = ({
             </span>
           </h3>
           <p className="text-xs sm:text-sm text-stone-600 dark:text-stone-400 mt-1">
-            Real venues nationwide powered by OpenStreetMap & Curated Seeds. Zero synthetic entries, zero paid APIs.
+            Real venues nationwide powered by OpenStreetMap & Curated Seeds.
+            Zero synthetic entries, zero paid APIs.
           </p>
         </div>
 
@@ -239,14 +265,23 @@ export const VenueDiscoveryList: React.FC<VenueDiscoveryListProps> = ({
             disabled={geoState.status === "requesting"}
             className="text-xs px-3.5 py-2 border border-stone-300 dark:border-stone-700 rounded-xl text-stone-700 dark:text-stone-300 hover:bg-stone-100 dark:hover:bg-stone-800 font-semibold transition-all flex items-center gap-1.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500"
           >
-            <Navigation className={`w-3.5 h-3.5 text-blue-600 dark:text-blue-400 ${geoState.status === "requesting" ? "animate-spin" : ""}`} />
-            <span>{geoState.status === "requesting" ? "Locating..." : "Use Current Location"}</span>
+            <Navigation
+              className={`w-3.5 h-3.5 text-blue-600 dark:text-blue-400 ${geoState.status === "requesting" ? "animate-spin" : ""}`}
+            />
+            <span>
+              {geoState.status === "requesting"
+                ? "Locating..."
+                : "Use Current Location"}
+            </span>
           </button>
         </div>
       </div>
 
       {/* Manual City / Pincode Fallback Input Bar */}
-      <form onSubmit={handleManualSearch} className="flex flex-col sm:flex-row gap-2">
+      <form
+        onSubmit={handleManualSearch}
+        className="flex flex-col sm:flex-row gap-2"
+      >
         <div className="relative flex-1">
           <MapPin className="w-4 h-4 text-stone-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
           <input
@@ -272,7 +307,8 @@ export const VenueDiscoveryList: React.FC<VenueDiscoveryListProps> = ({
         <div className="flex items-center gap-2">
           <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
           <span>
-            Search Centroid: <strong>{geoState.displayName || city}</strong> ({centerLat.toFixed(3)}, {centerLng.toFixed(3)}) • 25 km radius
+            Search Centroid: <strong>{geoState.displayName || city}</strong> (
+            {centerLat.toFixed(3)}, {centerLng.toFixed(3)}) • 25 km radius
           </span>
         </div>
         <span className="text-[11px] text-stone-500 font-mono">
@@ -284,7 +320,9 @@ export const VenueDiscoveryList: React.FC<VenueDiscoveryListProps> = ({
         <div className="text-xs bg-amber-50 dark:bg-amber-950/50 border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-300 rounded-xl p-3 flex items-center justify-between">
           <span>ℹ️ {geoState.errorMsg}</span>
           <button
-            onClick={() => setGeoState((prev) => ({ ...prev, errorMsg: undefined }))}
+            onClick={() =>
+              setGeoState((prev) => ({ ...prev, errorMsg: undefined }))
+            }
             className="text-amber-900 dark:text-amber-100 hover:opacity-75 font-bold ml-2"
           >
             ×
@@ -296,9 +334,11 @@ export const VenueDiscoveryList: React.FC<VenueDiscoveryListProps> = ({
       <div className="space-y-2">
         <div className="flex items-center justify-between text-xs font-semibold text-stone-700 dark:text-stone-300">
           <span>Interactive Map (Click pins to inspect & select)</span>
-          <span className="text-[11px] text-stone-500">Leaflet.js • OpenStreetMap ODbL</span>
+          <span className="text-[11px] text-stone-500">
+            Leaflet.js • OpenStreetMap ODbL
+          </span>
         </div>
-        
+
         <LeafletVenueMap
           venues={venues}
           centerLat={centerLat}
@@ -342,7 +382,10 @@ export const VenueDiscoveryList: React.FC<VenueDiscoveryListProps> = ({
       {loading ? (
         <div className="py-12 text-center text-stone-900 dark:text-stone-100 font-medium text-xs sm:text-sm space-y-3">
           <div className="text-2xl animate-spin inline-block">⏳</div>
-          <p>Scanning OpenStreetMap and curated directory within 25 km of {city}...</p>
+          <p>
+            Scanning OpenStreetMap and curated directory within 25 km of {city}
+            ...
+          </p>
           <div className="max-w-md mx-auto">
             <WakingUpNotice isLoading={loading} timeoutMs={3500} />
           </div>
@@ -359,17 +402,26 @@ export const VenueDiscoveryList: React.FC<VenueDiscoveryListProps> = ({
             No places found yet near you
           </h4>
           <p className="text-xs text-stone-600 dark:text-stone-400 max-w-md mx-auto leading-relaxed">
-            OpenStreetMap currently has zero banquet halls, marriage gardens, or event venues mapped within 25 km of this location. This is a real data gap in OpenStreetMap for smaller towns, not a system error.
+            OpenStreetMap currently has zero banquet halls, marriage gardens, or
+            event venues mapped within 25 km of this location. This is a real
+            data gap in OpenStreetMap for smaller towns, not a system error.
           </p>
           <p className="text-xs text-amber-800 dark:text-amber-300 font-medium">
-            Utsav never fabricates synthetic places. You can search another nearby city or skip this step to proceed with &quot;Venue to be confirmed&quot;.
+            Utsav never fabricates synthetic places. You can search another
+            nearby city or skip this step to proceed with &quot;Venue to be
+            confirmed&quot;.
           </p>
         </div>
       ) : (
-        <div id="venue-cards-list" className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div
+          id="venue-cards-list"
+          className="grid grid-cols-1 md:grid-cols-2 gap-4"
+        >
           {venues.map((venue) => {
             const isSelected = selectedVenueId === venue.id;
-            const isCuratedSeed = (venue.source_notes || "").includes("pickyourtrail") || (venue.source_notes || "").includes("venuelook");
+            const isCuratedSeed =
+              (venue.source_notes || "").includes("pickyourtrail") ||
+              (venue.source_notes || "").includes("venuelook");
 
             return (
               <div
@@ -386,25 +438,32 @@ export const VenueDiscoveryList: React.FC<VenueDiscoveryListProps> = ({
                     <h4 className="font-medium text-stone-900 dark:text-stone-100 text-sm flex items-center gap-1.5">
                       <span>{venue.business_name}</span>
                       {isCuratedSeed && (
-                        <span className="text-[10px] bg-amber-500/20 text-amber-900 dark:text-amber-200 px-1.5 py-0.2 rounded font-mono font-semibold" title="High-confidence curated baseline">
+                        <span
+                          className="text-[10px] bg-amber-500/20 text-amber-900 dark:text-amber-200 px-1.5 py-0.2 rounded font-mono font-semibold"
+                          title="High-confidence curated baseline"
+                        >
                           Curated
                         </span>
                       )}
                     </h4>
                     <p className="text-xs text-stone-500 dark:text-stone-400 mt-0.5">
-                      📍 {venue.locality ? `${venue.locality}, ` : ""}{venue.city}
+                      📍 {venue.locality ? `${venue.locality}, ` : ""}
+                      {venue.city}
                     </p>
                   </div>
-                  {venue.distance_km !== null && venue.distance_km !== undefined && (
-                    <div className="flex flex-col items-end shrink-0">
-                      <span className="text-xs font-mono font-bold bg-white dark:bg-stone-900 text-stone-800 dark:text-stone-200 px-2 py-0.5 rounded border border-stone-200 dark:border-stone-800 shadow-2xs">
-                        {venue.distance_km.toFixed(1)} km
-                      </span>
-                      <span className="text-[10px] text-stone-500 mt-0.5">
-                        {venue.coordinate_precision === "exact_osm_node" ? "exact OSM pin" : "approx. centroid"}
-                      </span>
-                    </div>
-                  )}
+                  {venue.distance_km !== null &&
+                    venue.distance_km !== undefined && (
+                      <div className="flex flex-col items-end shrink-0">
+                        <span className="text-xs font-mono font-bold bg-white dark:bg-stone-900 text-stone-800 dark:text-stone-200 px-2 py-0.5 rounded border border-stone-200 dark:border-stone-800 shadow-2xs">
+                          {venue.distance_km.toFixed(1)} km
+                        </span>
+                        <span className="text-[10px] text-stone-500 mt-0.5">
+                          {venue.coordinate_precision === "exact_osm_node"
+                            ? "exact OSM pin"
+                            : "approx. centroid"}
+                        </span>
+                      </div>
+                    )}
                 </div>
 
                 {/* Badges: Category + Unrated Tier + Limited Data Cost */}
@@ -418,13 +477,18 @@ export const VenueDiscoveryList: React.FC<VenueDiscoveryListProps> = ({
                   </span>
 
                   <span className="bg-stone-100 dark:bg-stone-800 text-stone-600 dark:text-stone-400 px-2 py-0.5 rounded text-[11px]">
-                    Estimate: {venue.cost_estimate?.estimated_cost_display || "Limited data"}
+                    Estimate:{" "}
+                    {venue.cost_estimate?.estimated_cost_display ||
+                      "Limited data"}
                   </span>
                 </div>
 
                 {/* Sourcing Footnote */}
                 {venue.source_notes && (
-                  <p className="text-[10px] text-stone-500 dark:text-stone-400 mt-2 italic line-clamp-1" title={venue.source_notes}>
+                  <p
+                    className="text-[10px] text-stone-500 dark:text-stone-400 mt-2 italic line-clamp-1"
+                    title={venue.source_notes}
+                  >
                     Source: {venue.source_notes}
                   </p>
                 )}
@@ -432,7 +496,9 @@ export const VenueDiscoveryList: React.FC<VenueDiscoveryListProps> = ({
                 {/* Action button */}
                 <div className="mt-3 pt-2 flex items-center justify-between border-t border-stone-100 dark:border-stone-800/40">
                   <span className="text-[11px] text-stone-500">
-                    {isSelected ? "Selected for this celebration" : "Click card or map pin to pick"}
+                    {isSelected
+                      ? "Selected for this celebration"
+                      : "Click card or map pin to pick"}
                   </span>
                   <button
                     type="button"

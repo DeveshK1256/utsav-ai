@@ -1,23 +1,23 @@
-'use client';
+"use client";
 
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { useParams, useRouter } from 'next/navigation';
-import Link from 'next/link';
-import { Navbar } from '@/components/ui/Navbar';
-import { ElderDisclaimerBanner } from '@/components/ui/ElderDisclaimerBanner';
-import { GuestCoordinationModule } from '@/components/ui/GuestCoordinationModule';
-import { RitualIntelligenceHub } from '@/components/ui/RitualIntelligenceHub';
-import { InvitationStudio } from '@/components/ui/InvitationStudio';
-import { VenueDiscoveryList } from '@/components/ui/VenueDiscoveryList';
-import { WakingUpNotice } from '@/components/ui/WakingUpNotice';
-import { getAuthHeaders } from '@/lib/auth';
+import React, { useState, useEffect, useMemo, useCallback } from "react";
+import { useParams, useRouter } from "next/navigation";
+import Link from "next/link";
+import { Navbar } from "@/components/ui/Navbar";
+import { ElderDisclaimerBanner } from "@/components/ui/ElderDisclaimerBanner";
+import { GuestCoordinationModule } from "@/components/ui/GuestCoordinationModule";
+import { RitualIntelligenceHub } from "@/components/ui/RitualIntelligenceHub";
+import { InvitationStudio } from "@/components/ui/InvitationStudio";
+import { VenueDiscoveryList } from "@/components/ui/VenueDiscoveryList";
+import { WakingUpNotice } from "@/components/ui/WakingUpNotice";
+import { getAuthHeaders } from "@/lib/auth";
 
 // Currency Formatter
 const formatINR = (val: number) => {
-  return new Intl.NumberFormat('en-IN', {
-    style: 'currency',
-    currency: 'INR',
-    maximumFractionDigits: 0
+  return new Intl.NumberFormat("en-IN", {
+    style: "currency",
+    currency: "INR",
+    maximumFractionDigits: 0,
   }).format(val);
 };
 
@@ -58,7 +58,18 @@ interface TaskItem {
   assigned_role?: string;
 }
 
+type DashboardTab =
+  | "overview"
+  | "itinerary"
+  | "rituals"
+  | "budget"
+  | "vendors"
+  | "vibe"
+  | "guests"
+  | "invitations";
+
 interface EventData {
+  secondary_tradition_code?: string;
   id: string;
   name: string;
   owner_name: string;
@@ -92,20 +103,23 @@ interface StyleProfile {
 export default function EventDashboardClient() {
   const params = useParams();
   const router = useRouter();
-  const rawEventId = (params?.id as string) || '';
+  const rawEventId = (params?.id as string) || "";
 
   const [eventData, setEventData] = useState<EventData | null>(null);
   const [styleProfile, setStyleProfile] = useState<StyleProfile | null>(null);
-  const [activeTab, setActiveTab] = useState<'overview' | 'itinerary' | 'rituals' | 'budget' | 'vendors' | 'vibe' | 'guests' | 'invitations'>('overview');
+  const [activeTab, setActiveTab] = useState<DashboardTab>("overview");
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [selectedWhyThis, setSelectedWhyThis] = useState<BudgetItem | null>(null);
+  const [selectedWhyThis, setSelectedWhyThis] = useState<BudgetItem | null>(
+    null,
+  );
 
   // Dynamic API Base URL resolver
   const getApiBase = () => {
-    return typeof window !== 'undefined' && window.location.hostname.includes('netlify.app')
-      ? '/api/v1'
-      : 'https://utsav-ai-ycg2.onrender.com/api/v1';
+    return typeof window !== "undefined" &&
+      window.location.hostname.includes("netlify.app")
+      ? "/api/v1"
+      : "https://utsav-ai-ycg2.onrender.com/api/v1";
   };
 
   // Fetch real event data from backend API — strictly zero invented facts
@@ -115,18 +129,18 @@ export default function EventDashboardClient() {
 
     // Resolve real event ID from URL pathname, rawEventId, or localStorage without router loop
     let targetId = rawEventId;
-    if (typeof window !== 'undefined') {
-      const segments = window.location.pathname.split('/').filter(Boolean);
+    if (typeof window !== "undefined") {
+      const segments = window.location.pathname.split("/").filter(Boolean);
       const lastSeg = segments[segments.length - 1];
-      if (lastSeg && lastSeg !== 'events' && lastSeg !== 'default') {
+      if (lastSeg && lastSeg !== "events" && lastSeg !== "default") {
         targetId = lastSeg;
       }
     }
 
-    if (!targetId || targetId === 'default') {
+    if (!targetId || targetId === "default") {
       try {
-        const saved = localStorage.getItem('utsav_last_event_id');
-        if (saved && saved !== 'default') {
+        const saved = localStorage.getItem("utsav_last_event_id");
+        if (saved && saved !== "default") {
           targetId = saved;
         }
       } catch (e) {
@@ -134,27 +148,33 @@ export default function EventDashboardClient() {
       }
     }
 
-    if (!targetId || targetId === 'default') {
+    if (!targetId || targetId === "default") {
       setIsLoading(false);
-      setErrorMessage('No celebration event selected. Please create your plan via the intake wizard to launch your real workspace.');
+      setErrorMessage(
+        "No celebration event selected. Please create your plan via the intake wizard to launch your real workspace.",
+      );
       return;
     }
 
     try {
       const apiBase = getApiBase();
       const res = await fetch(`${apiBase}/events/${targetId}`, {
-        headers: getAuthHeaders(targetId)
+        headers: getAuthHeaders(targetId),
       });
 
       if (res.status === 404) {
         setIsLoading(false);
-        setErrorMessage(`Event with ID "${targetId}" was not found in the live database. Please check the URL or create a new celebration plan.`);
+        setErrorMessage(
+          `Event with ID "${targetId}" was not found in the live database. Please check the URL or create a new celebration plan.`,
+        );
         return;
       }
 
       if (!res.ok) {
         setIsLoading(false);
-        setErrorMessage(`Backend server returned HTTP error ${res.status} (${res.statusText || 'Failed to fetch event'}).`);
+        setErrorMessage(
+          `Backend server returned HTTP error ${res.status} (${res.statusText || "Failed to fetch event"}).`,
+        );
         return;
       }
 
@@ -162,35 +182,39 @@ export default function EventDashboardClient() {
       setEventData({
         id: data.id,
         name: data.name,
-        owner_name: data.owner_name || 'Host',
-        event_type: data.event_type || 'wedding',
+        owner_name: data.owner_name || "Host",
+        event_type: data.event_type || "wedding",
         city: data.city,
-        city_tier: data.city_tier || 'tier_2',
+        city_tier: data.city_tier || "tier_2",
         guest_count: data.guest_count,
         total_budget: Number(data.total_budget),
-        tradition_code: data.tradition_code || 'maharashtrian_vedic',
-        status: data.status || 'planning',
+        tradition_code: data.tradition_code || "maharashtrian_vedic",
+        status: data.status || "planning",
         start_date: data.start_date,
         end_date: data.end_date,
-        elder_verification_disclaimer: data.elder_verification_disclaimer ||
-          'Auspicious timings & ritual checklists are algorithmic estimates computed via astronomical ephemeris models. Please verify with your family Guruji or elders.',
+        elder_verification_disclaimer:
+          data.elder_verification_disclaimer ||
+          "Auspicious timings & ritual checklists are algorithmic estimates computed via astronomical ephemeris models. Please verify with your family Guruji or elders.",
         sub_events: data.sub_events || [],
         budget_breakdown: data.budget_breakdown || [],
-        tasks: data.tasks || []
+        tasks: data.tasks || [],
       });
 
       // Persist active ID in localStorage
       try {
-        localStorage.setItem('utsav_last_event_id', data.id);
+        localStorage.setItem("utsav_last_event_id", data.id);
       } catch (e) {
         // ignore
       }
 
       // Try fetching style profiles for this event
       try {
-        const vibeRes = await fetch(`${apiBase}/events/${targetId}/vibe/profiles`, {
-          headers: getAuthHeaders(targetId)
-        });
+        const vibeRes = await fetch(
+          `${apiBase}/events/${targetId}/vibe/profiles`,
+          {
+            headers: getAuthHeaders(targetId),
+          },
+        );
         if (vibeRes.ok) {
           const profiles = await vibeRes.json();
           if (profiles && profiles.length > 0) {
@@ -200,9 +224,11 @@ export default function EventDashboardClient() {
       } catch (e) {
         // ignore vibe fetch failures
       }
-    } catch (err: any) {
-      console.error('Failed to fetch live event:', err);
-      setErrorMessage(`Network error connecting to backend: ${err.message || 'Unable to reach API server'}. Please verify backend health.`);
+    } catch (err: unknown) {
+      console.error("Failed to fetch live event:", err);
+      setErrorMessage(
+        `Network error connecting to backend: ${(err instanceof Error ? err.message : String(err)) || "Unable to reach API server"}. Please verify backend health.`,
+      );
     } finally {
       setIsLoading(false);
     }
@@ -215,7 +241,10 @@ export default function EventDashboardClient() {
   // Derived KPI calculations from REAL database data
   const totalAllocated = useMemo(() => {
     if (!eventData?.budget_breakdown) return 0;
-    return eventData.budget_breakdown.reduce((sum, item) => sum + (item.planned_amount || 0), 0);
+    return eventData.budget_breakdown.reduce(
+      (sum, item) => sum + (item.planned_amount || 0),
+      0,
+    );
   }, [eventData]);
 
   const muhuratCount = useMemo(() => {
@@ -224,17 +253,20 @@ export default function EventDashboardClient() {
   }, [eventData]);
 
   const traditionTitle = useMemo(() => {
-    if (!eventData?.tradition_code) return 'Celebration';
+    if (!eventData?.tradition_code) return "Celebration";
     const map: Record<string, string> = {
-      maharashtrian_vedic: 'Maharashtrian Vedic Lagna 🕉️',
-      gujarati_hindu: 'Gujarati Hindu Vivah 🪔',
-      punjabi_sikh: 'Punjabi Anand Karaj ✨',
-      south_indian_iyer: 'Tamil Brahmin Iyer Kalyanam 🌸',
-      marwari_traditional: 'Marwari Traditional Vivah 👑',
-      satyanarayan_puja: 'Satyanarayan Vrat & Puja 🙏',
-      community_festival: 'Sarvajanik Community Utsav 🚩'
+      maharashtrian_vedic: "Maharashtrian Vedic Lagna 🕉️",
+      gujarati_hindu: "Gujarati Hindu Vivah 🪔",
+      punjabi_sikh: "Punjabi Anand Karaj ✨",
+      south_indian_iyer: "Tamil Brahmin Iyer Kalyanam 🌸",
+      marwari_traditional: "Marwari Traditional Vivah 👑",
+      satyanarayan_puja: "Satyanarayan Vrat & Puja 🙏",
+      community_festival: "Sarvajanik Community Utsav 🚩",
     };
-    return map[eventData.tradition_code] || `${eventData.tradition_code.replace('_', ' ')} ✨`;
+    return (
+      map[eventData.tradition_code] ||
+      `${eventData.tradition_code.replace("_", " ")} ✨`
+    );
   }, [eventData]);
 
   // Loading state
@@ -248,9 +280,14 @@ export default function EventDashboardClient() {
             Connecting to PostgreSQL Event Registry...
           </h2>
           <p className="text-xs text-stone-500 dark:text-stone-400 font-mono">
-            Resolving live event #{rawEventId} • Zero invented facts policy active
+            Resolving live event #{rawEventId} • Zero invented facts policy
+            active
           </p>
-          <WakingUpNotice isLoading={isLoading} timeoutMs={3500} className="mt-6" />
+          <WakingUpNotice
+            isLoading={isLoading}
+            timeoutMs={3500}
+            className="mt-6"
+          />
         </div>
       </div>
     );
@@ -280,8 +317,17 @@ export default function EventDashboardClient() {
               <div className="font-semibold text-rose-700 dark:text-rose-400 uppercase tracking-wider text-[11px]">
                 Integrity Guard Active
               </div>
-              <div>• Requested Event ID: <span className="font-bold text-stone-900 dark:text-stone-200">{rawEventId || '(none)'}</span></div>
-              <div>• Zero Invented Facts: Utsav never fabricates placeholder budgets or fake schedules when real database records cannot be verified.</div>
+              <div>
+                • Requested Event ID:{" "}
+                <span className="font-bold text-stone-900 dark:text-stone-200">
+                  {rawEventId || "(none)"}
+                </span>
+              </div>
+              <div>
+                • Zero Invented Facts: Utsav never fabricates placeholder
+                budgets or fake schedules when real database records cannot be
+                verified.
+              </div>
             </div>
 
             <div className="flex flex-col sm:flex-row gap-3 justify-center pt-2">
@@ -333,16 +379,26 @@ export default function EventDashboardClient() {
         }
       />
 
-      <main id="main-content" className="max-w-7xl mx-auto px-4 sm:px-6 pt-8 space-y-8">
+      <main
+        id="main-content"
+        className="max-w-7xl mx-auto px-4 sm:px-6 pt-8 space-y-8"
+      >
         {/* Breadcrumb Navigation */}
         <div className="flex items-center gap-2 text-xs text-stone-500 dark:text-stone-400 font-medium">
-          <Link href="/" className="hover:text-stone-900 dark:hover:text-white transition-colors">
+          <Link
+            href="/"
+            className="hover:text-stone-900 dark:hover:text-white transition-colors"
+          >
             Home
           </Link>
           <span>/</span>
-          <span className="text-stone-700 dark:text-stone-300">Celebration Workspace</span>
+          <span className="text-stone-700 dark:text-stone-300">
+            Celebration Workspace
+          </span>
           <span>/</span>
-          <span className="font-mono text-stone-400 truncate max-w-[200px]">{currentEventId}</span>
+          <span className="font-mono text-stone-400 truncate max-w-[200px]">
+            {currentEventId}
+          </span>
         </div>
 
         {/* Header Hero Banner */}
@@ -369,11 +425,14 @@ export default function EventDashboardClient() {
               </h1>
 
               <p className="text-sm text-stone-600 dark:text-stone-300 leading-relaxed">
-                Primary Host:{' '}
-                <strong className="text-stone-900 dark:text-stone-100 font-semibold">{eventData.owner_name}</strong> •
-                Target Dates:{' '}
+                Primary Host:{" "}
+                <strong className="text-stone-900 dark:text-stone-100 font-semibold">
+                  {eventData.owner_name}
+                </strong>{" "}
+                • Target Dates:{" "}
                 <span className="font-mono text-stone-700 dark:text-stone-300">
-                  {eventData.start_date || 'TBD'} to {eventData.end_date || 'TBD'}
+                  {eventData.start_date || "TBD"} to{" "}
+                  {eventData.end_date || "TBD"}
                 </span>
               </p>
             </div>
@@ -461,7 +520,8 @@ export default function EventDashboardClient() {
               Timeline Velocity
             </div>
             <div className="text-2xl font-bold font-serif text-stone-900 dark:text-stone-50">
-              {eventData.sub_events.length} Events • {eventData.tasks.length} Tasks
+              {eventData.sub_events.length} Events • {eventData.tasks.length}{" "}
+              Tasks
             </div>
             <div className="text-xs text-stone-500 dark:text-stone-400">
               DAG dependency scheduled
@@ -472,22 +532,26 @@ export default function EventDashboardClient() {
         {/* Tab Navigation Controls */}
         <section className="flex border-b border-stone-200 dark:border-stone-800 overflow-x-auto no-scrollbar gap-1">
           {[
-            { key: 'overview', label: 'Overview & Cockpit', icon: '⚡' },
-            { key: 'itinerary', label: 'Master Itinerary & Muhurats', icon: '📅' },
-            { key: 'rituals', label: 'Cultural Rituals & Fusion', icon: '🕉️' },
-            { key: 'budget', label: 'Itemized Budget & Formulas', icon: '💰' },
-            { key: 'vendors', label: 'Vendor Hub & Quotes', icon: '🤝' },
-            { key: 'vibe', label: 'Vibe & Aesthetic Decor', icon: '🎨' },
-            { key: 'guests', label: 'Guests & WhatsApp RSVP', icon: '💌' },
-            { key: 'invitations', label: 'Invitation Cards (F16)', icon: '🎴' }
+            { key: "overview", label: "Overview & Cockpit", icon: "⚡" },
+            {
+              key: "itinerary",
+              label: "Master Itinerary & Muhurats",
+              icon: "📅",
+            },
+            { key: "rituals", label: "Cultural Rituals & Fusion", icon: "🕉️" },
+            { key: "budget", label: "Itemized Budget & Formulas", icon: "💰" },
+            { key: "vendors", label: "Vendor Hub & Quotes", icon: "🤝" },
+            { key: "vibe", label: "Vibe & Aesthetic Decor", icon: "🎨" },
+            { key: "guests", label: "Guests & WhatsApp RSVP", icon: "💌" },
+            { key: "invitations", label: "Invitation Cards (F16)", icon: "🎴" },
           ].map((tab) => (
             <button
               key={tab.key}
-              onClick={() => setActiveTab(tab.key as any)}
+              onClick={() => setActiveTab(tab.key as DashboardTab)}
               className={`flex items-center gap-2 px-5 py-3 text-xs sm:text-sm font-semibold whitespace-nowrap transition-all border-b-2 ${
                 activeTab === tab.key
-                  ? 'border-[#8B1E28] dark:border-[#F4B41A] text-[#8B1E28] dark:text-[#F4B41A]'
-                  : 'border-transparent text-stone-600 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-200'
+                  ? "border-[#8B1E28] dark:border-[#F4B41A] text-[#8B1E28] dark:text-[#F4B41A]"
+                  : "border-transparent text-stone-600 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-200"
               }`}
             >
               <span>{tab.icon}</span>
@@ -497,7 +561,7 @@ export default function EventDashboardClient() {
         </section>
 
         {/* TAB 1: OVERVIEW / COCKPIT */}
-        {activeTab === 'overview' && (
+        {activeTab === "overview" && (
           <div className="space-y-8 animate-fadeIn">
             {/* Quick Action Navigation Tiles */}
             <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -511,7 +575,8 @@ export default function EventDashboardClient() {
                     Plan B Live Replanning
                   </h3>
                   <p className="text-xs text-stone-600 dark:text-stone-300 mt-1 leading-relaxed">
-                    Test schedule shifts, guest count changes, or bad weather relocations with zero-LLM deterministic budget math.
+                    Test schedule shifts, guest count changes, or bad weather
+                    relocations with zero-LLM deterministic budget math.
                   </p>
                 </div>
                 <Link
@@ -532,7 +597,9 @@ export default function EventDashboardClient() {
                     Vibe-to-Plan Vision Engine
                   </h3>
                   <p className="text-xs text-stone-600 dark:text-stone-300 mt-1 leading-relaxed">
-                    Upload moodboard photos and color inspirations. Multimodal AI extracts color palettes and generates concrete decor items.
+                    Upload moodboard photos and color inspirations. Multimodal
+                    AI extracts color palettes and generates concrete decor
+                    items.
                   </p>
                 </div>
                 <Link
@@ -553,7 +620,8 @@ export default function EventDashboardClient() {
                     Quote Auditor & Hidden Costs
                   </h3>
                   <p className="text-xs text-stone-600 dark:text-stone-300 mt-1 leading-relaxed">
-                    Scan PDF or photo vendor quotes to detect hidden generator charges, overtime fees, and compare against city benchmarks.
+                    Scan PDF or photo vendor quotes to detect hidden generator
+                    charges, overtime fees, and compare against city benchmarks.
                   </p>
                 </div>
                 <Link
@@ -574,11 +642,12 @@ export default function EventDashboardClient() {
                     Invitation Studio
                   </h3>
                   <p className="text-xs text-stone-600 dark:text-stone-300 mt-1 leading-relaxed">
-                    Generate personalized print-ready PDFs and digital PNG cards with theme palettes and Devanagari script.
+                    Generate personalized print-ready PDFs and digital PNG cards
+                    with theme palettes and Devanagari script.
                   </p>
                 </div>
                 <button
-                  onClick={() => setActiveTab('invitations')}
+                  onClick={() => setActiveTab("invitations")}
                   className="inline-flex items-center text-xs font-bold text-amber-700 dark:text-amber-400 hover:underline gap-1"
                 >
                   Open Card Studio →
@@ -595,7 +664,7 @@ export default function EventDashboardClient() {
                     <span>📅</span> Multi-Day Run-of-Show
                   </h3>
                   <button
-                    onClick={() => setActiveTab('itinerary')}
+                    onClick={() => setActiveTab("itinerary")}
                     className="text-xs font-semibold text-amber-700 dark:text-amber-400 hover:underline"
                   >
                     View All ({eventData.sub_events.length}) →
@@ -603,7 +672,9 @@ export default function EventDashboardClient() {
                 </div>
                 <div className="space-y-3">
                   {eventData.sub_events.length === 0 ? (
-                    <p className="text-xs text-stone-500 py-3">No sub-events generated yet.</p>
+                    <p className="text-xs text-stone-500 py-3">
+                      No sub-events generated yet.
+                    </p>
                   ) : (
                     eventData.sub_events.slice(0, 3).map((se) => (
                       <div
@@ -615,8 +686,15 @@ export default function EventDashboardClient() {
                             {se.name}
                           </div>
                           <div className="text-xs text-stone-500 dark:text-stone-400 font-mono mt-0.5">
-                            {new Date(se.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} -{' '}
-                            {new Date(se.end_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            {new Date(se.start_time).toLocaleTimeString([], {
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })}{" "}
+                            -{" "}
+                            {new Date(se.end_time).toLocaleTimeString([], {
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })}
                           </div>
                           <div className="text-xs text-stone-600 dark:text-stone-300 mt-1">
                             📍 {se.venue_name}
@@ -645,7 +723,9 @@ export default function EventDashboardClient() {
                 </div>
                 <div className="space-y-3">
                   {eventData.tasks.length === 0 ? (
-                    <p className="text-xs text-stone-500 py-3">No tasks scheduled yet.</p>
+                    <p className="text-xs text-stone-500 py-3">
+                      No tasks scheduled yet.
+                    </p>
                   ) : (
                     eventData.tasks.slice(0, 4).map((task) => (
                       <div
@@ -657,14 +737,18 @@ export default function EventDashboardClient() {
                             {task.title}
                           </div>
                           <div className="text-[11px] text-stone-500 dark:text-stone-400">
-                            Role:{' '}
+                            Role:{" "}
                             <span className="font-mono text-stone-700 dark:text-stone-300 font-medium">
-                              {task.assigned_role || 'Coordinator'}
+                              {task.assigned_role || "Coordinator"}
                             </span>
                           </div>
                         </div>
                         <span className="shrink-0 px-2.5 py-1 rounded-md bg-stone-100 dark:bg-stone-800 text-stone-700 dark:text-stone-300 font-mono font-medium text-[11px]">
-                          {task.scheduled_start ? new Date(task.scheduled_start).toLocaleDateString() : 'Pending'}
+                          {task.scheduled_start
+                            ? new Date(
+                                task.scheduled_start,
+                              ).toLocaleDateString()
+                            : "Pending"}
                         </span>
                       </div>
                     ))
@@ -676,7 +760,7 @@ export default function EventDashboardClient() {
         )}
 
         {/* TAB 2: MASTER ITINERARY & MUHURATS */}
-        {activeTab === 'itinerary' && (
+        {activeTab === "itinerary" && (
           <div className="space-y-6 animate-fadeIn">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div>
@@ -684,7 +768,8 @@ export default function EventDashboardClient() {
                   Master Itinerary & Multi-Day Timeline
                 </h2>
                 <p className="text-xs text-stone-600 dark:text-stone-300 mt-1">
-                  Chronological schedule resolved through topological DAG dependencies with sacred muhurat locks.
+                  Chronological schedule resolved through topological DAG
+                  dependencies with sacred muhurat locks.
                 </p>
               </div>
               <button
@@ -717,15 +802,24 @@ export default function EventDashboardClient() {
                   </h3>
 
                   <div className="text-xs font-mono text-stone-600 dark:text-stone-400 bg-stone-100 dark:bg-stone-900/60 p-2.5 rounded-xl border border-stone-200/60 dark:border-stone-800/60">
-                    ⏱️ {new Date(se.start_time).toLocaleDateString()} •{' '}
-                    {new Date(se.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} -{' '}
-                    {new Date(se.end_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    ⏱️ {new Date(se.start_time).toLocaleDateString()} •{" "}
+                    {new Date(se.start_time).toLocaleTimeString([], {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}{" "}
+                    -{" "}
+                    {new Date(se.end_time).toLocaleTimeString([], {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
                   </div>
 
                   <div className="text-xs text-stone-700 dark:text-stone-300 space-y-1">
                     <div>
-                      📍 <strong>Venue:</strong> {se.venue_name}{' '}
-                      <span className="text-stone-500 font-mono">({se.is_outdoor ? 'Outdoor Lawn' : 'Indoor AC Banquet'})</span>
+                      📍 <strong>Venue:</strong> {se.venue_name}{" "}
+                      <span className="text-stone-500 font-mono">
+                        ({se.is_outdoor ? "Outdoor Lawn" : "Indoor AC Banquet"})
+                      </span>
                     </div>
                     {se.muhurat_notes && (
                       <div className="p-2.5 rounded-xl bg-amber-50/80 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900 text-amber-900 dark:text-amber-300 text-xs leading-relaxed font-medium">
@@ -740,23 +834,27 @@ export default function EventDashboardClient() {
         )}
 
         {/* TAB: CULTURAL RITUALS & MULTI-TRADITION FUSION */}
-        {activeTab === 'rituals' && (
+        {activeTab === "rituals" && (
           <div className="space-y-6 animate-fadeIn">
             <RitualIntelligenceHub
               eventId={eventData.id}
               eventName={eventData.name}
               city={eventData.city}
               startDate={eventData.start_date}
-              initialTraditionCode={eventData.tradition_code || 'maharashtrian_vedic'}
-              initialSecondaryTraditionCode={(eventData as any).secondary_tradition_code || 'punjabi_traditional'}
-              apiBase={getApiBase().replace(/\/api\/v1$/, '')}
+              initialTraditionCode={
+                eventData.tradition_code || "maharashtrian_vedic"
+              }
+              initialSecondaryTraditionCode={
+                eventData?.secondary_tradition_code || "punjabi_traditional"
+              }
+              apiBase={getApiBase().replace(/\/api\/v1$/, "")}
               onTasksGenerated={fetchEventData}
             />
           </div>
         )}
 
         {/* TAB 3: ITEMIZED BUDGET & WHY THIS */}
-        {activeTab === 'budget' && (
+        {activeTab === "budget" && (
           <div className="space-y-6 animate-fadeIn">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div>
@@ -764,12 +862,15 @@ export default function EventDashboardClient() {
                   Itemized Budget Engine
                 </h2>
                 <p className="text-xs text-stone-600 dark:text-stone-300 mt-1">
-                  100% deterministic arithmetic calibrated for {eventData.city} ({eventData.city_tier.toUpperCase()}) across{' '}
+                  100% deterministic arithmetic calibrated for {eventData.city}{" "}
+                  ({eventData.city_tier.toUpperCase()}) across{" "}
                   {eventData.guest_count} guests. Zero LLM hallucinations.
                 </p>
               </div>
               <div className="text-right">
-                <span className="text-xs text-stone-500 uppercase tracking-wider block">Total Envelope</span>
+                <span className="text-xs text-stone-500 uppercase tracking-wider block">
+                  Total Envelope
+                </span>
                 <span className="text-xl font-bold font-serif text-[#8B1E28] dark:text-[#F4B41A]">
                   {formatINR(eventData.total_budget)}
                 </span>
@@ -785,7 +886,7 @@ export default function EventDashboardClient() {
                   <div className="space-y-1">
                     <div className="flex items-center justify-between">
                       <span className="text-xs font-bold uppercase tracking-wider text-amber-700 dark:text-amber-400">
-                        {item.category.replace('_', ' ')}
+                        {item.category.replace("_", " ")}
                       </span>
                       <span className="px-2 py-0.5 rounded-md bg-stone-100 dark:bg-stone-800 text-stone-700 dark:text-stone-300 text-xs font-mono font-semibold">
                         {item.percentage}%
@@ -814,7 +915,7 @@ export default function EventDashboardClient() {
         )}
 
         {/* TAB 4: VENDOR HUB & QUOTE AUDITOR (SCOPED TO CURRENT EVENT) */}
-        {activeTab === 'vendors' && (
+        {activeTab === "vendors" && (
           <div className="space-y-6 animate-fadeIn">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div>
@@ -822,7 +923,9 @@ export default function EventDashboardClient() {
                   Vendor Hub & Quotes
                 </h2>
                 <p className="text-xs text-stone-600 dark:text-stone-300 mt-1">
-                  Upload vendor proposals scoped to <strong className="font-semibold">{eventData.name}</strong>. Flag hidden fees, generator charges, and overtime rates.
+                  Upload vendor proposals scoped to{" "}
+                  <strong className="font-semibold">{eventData.name}</strong>.
+                  Flag hidden fees, generator charges, and overtime rates.
                 </p>
               </div>
               <Link
@@ -854,7 +957,8 @@ export default function EventDashboardClient() {
                   18 Red Flag Checks
                 </div>
                 <div className="text-xs text-stone-600 dark:text-stone-400">
-                  Cross-checks line items against regional hidden charge patterns (DEC-013).
+                  Cross-checks line items against regional hidden charge
+                  patterns (DEC-013).
                 </div>
               </div>
 
@@ -866,7 +970,8 @@ export default function EventDashboardClient() {
                   {eventData.city} ({eventData.city_tier.toUpperCase()})
                 </div>
                 <div className="text-xs text-stone-600 dark:text-stone-400">
-                  Evaluated against live regional benchmarks with sample size transparency.
+                  Evaluated against live regional benchmarks with sample size
+                  transparency.
                 </div>
               </div>
             </div>
@@ -877,7 +982,9 @@ export default function EventDashboardClient() {
                 Ready to upload vendor estimates?
               </h3>
               <p className="text-xs text-stone-600 dark:text-stone-300 max-w-md mx-auto leading-relaxed">
-                Add PDF or photo quotes for catering, mandap, sound, or photography. The engine audits line items and benchmarks costs against {eventData.city}.
+                Add PDF or photo quotes for catering, mandap, sound, or
+                photography. The engine audits line items and benchmarks costs
+                against {eventData.city}.
               </p>
               <Link
                 href={`/dashboard/events/${currentEventId}/vendors/quotes`}
@@ -895,7 +1002,7 @@ export default function EventDashboardClient() {
         )}
 
         {/* TAB 5: VIBE & AESTHETIC DECOR */}
-        {activeTab === 'vibe' && (
+        {activeTab === "vibe" && (
           <div className="space-y-6 animate-fadeIn">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div>
@@ -903,7 +1010,8 @@ export default function EventDashboardClient() {
                   Vibe & Theme Studio
                 </h2>
                 <p className="text-xs text-stone-600 dark:text-stone-300 mt-1">
-                  Multimodal vision translation: from Pinterest/Instagram inspiration to concrete itemized decor proposals.
+                  Multimodal vision translation: from Pinterest/Instagram
+                  inspiration to concrete itemized decor proposals.
                 </p>
               </div>
               <Link
@@ -921,7 +1029,7 @@ export default function EventDashboardClient() {
                     Active Style Profile
                   </span>
                   <h3 className="text-xl font-serif font-bold text-stone-900 dark:text-stone-100 mt-1">
-                    {styleProfile.theme_concept || 'Custom Curated Aesthetic'}
+                    {styleProfile.theme_concept || "Custom Curated Aesthetic"}
                   </h3>
                 </div>
 
@@ -932,19 +1040,23 @@ export default function EventDashboardClient() {
                   </h4>
                   <div className="grid grid-cols-5 gap-3">
                     {[
-                      { name: 'Primary', hex: styleProfile.primary_color },
-                      { name: 'Secondary', hex: styleProfile.secondary_color },
-                      { name: 'Accent', hex: styleProfile.accent_color },
-                      { name: 'Neutral', hex: styleProfile.neutral_color },
-                      { name: 'Base', hex: styleProfile.background_color }
+                      { name: "Primary", hex: styleProfile.primary_color },
+                      { name: "Secondary", hex: styleProfile.secondary_color },
+                      { name: "Accent", hex: styleProfile.accent_color },
+                      { name: "Neutral", hex: styleProfile.neutral_color },
+                      { name: "Base", hex: styleProfile.background_color },
                     ].map((col) => (
                       <div key={col.name} className="space-y-1.5 text-center">
                         <div
                           className="w-full h-14 rounded-2xl border border-stone-300/40 dark:border-stone-700/60 shadow-xs"
                           style={{ backgroundColor: col.hex }}
                         />
-                        <div className="text-[11px] font-semibold text-stone-700 dark:text-stone-300">{col.name}</div>
-                        <div className="text-[10px] font-mono text-stone-500">{col.hex}</div>
+                        <div className="text-[11px] font-semibold text-stone-700 dark:text-stone-300">
+                          {col.name}
+                        </div>
+                        <div className="text-[10px] font-mono text-stone-500">
+                          {col.hex}
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -991,7 +1103,9 @@ export default function EventDashboardClient() {
                   No mood photos analyzed yet for this celebration
                 </h3>
                 <p className="text-xs text-stone-600 dark:text-stone-300 max-w-md mx-auto leading-relaxed">
-                  Upload up to 10 photos of mandaps, outfits, or decor you love. Real multimodal AI will translate them into an actionable decor proposal with cost bounds.
+                  Upload up to 10 photos of mandaps, outfits, or decor you love.
+                  Real multimodal AI will translate them into an actionable
+                  decor proposal with cost bounds.
                 </p>
                 <Link
                   href={`/dashboard/events/${currentEventId}/vibe`}
@@ -1005,7 +1119,7 @@ export default function EventDashboardClient() {
         )}
 
         {/* TAB 6: GUESTS & WHATSAPP RSVP CONCIERGE (M4) */}
-        {activeTab === 'guests' && (
+        {activeTab === "guests" && (
           <GuestCoordinationModule
             eventId={currentEventId}
             eventName={eventData.name}
@@ -1014,19 +1128,21 @@ export default function EventDashboardClient() {
         )}
 
         {/* TAB 7: INVITATION CARD STUDIO (M10 / F16) */}
-        {activeTab === 'invitations' && (
+        {activeTab === "invitations" && (
           <InvitationStudio
             eventId={currentEventId}
             eventName={eventData.name}
             city={eventData.city}
             startDate={eventData.start_date}
-            apiBase={getApiBase().replace(/\/api\/v1\/?$/, '')}
+            apiBase={getApiBase().replace(/\/api\/v1\/?$/, "")}
           />
         )}
 
         {/* Elder Verification Disclaimer Banner (Mandatory F13 compliance) */}
         <section className="pt-4">
-          <ElderDisclaimerBanner customText={eventData.elder_verification_disclaimer} />
+          <ElderDisclaimerBanner
+            customText={eventData.elder_verification_disclaimer}
+          />
         </section>
       </main>
 
@@ -1055,7 +1171,9 @@ export default function EventDashboardClient() {
                   Category & Planned Amount
                 </span>
                 <div className="text-base font-bold text-stone-900 dark:text-stone-50">
-                  {selectedWhyThis.name} • {formatINR(selectedWhyThis.planned_amount)} ({selectedWhyThis.percentage}%)
+                  {selectedWhyThis.name} •{" "}
+                  {formatINR(selectedWhyThis.planned_amount)} (
+                  {selectedWhyThis.percentage}%)
                 </div>
               </div>
 
@@ -1080,8 +1198,16 @@ export default function EventDashboardClient() {
               )}
 
               <div className="flex items-center justify-between pt-3 border-t border-stone-200/60 dark:border-stone-800/60 text-[11px] text-stone-500">
-                <span>City Tier: {selectedWhyThis.reasoning_spec?.city_tier || eventData.city_tier}</span>
-                <span>Guest Count: {selectedWhyThis.reasoning_spec?.guest_count || eventData.guest_count}</span>
+                <span>
+                  City Tier:{" "}
+                  {selectedWhyThis.reasoning_spec?.city_tier ||
+                    eventData.city_tier}
+                </span>
+                <span>
+                  Guest Count:{" "}
+                  {selectedWhyThis.reasoning_spec?.guest_count ||
+                    eventData.guest_count}
+                </span>
               </div>
             </div>
 

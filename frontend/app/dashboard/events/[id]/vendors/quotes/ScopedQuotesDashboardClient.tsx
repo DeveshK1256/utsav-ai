@@ -1,10 +1,10 @@
-'use client';
+"use client";
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import Link from 'next/link';
-import { useParams } from 'next/navigation';
-import { Navbar } from '@/components/ui/Navbar';
-import { getAuthHeaders, getEventOwnerToken } from '@/lib/auth';
+import React, { useState, useEffect, useRef, useCallback } from "react";
+import Link from "next/link";
+import { useParams } from "next/navigation";
+import { Navbar } from "@/components/ui/Navbar";
+import { getAuthHeaders, getEventOwnerToken } from "@/lib/auth";
 
 interface LineItem {
   name: string;
@@ -22,7 +22,7 @@ interface HiddenCostAlert {
   description: string;
   typical_impact: string;
   suggested_question: string;
-  status: 'missing_from_quote' | 'explicitly_covered' | 'ambiguous';
+  status: "missing_from_quote" | "explicitly_covered" | "ambiguous";
 }
 
 interface BenchmarkComparison {
@@ -34,7 +34,7 @@ interface BenchmarkComparison {
   cost_status: string;
   percentage_diff_vs_median?: number;
   is_limited_data: boolean;
-  reasoning: Record<string, any>;
+  reasoning: Record<string, unknown>;
 }
 
 interface QuoteDocument {
@@ -74,7 +74,7 @@ interface ComparisonResult {
   benchmark_sample_size: number;
   benchmark_is_limited_data: boolean;
   best_value_quote_id?: string;
-  reasoning: Record<string, any>;
+  reasoning: Record<string, unknown>;
 }
 
 interface NegotiationDrafts {
@@ -92,63 +92,75 @@ interface EventMetadata {
 
 export default function ScopedQuotesDashboardClient() {
   const params = useParams();
-  const eventId = (params?.id as string) || '';
+  const eventId = (params?.id as string) || "";
 
   const [eventMeta, setEventMeta] = useState<EventMetadata | null>(null);
   const [quotes, setQuotes] = useState<QuoteDocument[]>([]);
   const [selectedQuoteIds, setSelectedQuoteIds] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isUploading, setIsUploading] = useState<boolean>(false);
-  const [uploadCategory, setUploadCategory] = useState<string>('caterer');
+  const [uploadCategory, setUploadCategory] = useState<string>("caterer");
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   // Active / Detailed view
   const [activeQuote, setActiveQuote] = useState<QuoteDocument | null>(null);
 
   // Side-by-side comparison
-  const [comparisonResult, setComparisonResult] = useState<ComparisonResult | null>(null);
+  const [comparisonResult, setComparisonResult] =
+    useState<ComparisonResult | null>(null);
   const [isComparing, setIsComparing] = useState<boolean>(false);
 
   // Negotiation Drawer State
   const [isDraftDrawerOpen, setIsDraftDrawerOpen] = useState<boolean>(false);
-  const [draftTargetQuote, setDraftTargetQuote] = useState<QuoteDocument | null>(null);
-  const [draftVariants, setDraftVariants] = useState<NegotiationDrafts | null>(null);
-  const [activeVariantTab, setActiveVariantTab] = useState<'polite' | 'firm' | 'bundle_ask'>('polite');
-  const [draftLanguage, setDraftLanguage] = useState<'english' | 'hindi'>('english');
+  const [draftTargetQuote, setDraftTargetQuote] =
+    useState<QuoteDocument | null>(null);
+  const [draftVariants, setDraftVariants] = useState<NegotiationDrafts | null>(
+    null,
+  );
+  const [activeVariantTab, setActiveVariantTab] = useState<
+    "polite" | "firm" | "bundle_ask"
+  >("polite");
+  const [draftLanguage, setDraftLanguage] = useState<"english" | "hindi">(
+    "english",
+  );
   const [copySuccessMsg, setCopySuccessMsg] = useState<string | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const getApiBase = () => {
-    return typeof window !== 'undefined' && window.location.hostname.includes('netlify.app')
-      ? '/api/v1'
-      : 'https://utsav-ai-ycg2.onrender.com/api/v1';
+    return typeof window !== "undefined" &&
+      window.location.hostname.includes("netlify.app")
+      ? "/api/v1"
+      : "https://utsav-ai-ycg2.onrender.com/api/v1";
   };
 
-  const loadQuotes = useCallback(async (targetEventId: string) => {
-    setIsLoading(true);
-    try {
-      const apiBase = getApiBase();
-      const res = await fetch(`${apiBase}/quotes/event/${targetEventId}`, {
-        headers: getAuthHeaders(targetEventId)
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setQuotes(data);
-        if (data.length > 0 && !activeQuote) {
-          setActiveQuote(data[0]);
+  const loadQuotes = useCallback(
+    async (targetEventId: string) => {
+      setIsLoading(true);
+      try {
+        const apiBase = getApiBase();
+        const res = await fetch(`${apiBase}/quotes/event/${targetEventId}`, {
+          headers: getAuthHeaders(targetEventId),
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setQuotes(data);
+          if (data.length > 0 && !activeQuote) {
+            setActiveQuote(data[0]);
+          }
         }
+      } catch (err) {
+        console.error("Failed to load scoped quotes:", err);
+      } finally {
+        setIsLoading(false);
       }
-    } catch (err) {
-      console.error('Failed to load scoped quotes:', err);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [activeQuote]);
+    },
+    [activeQuote],
+  );
 
   // 1. Fetch Event Metadata & Scoped Quotes
   useEffect(() => {
-    if (!eventId || eventId === 'default') {
+    if (!eventId || eventId === "default") {
       setIsLoading(false);
       return;
     }
@@ -157,7 +169,7 @@ export default function ScopedQuotesDashboardClient() {
 
     // Fetch Event Metadata
     fetch(`${apiBase}/events/${eventId}`, {
-      headers: getAuthHeaders(eventId)
+      headers: getAuthHeaders(eventId),
     })
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
@@ -166,11 +178,11 @@ export default function ScopedQuotesDashboardClient() {
             name: data.name,
             city: data.city,
             guest_count: data.guest_count,
-            total_budget: Number(data.total_budget)
+            total_budget: Number(data.total_budget),
           });
         }
       })
-      .catch((err) => console.warn('Could not fetch event details:', err));
+      .catch((err) => console.warn("Could not fetch event details:", err));
 
     // Fetch Quotes for this Event
     loadQuotes(eventId);
@@ -178,18 +190,19 @@ export default function ScopedQuotesDashboardClient() {
 
   // Upload quote file for THIS event
   async function handleFileUpload(files: FileList | null) {
-    if (!files || files.length === 0 || !eventId || eventId === 'default') {
-      setErrorMsg('Cannot upload quote without a valid celebration event ID.');
+    if (!files || files.length === 0 || !eventId || eventId === "default") {
+      setErrorMsg("Cannot upload quote without a valid celebration event ID.");
       return;
     }
     const file = files[0];
+    if (!file) return;
 
     const form = new FormData();
-    form.append('file', file);
-    form.append('event_id', eventId);
-    form.append('category', uploadCategory);
+    form.append("file", file);
+    form.append("event_id", eventId);
+    form.append("category", uploadCategory);
     const ownerToken = getEventOwnerToken(eventId);
-    if (ownerToken) form.append('owner_token', ownerToken);
+    if (ownerToken) form.append("owner_token", ownerToken);
 
     setIsUploading(true);
     setErrorMsg(null);
@@ -197,28 +210,33 @@ export default function ScopedQuotesDashboardClient() {
     try {
       const apiBase = getApiBase();
       const res = await fetch(`${apiBase}/quotes/upload`, {
-        method: 'POST',
+        method: "POST",
         headers: getAuthHeaders(eventId),
-        body: form
+        body: form,
       });
       if (!res.ok) {
         const errData = await res.json().catch(() => ({}));
-        throw new Error(errData.detail || `Upload failed with status ${res.status}`);
+        throw new Error(
+          errData.detail || `Upload failed with status ${res.status}`,
+        );
       }
       const newQuote: QuoteDocument = await res.json();
       setQuotes((prev) => [newQuote, ...prev]);
       setActiveQuote(newQuote);
-    } catch (err: any) {
-      setErrorMsg(err.message || 'Failed to upload quote document.');
+    } catch (err: unknown) {
+      setErrorMsg(
+        (err instanceof Error ? err.message : String(err)) ||
+          "Failed to upload quote document.",
+      );
     } finally {
       setIsUploading(false);
-      if (fileInputRef.current) fileInputRef.current.value = '';
+      if (fileInputRef.current) fileInputRef.current.value = "";
     }
   }
 
   function toggleQuoteSelection(id: string) {
     setSelectedQuoteIds((prev) =>
-      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id],
     );
   }
 
@@ -229,19 +247,19 @@ export default function ScopedQuotesDashboardClient() {
     try {
       const apiBase = getApiBase();
       const res = await fetch(`${apiBase}/quotes/compare`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           quote_ids: selectedQuoteIds,
-          target_guest_count: eventMeta?.guest_count || 250
-        })
+          target_guest_count: eventMeta?.guest_count || 250,
+        }),
       });
       if (res.ok) {
         const data: ComparisonResult = await res.json();
         setComparisonResult(data);
       }
     } catch (err) {
-      console.error('Failed to compare quotes', err);
+      console.error("Failed to compare quotes", err);
     } finally {
       setIsComparing(false);
     }
@@ -256,37 +274,39 @@ export default function ScopedQuotesDashboardClient() {
 
     try {
       const apiBase = getApiBase();
-      const competitorId = quotes.find((q) => q.id !== quote.id && q.category === quote.category)?.id;
+      const competitorId = quotes.find(
+        (q) => q.id !== quote.id && q.category === quote.category,
+      )?.id;
       const res = await fetch(`${apiBase}/quotes/${quote.id}/negotiate-draft`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           quote_id: quote.id,
           target_discount_percentage: 10.0,
-          competing_quote_id: competitorId
-        })
+          competing_quote_id: competitorId,
+        }),
       });
       if (res.ok) {
         const data = await res.json();
         setDraftVariants(data.draft_variants);
       }
     } catch (err) {
-      console.error('Failed to load negotiation drafts', err);
+      console.error("Failed to load negotiation drafts", err);
     }
   }
 
   function handleCopyText(text: string) {
     navigator.clipboard.writeText(text);
-    setCopySuccessMsg('Draft copied to clipboard!');
+    setCopySuccessMsg("Draft copied to clipboard!");
     setTimeout(() => setCopySuccessMsg(null), 3000);
   }
 
   const formatCurrency = (amount?: number) => {
-    if (amount === undefined || amount === null) return '—';
-    return new Intl.NumberFormat('en-IN', {
-      style: 'currency',
-      currency: 'INR',
-      maximumFractionDigits: 0
+    if (amount === undefined || amount === null) return "—";
+    return new Intl.NumberFormat("en-IN", {
+      style: "currency",
+      currency: "INR",
+      maximumFractionDigits: 0,
     }).format(amount);
   };
 
@@ -309,15 +329,23 @@ export default function ScopedQuotesDashboardClient() {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 pt-8 space-y-6">
         {/* Breadcrumb Navigation */}
         <div className="flex items-center gap-2 text-xs text-stone-500 dark:text-stone-400 font-medium">
-          <Link href="/" className="hover:text-stone-900 dark:hover:text-white transition-colors">
+          <Link
+            href="/"
+            className="hover:text-stone-900 dark:hover:text-white transition-colors"
+          >
             Home
           </Link>
           <span>/</span>
-          <Link href={`/dashboard/events/${eventId}`} className="hover:text-stone-900 dark:hover:text-white transition-colors">
-            {eventMeta?.name || 'Celebration'}
+          <Link
+            href={`/dashboard/events/${eventId}`}
+            className="hover:text-stone-900 dark:hover:text-white transition-colors"
+          >
+            {eventMeta?.name || "Celebration"}
           </Link>
           <span>/</span>
-          <span className="text-stone-700 dark:text-stone-300">Vendor Quotes</span>
+          <span className="text-stone-700 dark:text-stone-300">
+            Vendor Quotes
+          </span>
         </div>
 
         {/* Event Scope Header */}
@@ -327,10 +355,12 @@ export default function ScopedQuotesDashboardClient() {
               Scoped Vendor Management
             </span>
             <h1 className="text-2xl sm:text-3xl font-serif font-bold text-stone-900 dark:text-stone-50 mt-0.5">
-              {eventMeta?.name || 'Celebration Quotes'}
+              {eventMeta?.name || "Celebration Quotes"}
             </h1>
             <p className="text-xs text-stone-500 dark:text-stone-400 mt-1">
-              Event ID: <span className="font-mono">{eventId}</span> • City: {eventMeta?.city || 'Calibrated'} • Guests: {eventMeta?.guest_count || 250}
+              Event ID: <span className="font-mono">{eventId}</span> • City:{" "}
+              {eventMeta?.city || "Calibrated"} • Guests:{" "}
+              {eventMeta?.guest_count || 250}
             </p>
           </div>
 
@@ -350,7 +380,9 @@ export default function ScopedQuotesDashboardClient() {
               Deterministic Negotiation & Document Privacy
             </h4>
             <p className="text-xs text-amber-900/90 dark:text-amber-300/90 mt-0.5 leading-relaxed">
-              Utsav never contacts vendors on your behalf. All extracted prices are grounded strictly in your uploaded contracts. Draft letters are provided for you to review, personalize, and send directly.
+              Utsav never contacts vendors on your behalf. All extracted prices
+              are grounded strictly in your uploaded contracts. Draft letters
+              are provided for you to review, personalize, and send directly.
             </p>
           </div>
         </div>
@@ -358,7 +390,12 @@ export default function ScopedQuotesDashboardClient() {
         {errorMsg && (
           <div className="p-4 rounded-2xl bg-rose-50 dark:bg-rose-950/60 border border-rose-300 dark:border-rose-800 text-rose-800 dark:text-rose-200 text-xs flex justify-between items-center shadow-sm">
             <span>⚠️ {errorMsg}</span>
-            <button onClick={() => setErrorMsg(null)} className="font-bold ml-2 hover:opacity-75">✕</button>
+            <button
+              onClick={() => setErrorMsg(null)}
+              className="font-bold ml-2 hover:opacity-75"
+            >
+              ✕
+            </button>
           </div>
         )}
 
@@ -370,24 +407,30 @@ export default function ScopedQuotesDashboardClient() {
               Upload Vendor Quotation
             </h2>
             <p className="text-xs text-stone-600 dark:text-stone-400 mb-4">
-              Upload PDF invoice or quotation image for {eventMeta?.name || 'this event'}. Line items, taxes, and hidden clauses are extracted deterministically.
+              Upload PDF invoice or quotation image for{" "}
+              {eventMeta?.name || "this event"}. Line items, taxes, and hidden
+              clauses are extracted deterministically.
             </p>
 
             <div className="flex flex-wrap items-center gap-2 sm:gap-3 mb-5">
-              <label className="text-xs font-semibold text-stone-700 dark:text-stone-300">Category:</label>
-              {(['caterer', 'venue', 'decorator', 'photographer'] as const).map((cat) => (
-                <button
-                  key={cat}
-                  onClick={() => setUploadCategory(cat)}
-                  className={`px-3.5 py-1.5 rounded-full text-xs font-semibold capitalize transition-all active:scale-95 ${
-                    uploadCategory === cat
-                      ? 'bg-[#8B1E28] text-white dark:bg-[#F4B41A] dark:text-stone-950 shadow-sm'
-                      : 'bg-stone-100 dark:bg-stone-800 text-stone-700 dark:text-stone-300 hover:bg-stone-200 dark:hover:bg-stone-700 border border-stone-200 dark:border-stone-700'
-                  }`}
-                >
-                  {cat}
-                </button>
-              ))}
+              <label className="text-xs font-semibold text-stone-700 dark:text-stone-300">
+                Category:
+              </label>
+              {(["caterer", "venue", "decorator", "photographer"] as const).map(
+                (cat) => (
+                  <button
+                    key={cat}
+                    onClick={() => setUploadCategory(cat)}
+                    className={`px-3.5 py-1.5 rounded-full text-xs font-semibold capitalize transition-all active:scale-95 ${
+                      uploadCategory === cat
+                        ? "bg-[#8B1E28] text-white dark:bg-[#F4B41A] dark:text-stone-950 shadow-sm"
+                        : "bg-stone-100 dark:bg-stone-800 text-stone-700 dark:text-stone-300 hover:bg-stone-200 dark:hover:bg-stone-700 border border-stone-200 dark:border-stone-700"
+                    }`}
+                  >
+                    {cat}
+                  </button>
+                ),
+              )}
             </div>
 
             <div
@@ -408,9 +451,13 @@ export default function ScopedQuotesDashboardClient() {
               />
               <div className="text-4xl mb-2">📄</div>
               <p className="text-sm font-semibold text-stone-800 dark:text-stone-200">
-                {isUploading ? 'Extracting & Auditing Quote with Gemini...' : 'Drag & drop quote PDF/image or click to browse'}
+                {isUploading
+                  ? "Extracting & Auditing Quote with Gemini..."
+                  : "Drag & drop quote PDF/image or click to browse"}
               </p>
-              <p className="text-xs text-stone-500 dark:text-stone-400 mt-1">Supports PDF, PNG, JPG up to 10MB</p>
+              <p className="text-xs text-stone-500 dark:text-stone-400 mt-1">
+                Supports PDF, PNG, JPG up to 10MB
+              </p>
             </div>
           </div>
 
@@ -421,14 +468,18 @@ export default function ScopedQuotesDashboardClient() {
                 Side-by-Side Comparison
               </h3>
               <p className="text-xs text-stone-600 dark:text-stone-400 mb-4">
-                Select 2 or more quotes in the same category to calculate effective costs and hidden liability buffers.
+                Select 2 or more quotes in the same category to calculate
+                effective costs and hidden liability buffers.
               </p>
               <div className="p-4 rounded-2xl bg-stone-100 dark:bg-stone-900/60 border border-stone-200 dark:border-stone-800 space-y-2 mb-4">
                 <div className="text-xs font-semibold text-stone-700 dark:text-stone-300">
                   Selected for Matrix:
                 </div>
                 <div className="text-2xl font-bold font-serif text-[#8B1E28] dark:text-[#F4B41A]">
-                  {selectedQuoteIds.length} <span className="text-xs font-semibold text-stone-700 dark:text-stone-300">quotes</span>
+                  {selectedQuoteIds.length}{" "}
+                  <span className="text-xs font-semibold text-stone-700 dark:text-stone-300">
+                    quotes
+                  </span>
                 </div>
               </div>
             </div>
@@ -438,11 +489,13 @@ export default function ScopedQuotesDashboardClient() {
               disabled={selectedQuoteIds.length < 2 || isComparing}
               className={`w-full py-3 rounded-xl text-xs font-bold uppercase tracking-wider transition-all shadow-sm active:scale-95 ${
                 selectedQuoteIds.length >= 2 && !isComparing
-                  ? 'bg-[#8B1E28] hover:bg-stone-900 text-white dark:bg-[#F4B41A] dark:hover:bg-amber-300 dark:text-stone-950'
-                  : 'bg-stone-200 dark:bg-stone-800 text-stone-400 cursor-not-allowed'
+                  ? "bg-[#8B1E28] hover:bg-stone-900 text-white dark:bg-[#F4B41A] dark:hover:bg-amber-300 dark:text-stone-950"
+                  : "bg-stone-200 dark:bg-stone-800 text-stone-400 cursor-not-allowed"
               }`}
             >
-              {isComparing ? 'Computing Differential...' : 'Run Side-by-Side Comparison'}
+              {isComparing
+                ? "Computing Differential..."
+                : "Run Side-by-Side Comparison"}
             </button>
           </div>
         </div>
@@ -456,7 +509,8 @@ export default function ScopedQuotesDashboardClient() {
                   Comparative Normalization Matrix
                 </span>
                 <h3 className="text-xl font-serif font-bold text-stone-900 dark:text-stone-50 capitalize">
-                  {comparisonResult.category} Comparison ({comparisonResult.guest_count} Guests)
+                  {comparisonResult.category} Comparison (
+                  {comparisonResult.guest_count} Guests)
                 </h3>
               </div>
               <button
@@ -469,14 +523,15 @@ export default function ScopedQuotesDashboardClient() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {comparisonResult.compared_quotes.map((q) => {
-                const isBest = q.quote_id === comparisonResult.best_value_quote_id;
+                const isBest =
+                  q.quote_id === comparisonResult.best_value_quote_id;
                 return (
                   <div
                     key={q.quote_id}
                     className={`rounded-2xl p-5 border relative flex flex-col justify-between ${
                       isBest
-                        ? 'border-emerald-500 dark:border-emerald-400 bg-emerald-50/40 dark:bg-emerald-950/20 shadow-md'
-                        : 'border-stone-200 dark:border-stone-800 bg-white/40 dark:bg-stone-900/40'
+                        ? "border-emerald-500 dark:border-emerald-400 bg-emerald-50/40 dark:bg-emerald-950/20 shadow-md"
+                        : "border-stone-200 dark:border-stone-800 bg-white/40 dark:bg-stone-900/40"
                     }`}
                   >
                     {isBest && (
@@ -490,11 +545,15 @@ export default function ScopedQuotesDashboardClient() {
                         <h4 className="font-serif font-bold text-base text-stone-900 dark:text-stone-100">
                           {q.vendor_name}
                         </h4>
-                        <div className="text-xs text-stone-500">Raw: {formatCurrency(q.raw_total)}</div>
+                        <div className="text-xs text-stone-500">
+                          Raw: {formatCurrency(q.raw_total)}
+                        </div>
                       </div>
 
                       <div className="p-3 rounded-xl bg-stone-100 dark:bg-stone-800/60 font-mono space-y-1 text-xs">
-                        <div className="text-[10px] uppercase text-stone-500">Effective Total (+Hidden Risks)</div>
+                        <div className="text-[10px] uppercase text-stone-500">
+                          Effective Total (+Hidden Risks)
+                        </div>
                         <div className="text-base font-bold text-stone-900 dark:text-stone-100">
                           {formatCurrency(q.effective_total_with_hidden_buffer)}
                         </div>
@@ -533,7 +592,8 @@ export default function ScopedQuotesDashboardClient() {
 
             {quotes.length === 0 ? (
               <div className="p-8 rounded-3xl glass-card text-center text-xs text-stone-500 border border-stone-200 dark:border-stone-800">
-                No quotes uploaded yet for this event. Drag and drop a vendor quote above to begin auditing.
+                No quotes uploaded yet for this event. Drag and drop a vendor
+                quote above to begin auditing.
               </div>
             ) : (
               quotes.map((q) => {
@@ -545,8 +605,8 @@ export default function ScopedQuotesDashboardClient() {
                     onClick={() => setActiveQuote(q)}
                     className={`p-4 rounded-2xl border transition-all cursor-pointer relative shadow-xs ${
                       isActive
-                        ? 'border-amber-500 dark:border-amber-400 bg-amber-50/50 dark:bg-amber-950/20'
-                        : 'border-stone-200 dark:border-stone-800 bg-white/60 dark:bg-stone-900/60 hover:bg-stone-50 dark:hover:bg-stone-800/40'
+                        ? "border-amber-500 dark:border-amber-400 bg-amber-50/50 dark:bg-amber-950/20"
+                        : "border-stone-200 dark:border-stone-800 bg-white/60 dark:bg-stone-900/60 hover:bg-stone-50 dark:hover:bg-stone-800/40"
                     }`}
                   >
                     <div className="flex items-start justify-between gap-2">
@@ -557,7 +617,9 @@ export default function ScopedQuotesDashboardClient() {
                         <h4 className="font-semibold text-sm text-stone-900 dark:text-stone-100 mt-1">
                           {q.vendor_name}
                         </h4>
-                        <div className="text-xs text-stone-500 mt-0.5">{q.file_name}</div>
+                        <div className="text-xs text-stone-500 mt-0.5">
+                          {q.file_name}
+                        </div>
                       </div>
 
                       <input
@@ -575,9 +637,17 @@ export default function ScopedQuotesDashboardClient() {
                       <span className="font-mono font-bold text-stone-900 dark:text-stone-100">
                         {formatCurrency(q.total_quoted_amount)}
                       </span>
-                      {q.hidden_cost_alerts.filter((a) => a.status === 'missing_from_quote').length > 0 && (
+                      {q.hidden_cost_alerts.filter(
+                        (a) => a.status === "missing_from_quote",
+                      ).length > 0 && (
                         <span className="text-rose-600 dark:text-rose-400 font-semibold text-[11px]">
-                          ⚠️ {q.hidden_cost_alerts.filter((a) => a.status === 'missing_from_quote').length} hidden risks
+                          ⚠️{" "}
+                          {
+                            q.hidden_cost_alerts.filter(
+                              (a) => a.status === "missing_from_quote",
+                            ).length
+                          }{" "}
+                          hidden risks
                         </span>
                       )}
                     </div>
@@ -600,7 +670,8 @@ export default function ScopedQuotesDashboardClient() {
                       {activeQuote.vendor_name}
                     </h3>
                     <div className="text-xs text-stone-500 font-mono mt-0.5">
-                      File: {activeQuote.file_name} • Uploaded: {new Date(activeQuote.uploaded_at).toLocaleDateString()}
+                      File: {activeQuote.file_name} • Uploaded:{" "}
+                      {new Date(activeQuote.uploaded_at).toLocaleDateString()}
                     </div>
                   </div>
 
@@ -631,7 +702,10 @@ export default function ScopedQuotesDashboardClient() {
                       </thead>
                       <tbody className="divide-y divide-stone-200 dark:divide-stone-800">
                         {activeQuote.line_items.map((item, idx) => (
-                          <tr key={idx} className="hover:bg-stone-50/50 dark:hover:bg-stone-800/30">
+                          <tr
+                            key={idx}
+                            className="hover:bg-stone-50/50 dark:hover:bg-stone-800/30"
+                          >
                             <td className="p-3 font-medium text-stone-900 dark:text-stone-100">
                               {item.name}
                               {item.category_tag && (
@@ -654,7 +728,9 @@ export default function ScopedQuotesDashboardClient() {
                       </tbody>
                       <tfoot className="bg-stone-50 dark:bg-stone-900/60 font-semibold font-mono border-t border-stone-200 dark:border-stone-800">
                         <tr>
-                          <td colSpan={3} className="p-3 text-right">Total Quoted Amount:</td>
+                          <td colSpan={3} className="p-3 text-right">
+                            Total Quoted Amount:
+                          </td>
                           <td className="p-3 text-right text-base text-[#8B1E28] dark:text-[#F4B41A]">
                             {formatCurrency(activeQuote.total_quoted_amount)}
                           </td>
@@ -674,19 +750,25 @@ export default function ScopedQuotesDashboardClient() {
                       <div
                         key={idx}
                         className={`p-3.5 rounded-xl border text-xs space-y-1.5 ${
-                          alert.status === 'missing_from_quote'
-                            ? 'bg-rose-50/70 dark:bg-rose-950/30 border-rose-300 dark:border-rose-900 text-rose-950 dark:text-rose-200'
-                            : alert.status === 'ambiguous'
-                            ? 'bg-amber-50/70 dark:bg-amber-950/30 border-amber-300 dark:border-amber-900 text-amber-950 dark:text-amber-200'
-                            : 'bg-emerald-50/70 dark:bg-emerald-950/30 border-emerald-300 dark:border-emerald-900 text-emerald-950 dark:text-emerald-200'
+                          alert.status === "missing_from_quote"
+                            ? "bg-rose-50/70 dark:bg-rose-950/30 border-rose-300 dark:border-rose-900 text-rose-950 dark:text-rose-200"
+                            : alert.status === "ambiguous"
+                              ? "bg-amber-50/70 dark:bg-amber-950/30 border-amber-300 dark:border-amber-900 text-amber-950 dark:text-amber-200"
+                              : "bg-emerald-50/70 dark:bg-emerald-950/30 border-emerald-300 dark:border-emerald-900 text-emerald-950 dark:text-emerald-200"
                         }`}
                       >
                         <div className="flex items-center justify-between font-bold">
                           <span>{alert.name}</span>
-                          <span className="font-mono text-[10px] uppercase">{alert.status.replace('_', ' ')}</span>
+                          <span className="font-mono text-[10px] uppercase">
+                            {alert.status.replace("_", " ")}
+                          </span>
                         </div>
-                        <p className="text-[11px] opacity-90 leading-relaxed">{alert.description}</p>
-                        <div className="font-mono text-[10px] text-stone-500">Typical Impact: {alert.typical_impact}</div>
+                        <p className="text-[11px] opacity-90 leading-relaxed">
+                          {alert.description}
+                        </p>
+                        <div className="font-mono text-[10px] text-stone-500">
+                          Typical Impact: {alert.typical_impact}
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -694,7 +776,8 @@ export default function ScopedQuotesDashboardClient() {
               </div>
             ) : (
               <div className="p-12 rounded-3xl glass-card text-center text-xs text-stone-500 border border-stone-200 dark:border-stone-800">
-                Select a quote from the left to view extracted deliverables and hidden clause red flags.
+                Select a quote from the left to view extracted deliverables and
+                hidden clause red flags.
               </div>
             )}
           </div>
@@ -710,7 +793,8 @@ export default function ScopedQuotesDashboardClient() {
                     Draft Negotiation Template
                   </h3>
                   <p className="text-xs text-stone-500 mt-0.5">
-                    Target Vendor: {draftTargetQuote.vendor_name} ({draftTargetQuote.category})
+                    Target Vendor: {draftTargetQuote.vendor_name} (
+                    {draftTargetQuote.category})
                   </p>
                 </div>
                 <button
@@ -723,32 +807,36 @@ export default function ScopedQuotesDashboardClient() {
 
               {/* Tone Variant Tabs */}
               <div className="flex border-b border-stone-200 dark:border-stone-800 gap-1 text-xs font-semibold">
-                {(['polite', 'firm', 'bundle_ask'] as const).map((variant) => (
+                {(["polite", "firm", "bundle_ask"] as const).map((variant) => (
                   <button
                     key={variant}
                     onClick={() => setActiveVariantTab(variant)}
                     className={`px-4 py-2 border-b-2 capitalize transition-all ${
                       activeVariantTab === variant
-                        ? 'border-[#8B1E28] dark:border-[#F4B41A] text-[#8B1E28] dark:text-[#F4B41A]'
-                        : 'border-transparent text-stone-500 hover:text-stone-800'
+                        ? "border-[#8B1E28] dark:border-[#F4B41A] text-[#8B1E28] dark:text-[#F4B41A]"
+                        : "border-transparent text-stone-500 hover:text-stone-800"
                     }`}
                   >
-                    {variant.replace('_', ' ')}
+                    {variant.replace("_", " ")}
                   </button>
                 ))}
                 <div className="ml-auto flex items-center gap-1.5 text-xs">
                   <button
-                    onClick={() => setDraftLanguage('english')}
+                    onClick={() => setDraftLanguage("english")}
                     className={`px-2.5 py-1 rounded-md text-[11px] font-medium ${
-                      draftLanguage === 'english' ? 'bg-stone-800 text-white dark:bg-stone-200 dark:text-stone-900' : 'text-stone-500'
+                      draftLanguage === "english"
+                        ? "bg-stone-800 text-white dark:bg-stone-200 dark:text-stone-900"
+                        : "text-stone-500"
                     }`}
                   >
                     English
                   </button>
                   <button
-                    onClick={() => setDraftLanguage('hindi')}
+                    onClick={() => setDraftLanguage("hindi")}
                     className={`px-2.5 py-1 rounded-md text-[11px] font-medium ${
-                      draftLanguage === 'hindi' ? 'bg-stone-800 text-white dark:bg-stone-200 dark:text-stone-900' : 'text-stone-500'
+                      draftLanguage === "hindi"
+                        ? "bg-stone-800 text-white dark:bg-stone-200 dark:text-stone-900"
+                        : "text-stone-500"
                     }`}
                   >
                     Hindi
@@ -765,7 +853,7 @@ export default function ScopedQuotesDashboardClient() {
                   value={
                     draftVariants
                       ? draftVariants[activeVariantTab][draftLanguage]
-                      : 'Synthesizing contextual negotiation brief from verified contract benchmarks...'
+                      : "Synthesizing contextual negotiation brief from verified contract benchmarks..."
                   }
                 />
                 {copySuccessMsg && (
@@ -779,7 +867,9 @@ export default function ScopedQuotesDashboardClient() {
                 <button
                   onClick={() => {
                     if (draftVariants) {
-                      handleCopyText(draftVariants[activeVariantTab][draftLanguage]);
+                      handleCopyText(
+                        draftVariants[activeVariantTab][draftLanguage],
+                      );
                     }
                   }}
                   disabled={!draftVariants}

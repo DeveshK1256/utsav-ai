@@ -1,13 +1,13 @@
-'use client';
+"use client";
 
-import React from 'react';
-import Link from 'next/link';
-import { Navbar } from '@/components/ui/Navbar';
-import { ElderDisclaimerBanner } from '@/components/ui/ElderDisclaimerBanner';
-import { HeroChaosToComposed } from '@/components/3d/HeroChaosToComposed';
-import { WalkthroughVideoPlayer } from '@/components/ui/WalkthroughVideoPlayer';
-import { FeatureShowcase3D } from '@/components/3d/FeatureShowcase3D';
-import { DiyaLightingInteraction } from '@/components/3d/DiyaLightingInteraction';
+import React from "react";
+import Link from "next/link";
+import { Navbar } from "@/components/ui/Navbar";
+import { ElderDisclaimerBanner } from "@/components/ui/ElderDisclaimerBanner";
+import { HeroChaosToComposed } from "@/components/3d/HeroChaosToComposed";
+import { WalkthroughVideoPlayer } from "@/components/ui/WalkthroughVideoPlayer";
+import { FeatureShowcase3D } from "@/components/3d/FeatureShowcase3D";
+import { DiyaLightingInteraction } from "@/components/3d/DiyaLightingInteraction";
 
 export default function HomePage() {
   return (
@@ -52,7 +52,8 @@ export default function HomePage() {
               उ
             </div>
             <p className="font-medium text-stone-800 dark:text-stone-200">
-              © 2026 Utsav AI. Composed with deep respect for Indian heritage traditions.
+              © 2026 Utsav AI. Composed with deep respect for Indian heritage
+              traditions.
             </p>
           </div>
 

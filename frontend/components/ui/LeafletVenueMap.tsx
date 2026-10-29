@@ -1,7 +1,7 @@
-'use client';
+"use client";
 
-import React, { useEffect, useRef } from 'react';
-import { VendorDiscoveryItem } from './VenueDiscoveryList';
+import React, { useEffect, useRef } from "react";
+import { VendorDiscoveryItem } from "./VenueDiscoveryList";
 
 interface LeafletVenueMapProps {
   venues: VendorDiscoveryItem[];
@@ -22,19 +22,19 @@ export function LeafletVenueMap({
   userLng,
   selectedVenueId,
   onSelectVenue,
-  className = 'h-[420px] w-full rounded-2xl overflow-hidden border border-stone-200 dark:border-stone-800 shadow-md relative'
+  className = "h-[420px] w-full rounded-2xl overflow-hidden border border-stone-200 dark:border-stone-800 shadow-md relative",
 }: LeafletVenueMapProps) {
   const mapContainerRef = useRef<HTMLDivElement>(null);
-  const mapInstanceRef = useRef<any>(null);
-  const markersLayerRef = useRef<any>(null);
+  const mapInstanceRef = useRef<{ remove: () => void } | null>(null);
+  const markersLayerRef = useRef<{ clearLayers: () => void } | null>(null);
 
   useEffect(() => {
-    if (typeof window === 'undefined' || !mapContainerRef.current) return;
+    if (typeof window === "undefined" || !mapContainerRef.current) return;
 
     let isMounted = true;
 
     // Dynamically import Leaflet to protect Next.js SSR
-    import('leaflet').then((L) => {
+    import("leaflet").then((L) => {
       if (!isMounted || !mapContainerRef.current) return;
 
       // Clean up previous instance if any
@@ -48,11 +48,12 @@ export function LeafletVenueMap({
         center: [centerLat, centerLng],
         zoom: 12,
         scrollWheelZoom: false,
-        attributionControl: true
+        attributionControl: true,
       });
 
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors',
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        attribution:
+          '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors',
         maxZoom: 18,
       }).addTo(map);
 
@@ -63,7 +64,7 @@ export function LeafletVenueMap({
       // Render User GPS/Query location pin if provided
       if (userLat && userLng) {
         const userIcon = L.divIcon({
-          className: 'user-pin-marker',
+          className: "user-pin-marker",
           html: `
             <div class="relative flex items-center justify-center w-8 h-8">
               <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
@@ -71,12 +72,14 @@ export function LeafletVenueMap({
             </div>
           `,
           iconSize: [32, 32],
-          iconAnchor: [16, 16]
+          iconAnchor: [16, 16],
         });
 
         L.marker([userLat, userLng], { icon: userIcon })
           .addTo(markersLayer)
-          .bindPopup('<strong>Your Search Location</strong><br/><span style="font-size:11px;color:#666;">Distances calculated from here</span>');
+          .bindPopup(
+            '<strong>Your Search Location</strong><br/><span style="font-size:11px;color:#666;">Distances calculated from here</span>',
+          );
       }
 
       // Render venue pins
@@ -84,20 +87,22 @@ export function LeafletVenueMap({
         if (!v.latitude || !v.longitude) return;
 
         const isSelected = v.id === selectedVenueId;
-        const isCuratedSeed = (v.source_notes || '').includes('pickyourtrail') || (v.source_notes || '').includes('venuelook');
-        
-        const pinBg = isSelected 
-          ? '#10B981' // Emerald for selected
-          : isCuratedSeed 
-            ? '#D97706' // Warm Amber for Curated Seed
-            : '#8B1E28'; // Kumkum Crimson for OSM record
+        const isCuratedSeed =
+          (v.source_notes || "").includes("pickyourtrail") ||
+          (v.source_notes || "").includes("venuelook");
+
+        const pinBg = isSelected
+          ? "#10B981" // Emerald for selected
+          : isCuratedSeed
+            ? "#D97706" // Warm Amber for Curated Seed
+            : "#8B1E28"; // Kumkum Crimson for OSM record
 
         const iconHtml = `
           <div style="
             background-color: ${pinBg};
             color: white;
-            width: ${isSelected ? '36px' : '30px'};
-            height: ${isSelected ? '36px' : '30px'};
+            width: ${isSelected ? "36px" : "30px"};
+            height: ${isSelected ? "36px" : "30px"};
             border-radius: 50% 50% 50% 0;
             transform: rotate(-45deg);
             display: flex;
@@ -107,8 +112,8 @@ export function LeafletVenueMap({
             box-shadow: 0 4px 6px rgba(0,0,0,0.3);
             transition: all 0.2s ease;
           ">
-            <span style="transform: rotate(45deg); font-size: ${isSelected ? '14px' : '12px'};">
-              ${isCuratedSeed ? '🪔' : '🏛️'}
+            <span style="transform: rotate(45deg); font-size: ${isSelected ? "14px" : "12px"};">
+              ${isCuratedSeed ? "🪔" : "🏛️"}
             </span>
           </div>
         `;
@@ -117,22 +122,27 @@ export function LeafletVenueMap({
           className: `venue-marker-${v.id}`,
           html: iconHtml,
           iconSize: [isSelected ? 36 : 30, isSelected ? 36 : 30],
-          iconAnchor: [isSelected ? 18 : 15, isSelected ? 36 : 30]
+          iconAnchor: [isSelected ? 18 : 15, isSelected ? 36 : 30],
         });
 
         const marker = L.marker([v.latitude, v.longitude], {
           icon: markerIcon,
           keyboard: true,
           title: `${v.business_name} (${v.locality || v.city}) - Press Enter to select`,
-          alt: `${v.business_name} marker`
+          alt: `${v.business_name} marker`,
         }).addTo(markersLayer);
 
         // Interactive Popup
-        const distBadge = v.distance_km !== undefined ? `<strong>${v.distance_km.toFixed(1)} km</strong> away` : 'Distance approximate';
-        const sourceBadge = isCuratedSeed ? '🌟 Curated Seed Directory' : '🗺️ OpenStreetMap Record';
-        
-        const popupContent = document.createElement('div');
-        popupContent.className = 'venue-popup p-1 text-xs space-y-1.5';
+        const distBadge =
+          v.distance_km !== undefined
+            ? `<strong>${v.distance_km.toFixed(1)} km</strong> away`
+            : "Distance approximate";
+        const sourceBadge = isCuratedSeed
+          ? "🌟 Curated Seed Directory"
+          : "🗺️ OpenStreetMap Record";
+
+        const popupContent = document.createElement("div");
+        popupContent.className = "venue-popup p-1 text-xs space-y-1.5";
         popupContent.innerHTML = `
           <div style="font-family: serif; font-size: 14px; font-weight: bold; color: #1C1917; line-height: 1.2;">
             ${v.business_name}
@@ -141,7 +151,7 @@ export function LeafletVenueMap({
             📍 ${v.locality || v.city} • <span style="color: #8B1E28; font-weight: 600;">${distBadge}</span>
           </div>
           <div style="font-size: 11px; color: #78716C; margin-top: 2px;">
-            💰 Cost: <span style="font-weight: 600; color: #44403C;">Estimate (${v.cost_estimate?.estimated_cost_display || 'Limited data'})</span>
+            💰 Cost: <span style="font-weight: 600; color: #44403C;">Estimate (${v.cost_estimate?.estimated_cost_display || "Limited data"})</span>
           </div>
           <div style="display: inline-block; font-size: 10px; background: #F5F5F4; padding: 2px 6px; border-radius: 4px; color: #78716C; margin-top: 3px;">
             ${sourceBadge}
@@ -158,7 +168,7 @@ export function LeafletVenueMap({
               cursor: pointer;
               font-size: 11px;
             ">
-              ${isSelected ? '✓ Selected Venue' : 'Select This Venue'}
+              ${isSelected ? "✓ Selected Venue" : "Select This Venue"}
             </button>
           </div>
         `;
@@ -166,8 +176,11 @@ export function LeafletVenueMap({
         marker.bindPopup(popupContent);
 
         // Keyboard activation on Enter / Space
-        marker.on('keypress', (e: any) => {
-          if (e.originalEvent && (e.originalEvent.key === 'Enter' || e.originalEvent.key === ' ')) {
+        marker.on("keypress", (e: { originalEvent?: KeyboardEvent }) => {
+          if (
+            e.originalEvent &&
+            (e.originalEvent.key === "Enter" || e.originalEvent.key === " ")
+          ) {
             if (onSelectVenue) {
               onSelectVenue(v);
             }
@@ -176,7 +189,7 @@ export function LeafletVenueMap({
         });
 
         // Bind button click inside popup
-        marker.on('popupopen', () => {
+        marker.on("popupopen", () => {
           const btn = document.getElementById(`select-pin-btn-${v.id}`);
           if (btn && onSelectVenue) {
             btn.onclick = () => {
@@ -187,7 +200,7 @@ export function LeafletVenueMap({
         });
 
         // Also trigger on marker click
-        marker.on('click', () => {
+        marker.on("click", () => {
           if (onSelectVenue && !isSelected) {
             onSelectVenue(v);
           }
@@ -197,9 +210,9 @@ export function LeafletVenueMap({
       // Fit bounds if venues exist
       if (venues.length > 0) {
         const boundsCoords: [number, number][] = venues
-          .filter(v => v.latitude && v.longitude)
-          .map(v => [v.latitude!, v.longitude!]);
-        
+          .filter((v) => v.latitude && v.longitude)
+          .map((v) => [v.latitude!, v.longitude!]);
+
         if (userLat && userLng) {
           boundsCoords.push([userLat, userLng]);
         }
@@ -212,20 +225,27 @@ export function LeafletVenueMap({
       // Ensure controls and container have accessible labels and non-trapping tab navigation
       const container = mapContainerRef.current;
       if (container) {
-        container.setAttribute('role', 'region');
-        container.setAttribute('aria-label', 'Celebration Venues Interactive Map');
-        
+        container.setAttribute("role", "region");
+        container.setAttribute(
+          "aria-label",
+          "Celebration Venues Interactive Map",
+        );
+
         // Ensure zoom controls have accessible aria-labels
         setTimeout(() => {
-          const zoomIn = container.querySelector('.leaflet-control-zoom-in') as HTMLElement | null;
-          const zoomOut = container.querySelector('.leaflet-control-zoom-out') as HTMLElement | null;
+          const zoomIn = container.querySelector(
+            ".leaflet-control-zoom-in",
+          ) as HTMLElement | null;
+          const zoomOut = container.querySelector(
+            ".leaflet-control-zoom-out",
+          ) as HTMLElement | null;
           if (zoomIn) {
-            zoomIn.setAttribute('aria-label', 'Zoom map in');
-            zoomIn.setAttribute('title', 'Zoom map in');
+            zoomIn.setAttribute("aria-label", "Zoom map in");
+            zoomIn.setAttribute("title", "Zoom map in");
           }
           if (zoomOut) {
-            zoomOut.setAttribute('aria-label', 'Zoom map out');
-            zoomOut.setAttribute('title', 'Zoom map out');
+            zoomOut.setAttribute("aria-label", "Zoom map out");
+            zoomOut.setAttribute("title", "Zoom map out");
           }
         }, 100);
       }
@@ -238,7 +258,15 @@ export function LeafletVenueMap({
         mapInstanceRef.current = null;
       }
     };
-  }, [venues, centerLat, centerLng, userLat, userLng, selectedVenueId, onSelectVenue]);
+  }, [
+    venues,
+    centerLat,
+    centerLng,
+    userLat,
+    userLng,
+    selectedVenueId,
+    onSelectVenue,
+  ]);
 
   return (
     <div className={className}>
@@ -249,15 +277,15 @@ export function LeafletVenueMap({
       >
         Skip map controls to venue list
       </a>
-      
-      <div 
-        ref={mapContainerRef} 
-        className="w-full h-full min-h-[400px]" 
-        tabIndex={0} 
+
+      <div
+        ref={mapContainerRef}
+        className="w-full h-full min-h-[400px]"
+        tabIndex={0}
         role="region"
         aria-label="Interactive venue map. Use Tab to navigate venue markers or skip to venue list."
       />
-      
+
       {/* Map Legend Overlay */}
       <div className="absolute bottom-3 left-3 z-[400] bg-white/90 dark:bg-stone-900/90 backdrop-blur-xs p-2 rounded-xl border border-stone-200 dark:border-stone-800 text-[10px] space-y-1 shadow-md pointer-events-none">
         <div className="flex items-center gap-1.5 font-semibold text-stone-800 dark:text-stone-200">

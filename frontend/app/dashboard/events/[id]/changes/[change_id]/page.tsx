@@ -1,9 +1,7 @@
-import ChangeProposalDiffClient from './ChangeProposalDiffClient';
+import ChangeProposalDiffClient from "./ChangeProposalDiffClient";
 
 export function generateStaticParams() {
-  return [
-    { id: 'default', change_id: 'default' }
-  ];
+  return [{ id: "default", change_id: "default" }];
 }
 
 export default function ChangeProposalDiffPage() {

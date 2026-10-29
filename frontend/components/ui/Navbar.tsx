@@ -1,10 +1,10 @@
-'use client';
+"use client";
 
-import React from 'react';
-import Link from 'next/link';
-import { ThemeToggle } from './ThemeToggle';
-import { MotionToggle } from './MotionToggle';
-import { LanguageSelector } from './LanguageSelector';
+import React from "react";
+import Link from "next/link";
+import { ThemeToggle } from "./ThemeToggle";
+import { MotionToggle } from "./MotionToggle";
+import { LanguageSelector } from "./LanguageSelector";
 
 interface NavbarProps {
   badge?: string;

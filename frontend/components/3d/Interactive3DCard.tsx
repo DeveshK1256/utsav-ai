@@ -1,6 +1,6 @@
-'use client';
+"use client";
 
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useRef, useState, useEffect } from "react";
 
 interface Interactive3DCardProps {
   children: React.ReactNode;
@@ -12,25 +12,31 @@ interface Interactive3DCardProps {
 
 export function Interactive3DCard({
   children,
-  className = '',
+  className = "",
   maxTilt = 12,
   perspective = 1000,
-  elevationZ = 20
+  elevationZ = 20,
 }: Interactive3DCardProps) {
   const cardRef = useRef<HTMLDivElement>(null);
-  const [transformStyle, setTransformStyle] = useState<string>('');
+  const [transformStyle, setTransformStyle] = useState<string>("");
   const [reducedMotion, setReducedMotion] = useState(false);
 
   useEffect(() => {
     // Check system preference
-    const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
-    setReducedMotion(mediaQuery.matches || document.documentElement.classList.contains('reduced-motion'));
+    const mediaQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
+    setReducedMotion(
+      mediaQuery.matches ||
+        document.documentElement.classList.contains("reduced-motion"),
+    );
 
     const handler = (e: MediaQueryListEvent) => {
-      setReducedMotion(e.matches || document.documentElement.classList.contains('reduced-motion'));
+      setReducedMotion(
+        e.matches ||
+          document.documentElement.classList.contains("reduced-motion"),
+      );
     };
-    mediaQuery.addEventListener('change', handler);
-    return () => mediaQuery.removeEventListener('change', handler);
+    mediaQuery.addEventListener("change", handler);
+    return () => mediaQuery.removeEventListener("change", handler);
   }, []);
 
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -45,13 +51,15 @@ export function Interactive3DCard({
     const rotateY = ((x - centerX) / centerX) * maxTilt;
 
     setTransformStyle(
-      `perspective(${perspective}px) rotateX(${rotateX.toFixed(2)}deg) rotateY(${rotateY.toFixed(2)}deg) translateZ(${elevationZ}px)`
+      `perspective(${perspective}px) rotateX(${rotateX.toFixed(2)}deg) rotateY(${rotateY.toFixed(2)}deg) translateZ(${elevationZ}px)`,
     );
   };
 
   const handleMouseLeave = () => {
     if (reducedMotion) return;
-    setTransformStyle(`perspective(${perspective}px) rotateX(0deg) rotateY(0deg) translateZ(0px)`);
+    setTransformStyle(
+      `perspective(${perspective}px) rotateX(0deg) rotateY(0deg) translateZ(0px)`,
+    );
   };
 
   return (
@@ -61,7 +69,9 @@ export function Interactive3DCard({
       onMouseLeave={handleMouseLeave}
       className={`card-3d-tilt transition-transform duration-200 ease-out preserve-3d will-change-transform ${className}`}
       style={{
-        transform: reducedMotion ? 'none' : transformStyle || `perspective(${perspective}px)`,
+        transform: reducedMotion
+          ? "none"
+          : transformStyle || `perspective(${perspective}px)`,
       }}
     >
       {children}

@@ -195,7 +195,8 @@ class InvitationWordingAgent:
 
         prompt = f"""
 You are the Utsav Invitation Text Composer Agent.
-Write 3 distinct, culturally resonant invitation wording options for an Indian {event_type} celebration.
+Write 3 distinct, culturally resonant invitation wording options for an Indian \
+{event_type} celebration.
 
 STRICT INVENTED-FACTS POLICY:
 - Use ONLY the confirmed details provided below.

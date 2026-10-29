@@ -1,6 +1,6 @@
-'use client';
+"use client";
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState } from "react";
 
 interface WakingUpNoticeProps {
   isLoading: boolean;
@@ -8,7 +8,11 @@ interface WakingUpNoticeProps {
   className?: string;
 }
 
-export function WakingUpNotice({ isLoading, timeoutMs = 3500, className = '' }: WakingUpNoticeProps) {
+export function WakingUpNotice({
+  isLoading,
+  timeoutMs = 3500,
+  className = "",
+}: WakingUpNoticeProps) {
   const [show, setShow] = useState(false);
 
   useEffect(() => {
@@ -35,7 +39,10 @@ export function WakingUpNotice({ isLoading, timeoutMs = 3500, className = '' }: 
     >
       <div className="flex items-center justify-center gap-2 font-medium text-center">
         <span>🌅</span>
-        <span>Utsav is waking up — this can take up to a minute on our free hosting tier, thanks for your patience!</span>
+        <span>
+          Utsav is waking up — this can take up to a minute on our free hosting
+          tier, thanks for your patience!
+        </span>
       </div>
     </div>
   );

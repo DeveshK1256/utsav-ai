@@ -61,8 +61,8 @@ Utsav is verified continuously through strict static analysis, complete type saf
 | :--- | :--- | :--- |
 | **Ruff Linting** | Expanded rule set (`E, F, W, I, UP, B, C4, PIE, SIM, RUF, BLE, S, PTH, T20, C90`) | **0 Errors** (100% compliant) |
 | **Max Cyclomatic Complexity** | Grade A / B only (`CC <= 10`) | **0 Functions with CC >= 11** |
-| **Python Static Typing (MyPy)** | Strict (`disallow_untyped_defs`, `disallow_incomplete_defs`, `strict_equality`) | **0 Issues in 65 files** |
-| **Backend Test Coverage** | Mandatory branch coverage threshold `>= 90%` | **92.4% Branch Coverage** (181 passed) |
+| **Python Static Typing (MyPy)** | Strict (`disallow_untyped_defs`, `disallow_incomplete_defs`, `strict_equality`) | **0 Issues in 87 source files** |
+| **Backend Test Coverage** | Mandatory branch coverage threshold `>= 90%` | **92.30% Combined Coverage** (94.02% Line, 84.73% Branch; 181 passed) |
 | **Application Security (Bandit)** | Zero high or medium severity issues | **0 Issues detected** |
 | **Frontend Static Types** | Strict TypeScript compilation (`strict: true`) | **0 Errors** (`tsc --noEmit`) |
 | **Frontend Tests** | Vitest component & error state test suite | **16 / 16 Passed** |

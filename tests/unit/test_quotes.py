@@ -1,3 +1,8 @@
+import uuid
+from backend.app.db.session import SessionLocal
+import datetime
+from datetime import date, timedelta
+from backend.app.models.models import Event, User, QuoteDocument, QuoteLineItem
 import io
 import pytest
 from fastapi.testclient import TestClient
@@ -381,3 +386,374 @@ def test_deterministic_confidence_calculation():
     assert score_discrepant == 0.55
     assert score_discrepant < 0.60
 
+import io
+import json
+import uuid
+from unittest.mock import MagicMock, patch
+from backend.app.models.models import QuoteDocument, QuoteLineItem, VendorBenchmarkSample
+from backend.app.services.llm_provider import (
+    DeterministicStubNegotiationDraftProvider,
+    DeterministicStubQuoteExtractionProvider,
+    DeterministicStubReplanningExplanationProvider,
+    DeterministicStubVibeProvider,
+)
+
+
+def test_quotes_api_edge_case_and_error_branches():
+    """Covers lines 70-73, 105-108, 277-280, 360-363, 370-375, 380-383 in api/v1/quotes.py."""
+    db = SessionLocal()
+    ev_id = f"q_ev_{uuid.uuid4().hex[:8]}"
+    token = f"tok_{uuid.uuid4().hex[:8]}"
+    headers = {"X-Event-Owner-Token": token}
+    try:
+        user = User(phone_number=f"+9192{uuid.uuid4().hex[:8]}", full_name="Quote Host")
+        db.add(user)
+        db.commit()
+
+        ev = Event(
+            id=ev_id,
+            owner_id=user.id,
+            name="Quote Edge Event",
+            event_type="wedding",
+            city="Pune",
+            pincode="411001",
+            owner_token=token,
+            start_date=date(2026, 12, 1),
+            end_date=date(2026, 12, 2),
+            total_budget=800000.0,
+            guest_count=150,
+            metadata_json={"owner_token": token}
+        )
+        db.add(ev)
+        db.commit()
+
+        # 1. Upload quote to non-existent event -> 404
+        dummy_file = ("quote.pdf", io.BytesIO(b"%PDF dummy"), "application/pdf")
+        res_404_up = client.post(
+            "/api/v1/quotes/upload",
+            data={"event_id": "non_existent_event_id"},
+            files={"file": dummy_file},
+            headers={"X-Event-Owner-Token": "some_token"}
+        )
+        assert res_404_up.status_code == 404
+
+        # 2. Upload file exceeding 10MB -> 413
+        large_bytes = b"0" * (10 * 1024 * 1024 + 1024)
+        large_file = ("huge.pdf", io.BytesIO(large_bytes), "application/pdf")
+        res_413 = client.post(
+            "/api/v1/quotes/upload",
+            data={"event_id": ev_id},
+            files={"file": large_file},
+            headers=headers
+        )
+        assert res_413.status_code == 413
+
+        # 3. List quotes for non-existent event -> 404
+        res_list_404 = client.get("/api/v1/quotes/events/non_existent_event_id")
+        assert res_list_404.status_code == 404
+
+        # 4. Compare with less than 2 quotes -> 400/422
+        res_cmp_1 = client.post("/api/v1/quotes/compare", json={"quote_ids": ["q1"]})
+        assert res_cmp_1.status_code in (400, 422)
+
+        # 5. Compare with non-existent quote IDs -> 404
+        res_cmp_missing = client.post("/api/v1/quotes/compare", json={"quote_ids": ["q_non_1", "q_non_2"]})
+        assert res_cmp_missing.status_code == 404
+
+        # 6. Compare quotes with mismatched categories -> 400
+        q1 = QuoteDocument(
+            id=f"q_c_{uuid.uuid4().hex[:8]}",
+            event_id=ev_id,
+            vendor_name="Caterer Vendor",
+            category="caterer",
+            total_quoted_amount=200000.0,
+            file_name="c.pdf",
+            file_type="application/pdf",
+            uploaded_file=b"c",
+            raw_extracted_json={}
+        )
+        q2 = QuoteDocument(
+            id=f"q_d_{uuid.uuid4().hex[:8]}",
+            event_id=ev_id,
+            vendor_name="Decorator Vendor",
+            category="decorator",
+            total_quoted_amount=150000.0,
+            file_name="d.pdf",
+            file_type="application/pdf",
+            uploaded_file=b"d",
+            raw_extracted_json={}
+        )
+        db.add_all([q1, q2])
+        db.commit()
+
+        res_mismatch = client.post("/api/v1/quotes/compare", json={"quote_ids": [q1.id, q2.id]})
+        assert res_mismatch.status_code == 400
+        assert "same category" in res_mismatch.json()["detail"].lower()
+    finally:
+        db.query(QuoteDocument).filter(QuoteDocument.event_id == ev_id).delete()
+        db.query(Event).filter(Event.id == ev_id).delete()
+        db.commit()
+        db.close()
+
+
+def test_quotes_negotiation_draft_branches(client, test_data, db):
+    event, token = test_data
+    headers = {"X-Event-Owner-Token": token}
+
+    q1 = QuoteDocument(
+        event_id=event.id,
+        vendor_name="Prime Royal Caterers",
+        category="catering",
+        file_name="quote.pdf",
+        file_type="application/pdf",
+        uploaded_file=b"test_pdf_content",
+        total_quoted_amount=450000.0,
+        raw_extracted_json={"terms_and_conditions": []}
+    )
+    q2 = QuoteDocument(
+        event_id=event.id,
+        vendor_name="Shree Ganesh Catering",
+        category="catering",
+        file_name="comp.pdf",
+        file_type="application/pdf",
+        uploaded_file=b"comp_pdf_content",
+        total_quoted_amount=380000.0
+    )
+    db.add_all([q1, q2])
+    db.commit()
+
+    li1 = QuoteLineItem(
+        quote_document_id=q1.id,
+        name="Deluxe Dinner Buffet",
+        unit_price=1200.0,
+        qty=300,
+        total=360000.0,
+        category_tag="catering"
+    )
+    db.add(li1)
+
+    bench1 = VendorBenchmarkSample(category="catering", city_tier="tier_2", normalized_unit_cost=600.0)
+    bench2 = VendorBenchmarkSample(category="catering", city_tier="tier_2", normalized_unit_cost=700.0)
+    db.add_all([bench1, bench2])
+    db.commit()
+
+    draft_req = {
+        "quote_id": q1.id,
+        "competing_quote_id": q2.id,
+        "target_discount_percentage": 12.0
+    }
+    r = client.post(f"/api/v1/quotes/{q1.id}/negotiate-draft", json=draft_req, headers=headers)
+    assert r.status_code == 200
+    res_data = r.json()
+    assert "draft_variants" in res_data
+    assert len(res_data["draft_variants"]) > 0
+    assert len(res_data["leverage_points"]) > 0
+
+
+def test_quotes_api_error_and_edge_branches(client, test_data, db):
+    event, token = test_data
+    headers = {"X-Event-Owner-Token": token}
+
+    # 1. Compare quotes with < 2 IDs directly in router logic
+    from backend.app.api.v1.quotes import compare_quotes
+    from backend.app.schemas.quotes import QuoteComparisonRequestSchema
+    from fastapi import HTTPException
+    with pytest.raises(HTTPException) as exc_info:
+        compare_quotes(QuoteComparisonRequestSchema.model_construct(quote_ids=["single_id"]), db)
+    assert exc_info.value.status_code == 400
+
+    # 2. Compare quotes with non-existent IDs -> 404
+    r_not_found = client.post("/api/v1/quotes/compare", json={"quote_ids": ["fake_id_1", "fake_id_2"]}, headers=headers)
+    assert r_not_found.status_code == 404
+
+    # 3. Compare quotes with mismatched categories -> 400
+    q_cat1 = QuoteDocument(
+        event_id=event.id,
+        vendor_name="Caterer X",
+        category="catering",
+        file_name="q1.pdf",
+        file_type="application/pdf",
+        uploaded_file=b"cater",
+        total_quoted_amount=100000.0
+    )
+    q_cat2 = QuoteDocument(
+        event_id=event.id,
+        vendor_name="Photographer Y",
+        category="photography",
+        file_name="q2.pdf",
+        file_type="application/pdf",
+        uploaded_file=b"photo",
+        total_quoted_amount=80000.0
+    )
+    db.add_all([q_cat1, q_cat2])
+    db.commit()
+
+    r_mismatch = client.post("/api/v1/quotes/compare", json={"quote_ids": [q_cat1.id, q_cat2.id]}, headers=headers)
+    assert r_mismatch.status_code == 400
+    assert "same category" in r_mismatch.json()["detail"]
+
+    # 4. List quotes for non-existent event -> 404
+    r_list_404 = client.get("/api/v1/quotes/events/nonexistent_event_id/quotes", headers=headers)
+    assert r_list_404.status_code == 404
+
+    # 5. Upload quote without token or wrong token -> 403
+    files = {"file": ("quote.pdf", b"%PDF-1.4 test dummy content", "application/pdf")}
+    data = {"event_id": event.id, "category": "decor", "vendor_name": "Royal Decorators"}
+    r_auth_fail = client.post(
+        "/api/v1/quotes/upload",
+        files=files,
+        data=data,
+        headers={"X-Event-Owner-Token": "wrong_token_here"}
+    )
+    assert r_auth_fail.status_code == 403
+
+    # 6. Upload quote exceeding 10MB -> 413
+    huge_bytes = b"0" * (10 * 1024 * 1024 + 10)
+    huge_files = {"file": ("huge.pdf", huge_bytes, "application/pdf")}
+    r_huge = client.post(
+        "/api/v1/quotes/upload",
+        files=huge_files,
+        data=data,
+        headers=headers
+    )
+    assert r_huge.status_code == 413
+
+
+def test_api_quotes_negotiation_draft():
+    from backend.app.models.models import QuoteDocument, QuoteLineItem
+    rand_suffix = str(uuid.uuid4())[:8]
+    db = SessionLocal()
+    try:
+        # 1. 404 for non-existent quote
+        res_404 = client.post(
+            "/api/v1/quotes/non_existent_quote_id/negotiate-draft",
+            json={"quote_id": "non_existent_quote_id", "target_discount_percentage": 10.0}
+        )
+        assert res_404.status_code == 404
+
+        # 2. Valid quote negotiation draft
+        user = User(phone_number=f"+9155{rand_suffix}", full_name="Quote User", email=f"quote_{rand_suffix}@example.com")
+        db.add(user)
+        db.commit()
+
+        token = "quote_test_secret_token_123"
+        event = Event(
+            id="quote_test_evt_1",
+            name="Quote Test Event",
+            owner_id=user.id,
+            owner_token=token,
+            event_type="wedding",
+            guest_count=200,
+            total_budget=1500000.0,
+            city="Pune",
+            pincode="411001",
+            start_date=date(2026, 12, 1),
+            end_date=date(2026, 12, 2),
+            metadata_json={"owner_token": token}
+        )
+        db.add(event)
+        db.commit()
+
+        quote = QuoteDocument(
+            id="quote_doc_test_1",
+            event_id=event.id,
+            vendor_name="Royal Catering Services",
+            category="caterer",
+            total_quoted_amount=500000.0,
+            file_name="quote.pdf",
+            file_type="application/pdf",
+            uploaded_file=b"%PDF dummy",
+            raw_extracted_json={"terms_and_conditions": ["Breakage charged extra"]}
+        )
+        db.add(quote)
+        db.commit()
+
+        li = QuoteLineItem(
+            quote_document_id=quote.id,
+            name="Buffet Dinner",
+            qty=200.0,
+            unit="plates",
+            unit_price=2500.0,
+            total=500000.0,
+            category_tag="catering"
+        )
+        db.add(li)
+        db.commit()
+
+        res_neg = client.post(
+            f"/api/v1/quotes/{quote.id}/negotiate-draft",
+            json={"quote_id": quote.id, "target_discount_percentage": 12.0}
+        )
+        assert res_neg.status_code == 200
+        neg_data = res_neg.json()
+        assert neg_data["quote_id"] == quote.id
+        assert neg_data["target_discount_percentage"] == 12.0
+        assert "polite" in neg_data["draft_variants"]
+    finally:
+        db.query(QuoteLineItem).filter(QuoteLineItem.quote_document_id == "quote_doc_test_1").delete()
+        db.query(QuoteDocument).filter(QuoteDocument.id == "quote_doc_test_1").delete()
+        db.query(Event).filter(Event.id == "quote_test_evt_1").delete()
+        db.query(User).filter(User.phone_number == f"+9155{rand_suffix}").delete()
+        db.commit()
+        db.close()
+
+
+def test_deterministic_stubs_quote_and_vibe():
+    quote_stub = DeterministicStubQuoteExtractionProvider()
+    # Test all 4 category branches: venue, caterer, decorator, photographer
+    for cat in ["venue", "caterer", "decorator", "photographer"]:
+        q_res = quote_stub.extract_quote_from_document(b"dummy_bytes", "test.pdf", "application/pdf", cat)
+        assert q_res.vendor_name
+        assert q_res.total_amount > 0
+        assert len(q_res.line_items) >= 1
+
+    neg_stub = DeterministicStubNegotiationDraftProvider()
+    n_res = neg_stub.generate_negotiation_drafts(
+        vendor_name="Taj Hall",
+        category="venue",
+        quoted_total=100000.0,
+        target_discount_pct=10.0,
+        leverage_points=["Early deposit"],
+        competing_vendor_name="Leela Palace",
+        competing_quote_total=90000.0
+    )
+    assert isinstance(n_res, dict)
+    assert "polite" in n_res or len(n_res) > 0
+
+    replan_stub = DeterministicStubReplanningExplanationProvider()
+    # Test all change_type branches and over_budget=True
+    for ct in ["guest_count_changed", "date_moved", "vendor_cancelled", "budget_cut", "venue_unavailable", "other"]:
+        r_res = replan_stub.generate_explanation_and_mitigations(
+            change_type=ct,
+            diff_summary={
+                "budget_total_delta": 25000.0,
+                "budget_total_new": 125000.0,
+                "from_guest_count": 100,
+                "to_guest_count": 150,
+                "days_shifted": 3,
+                "from_date": "2026-12-01",
+                "to_date": "2026-12-04",
+                "vendor_category": "catering",
+                "vendor_name": "Royal Caterers",
+                "cut_amount": 25000.0,
+                "venue_name": "Grand Hall",
+                "capacity_exceeded": True,
+                "capacity_warning": "Warning: Hall capacity exceeded"
+            },
+            total_budget=100000.0
+        )
+        assert isinstance(r_res, dict)
+        assert "explanation" in r_res
+        assert len(r_res["mitigation_suggestions"]) >= 1
+
+    vibe_stub = DeterministicStubVibeProvider()
+    v_res = vibe_stub.extract_vibe_from_images([{"data": "mock"}], "Warm festival")
+    assert len(v_res.images) >= 1
+    assert len(v_res.overall_mood_words) >= 1
+
+    theme_res = vibe_stub.generate_theme_proposal(
+        style_profile={"palette": ["#FF0000"]},
+        event_details={"city": "Pune", "guest_count": 200}
+    )
+    assert theme_res.theme_name
+    assert len(theme_res.decor_items) >= 1

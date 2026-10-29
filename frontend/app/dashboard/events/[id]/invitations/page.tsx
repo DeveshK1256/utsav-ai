@@ -1,9 +1,7 @@
-import InvitationsPageClient from './InvitationsPageClient';
+import InvitationsPageClient from "./InvitationsPageClient";
 
 export function generateStaticParams() {
-  return [
-    { id: 'default' }
-  ];
+  return [{ id: "default" }];
 }
 
 export default function InvitationsPage() {

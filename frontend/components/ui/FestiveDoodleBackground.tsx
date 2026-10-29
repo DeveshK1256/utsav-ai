@@ -1,6 +1,6 @@
-'use client';
+"use client";
 
-import React from 'react';
+import React from "react";
 
 export function FestiveDoodleBackground() {
   return (
@@ -46,10 +46,7 @@ export function FestiveDoodleBackground() {
                 d="M 5 24 Q 25 38 45 24 Q 38 34 25 34 Q 12 34 5 24 Z"
                 fill="currentColor"
               />
-              <path
-                d="M 12 34 L 10 38 L 40 38 L 38 34 Z"
-                fill="currentColor"
-              />
+              <path d="M 12 34 L 10 38 L 40 38 L 38 34 Z" fill="currentColor" />
             </g>
 
             {/* 2. Shehnai / Music Horn at (200, 35) */}
@@ -67,22 +64,61 @@ export function FestiveDoodleBackground() {
               <circle cx="36" cy="16" r="1.5" fill="currentColor" />
               <circle cx="44" cy="16.5" r="1.5" fill="currentColor" />
               {/* Musical celebration notes */}
-              <path d="M 66 10 Q 72 6 78 12" stroke="currentColor" strokeWidth="1.2" fill="none" />
+              <path
+                d="M 66 10 Q 72 6 78 12"
+                stroke="currentColor"
+                strokeWidth="1.2"
+                fill="none"
+              />
               <circle cx="78" cy="12" r="2" fill="currentColor" />
-              <path d="M 72 24 Q 78 20 84 26" stroke="currentColor" strokeWidth="1.2" fill="none" />
+              <path
+                d="M 72 24 Q 78 20 84 26"
+                stroke="currentColor"
+                strokeWidth="1.2"
+                fill="none"
+              />
               <circle cx="84" cy="26" r="2" fill="currentColor" />
             </g>
 
             {/* 3. Auspicious Kalash with Mango Leaves & Coconut at (50, 190) */}
             <g transform="translate(40, 180)">
               {/* Coconut */}
-              <circle cx="25" cy="16" r="10" fill="none" stroke="currentColor" strokeWidth="1.6" />
+              <circle
+                cx="25"
+                cy="16"
+                r="10"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.6"
+              />
               {/* Mango leaves fan */}
-              <path d="M 15 20 Q 25 4 35 20" stroke="currentColor" strokeWidth="1.5" fill="none" />
-              <path d="M 10 22 Q 18 10 25 22" stroke="currentColor" strokeWidth="1.4" fill="none" />
-              <path d="M 25 22 Q 32 10 40 22" stroke="currentColor" strokeWidth="1.4" fill="none" />
+              <path
+                d="M 15 20 Q 25 4 35 20"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                fill="none"
+              />
+              <path
+                d="M 10 22 Q 18 10 25 22"
+                stroke="currentColor"
+                strokeWidth="1.4"
+                fill="none"
+              />
+              <path
+                d="M 25 22 Q 32 10 40 22"
+                stroke="currentColor"
+                strokeWidth="1.4"
+                fill="none"
+              />
               {/* Pot Neck & Body */}
-              <rect x="18" y="22" width="14" height="4" rx="2" fill="currentColor" />
+              <rect
+                x="18"
+                y="22"
+                width="14"
+                height="4"
+                rx="2"
+                fill="currentColor"
+              />
               <path
                 d="M 18 26 C 6 32 6 48 25 50 C 44 48 44 32 32 26 Z"
                 fill="none"
@@ -91,8 +127,24 @@ export function FestiveDoodleBackground() {
                 strokeLinejoin="round"
               />
               {/* Sacred Swastik / Tilak lines on pot */}
-              <line x1="25" y1="32" x2="25" y2="44" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
-              <line x1="19" y1="38" x2="31" y2="38" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+              <line
+                x1="25"
+                y1="32"
+                x2="25"
+                y2="44"
+                stroke="currentColor"
+                strokeWidth="1.4"
+                strokeLinecap="round"
+              />
+              <line
+                x1="19"
+                y1="38"
+                x2="31"
+                y2="38"
+                stroke="currentColor"
+                strokeWidth="1.4"
+                strokeLinecap="round"
+              />
             </g>
 
             {/* 4. Marigold Flower / Radial Mandala at (190, 180) */}
@@ -112,27 +164,99 @@ export function FestiveDoodleBackground() {
                   transform={`rotate(${angle} 30 30)`}
                 />
               ))}
-              <circle cx="30" cy="30" r="18" stroke="currentColor" strokeWidth="0.8" strokeDasharray="2 2" fill="none" />
+              <circle
+                cx="30"
+                cy="30"
+                r="18"
+                stroke="currentColor"
+                strokeWidth="0.8"
+                strokeDasharray="2 2"
+                fill="none"
+              />
             </g>
 
             {/* 5. Dholak / Drum with celebration sticks at (115, 105) */}
             <g transform="translate(110, 100) rotate(15)">
-              <ellipse cx="14" cy="22" rx="6" ry="14" fill="none" stroke="currentColor" strokeWidth="1.6" />
-              <ellipse cx="50" cy="22" rx="6" ry="14" fill="none" stroke="currentColor" strokeWidth="1.6" />
-              <path d="M 14 8 Q 32 5 50 8 M 14 36 Q 32 39 50 36" stroke="currentColor" strokeWidth="1.6" fill="none" />
+              <ellipse
+                cx="14"
+                cy="22"
+                rx="6"
+                ry="14"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.6"
+              />
+              <ellipse
+                cx="50"
+                cy="22"
+                rx="6"
+                ry="14"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.6"
+              />
+              <path
+                d="M 14 8 Q 32 5 50 8 M 14 36 Q 32 39 50 36"
+                stroke="currentColor"
+                strokeWidth="1.6"
+                fill="none"
+              />
               {/* Diagonal tightening ropes */}
-              <line x1="14" y1="8" x2="32" y2="39" stroke="currentColor" strokeWidth="1.2" />
-              <line x1="32" y1="39" x2="50" y2="8" stroke="currentColor" strokeWidth="1.2" />
-              <line x1="14" y1="36" x2="32" y2="5" stroke="currentColor" strokeWidth="1.2" />
-              <line x1="32" y1="5" x2="50" y2="36" stroke="currentColor" strokeWidth="1.2" />
+              <line
+                x1="14"
+                y1="8"
+                x2="32"
+                y2="39"
+                stroke="currentColor"
+                strokeWidth="1.2"
+              />
+              <line
+                x1="32"
+                y1="39"
+                x2="50"
+                y2="8"
+                stroke="currentColor"
+                strokeWidth="1.2"
+              />
+              <line
+                x1="14"
+                y1="36"
+                x2="32"
+                y2="5"
+                stroke="currentColor"
+                strokeWidth="1.2"
+              />
+              <line
+                x1="32"
+                y1="5"
+                x2="50"
+                y2="36"
+                stroke="currentColor"
+                strokeWidth="1.2"
+              />
             </g>
 
             {/* 6. Hanging Toran & Mango Leaf Garland Garland at (275, 110) */}
             <g transform="translate(260, 95)">
-              <path d="M 0 10 Q 25 24 50 10 Q 75 24 100 10" stroke="currentColor" strokeWidth="1.6" fill="none" />
+              <path
+                d="M 0 10 Q 25 24 50 10 Q 75 24 100 10"
+                stroke="currentColor"
+                strokeWidth="1.6"
+                fill="none"
+              />
               {/* Hanging leaf triangular tassels */}
-              <path d="M 15 16 L 25 32 L 35 16 Z" fill="none" stroke="currentColor" strokeWidth="1.2" />
-              <path d="M 65 16 L 75 32 L 85 16 Z" fill="none" stroke="currentColor" strokeWidth="1.2" />
+              <path
+                d="M 15 16 L 25 32 L 35 16 Z"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.2"
+              />
+              <path
+                d="M 65 16 L 75 32 L 85 16 Z"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.2"
+              />
               <circle cx="25" cy="35" r="2.5" fill="currentColor" />
               <circle cx="75" cy="35" r="2.5" fill="currentColor" />
             </g>
@@ -151,18 +275,82 @@ export function FestiveDoodleBackground() {
 
             {/* 8. Starburst celebration sparkles scattered */}
             <g transform="translate(130, 20)">
-              <line x1="10" y1="4" x2="10" y2="16" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
-              <line x1="4" y1="10" x2="16" y2="10" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
-              <line x1="6" y1="6" x2="14" y2="14" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
-              <line x1="6" y1="14" x2="14" y2="6" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
+              <line
+                x1="10"
+                y1="4"
+                x2="10"
+                y2="16"
+                stroke="currentColor"
+                strokeWidth="1.4"
+                strokeLinecap="round"
+              />
+              <line
+                x1="4"
+                y1="10"
+                x2="16"
+                y2="10"
+                stroke="currentColor"
+                strokeWidth="1.4"
+                strokeLinecap="round"
+              />
+              <line
+                x1="6"
+                y1="6"
+                x2="14"
+                y2="14"
+                stroke="currentColor"
+                strokeWidth="1.2"
+                strokeLinecap="round"
+              />
+              <line
+                x1="6"
+                y1="14"
+                x2="14"
+                y2="6"
+                stroke="currentColor"
+                strokeWidth="1.2"
+                strokeLinecap="round"
+              />
             </g>
             <g transform="translate(140, 260)">
-              <line x1="8" y1="3" x2="8" y2="13" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
-              <line x1="3" y1="8" x2="13" y2="8" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
+              <line
+                x1="8"
+                y1="3"
+                x2="8"
+                y2="13"
+                stroke="currentColor"
+                strokeWidth="1.2"
+                strokeLinecap="round"
+              />
+              <line
+                x1="3"
+                y1="8"
+                x2="13"
+                y2="8"
+                stroke="currentColor"
+                strokeWidth="1.2"
+                strokeLinecap="round"
+              />
             </g>
             <g transform="translate(15, 120)">
-              <line x1="6" y1="2" x2="6" y2="10" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
-              <line x1="2" y1="6" x2="10" y2="6" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
+              <line
+                x1="6"
+                y1="2"
+                x2="6"
+                y2="10"
+                stroke="currentColor"
+                strokeWidth="1.2"
+                strokeLinecap="round"
+              />
+              <line
+                x1="2"
+                y1="6"
+                x2="10"
+                y2="6"
+                stroke="currentColor"
+                strokeWidth="1.2"
+                strokeLinecap="round"
+              />
             </g>
           </pattern>
         </defs>

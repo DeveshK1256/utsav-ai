@@ -66,7 +66,7 @@ const mockFactSheet = {
 
 describe('GuestCoordinationModule Component', () => {
   beforeEach(() => {
-    vi.stubGlobal('fetch', vi.fn((url: string, options?: any) => {
+    vi.stubGlobal('fetch', vi.fn((url: string, options?: RequestInit) => {
       const urlStr = String(url);
       if (urlStr.includes('/guests/rsvp-summary')) {
         return Promise.resolve({

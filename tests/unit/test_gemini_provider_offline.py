@@ -291,3 +291,90 @@ def test_gemini_theme_generation_success():
         )
         assert res.theme_name == "Royal Rajwada Heritage"
         assert len(res.decor_items) >= 10
+
+from backend.app.services.llm_provider import (
+    DeterministicStubNegotiationDraftProvider,
+    DeterministicStubQuoteExtractionProvider,
+    DeterministicStubReplanningExplanationProvider,
+    DeterministicStubVibeProvider,
+)
+
+
+def test_gemini_providers_empty_key_fallbacks():
+    from backend.app.services.providers.gemini_provider import (
+        GeminiNegotiationDraftProvider,
+        GeminiReplanningExplanationProvider,
+        GeminiVibeProvider,
+        GeminiQuoteExtractionProvider,
+    )
+
+    # 1. GeminiNegotiationDraftProvider without key -> fallback stub
+    p_draft = GeminiNegotiationDraftProvider(api_key="")
+    res_draft = p_draft.generate_negotiation_drafts(
+        vendor_name="Royal Caterers",
+        category="catering",
+        quoted_total=300000.0,
+        target_discount_pct=10.0,
+        leverage_points=["Market rates lower"],
+        competing_vendor_name="Prime Feast",
+        competing_quote_total=250000.0
+    )
+    assert "polite" in res_draft
+    assert "firm" in res_draft
+
+    # 2. GeminiReplanningExplanationProvider without key -> fallback stub
+    p_replan = GeminiReplanningExplanationProvider(api_key="")
+    res_replan = p_replan.generate_explanation_and_mitigations(
+        change_type="guest_count_changed",
+        diff_summary={"budget_total_delta": 50000.0, "budget_total_new": 1050000.0},
+        total_budget=1000000.0
+    )
+    assert "plain_explanation" in res_replan or "explanation" in res_replan or "mitigations" in res_replan
+
+    # 3. GeminiVibeProvider without key -> fallback stub
+    p_vibe = GeminiVibeProvider(api_key="")
+    res_vibe = p_vibe.extract_vibe_from_images(
+        images=[{"bytes": b"test", "mime_type": "image/jpeg"}],
+        text_description="Royal Heritage Wedding"
+    )
+    assert p_vibe.last_provider_used == "deterministic_stub"
+    assert len(res_vibe.images) > 0
+
+    # 4. GeminiVibeProvider theme proposal without key -> fallback stub
+    res_theme = p_vibe.generate_theme_proposal(
+        style_profile={"extracted_palette": ["#FF0000"], "style_tags": ["royal"], "mood_words": ["vibrant"]},
+        event_details={"event_type": "Wedding", "city": "Jaipur", "guest_count": 200, "total_budget": 1000000.0}
+    )
+    assert p_vibe.last_provider_used == "deterministic_stub"
+    assert len(res_theme.decor_items) >= 10
+
+    # 5. GeminiQuoteExtractionProvider without key -> fallback stub
+    p_quote = GeminiQuoteExtractionProvider(api_key="")
+    res_quote = p_quote.extract_quote_from_document(
+        file_name="quote.pdf",
+        file_bytes=b"%PDF-1.4 test document content",
+        mime_type="application/pdf",
+        category_hint="catering"
+    )
+    assert res_quote.vendor_name is not None
+    assert res_quote.total_amount > 0
+
+
+def test_llm_provider_factories():
+    from backend.app.services.llm_provider import (
+        get_vibe_extraction_provider,
+        get_theme_generation_provider,
+        get_replanning_explanation_provider,
+        DeterministicStubVibeProvider,
+        DeterministicStubReplanningExplanationProvider
+    )
+
+    with patch.dict("os.environ", {}, clear=True):
+        vibe_prov = get_vibe_extraction_provider()
+        assert isinstance(vibe_prov, DeterministicStubVibeProvider)
+
+        theme_prov = get_theme_generation_provider()
+        assert isinstance(theme_prov, DeterministicStubVibeProvider)
+
+        replan_prov = get_replanning_explanation_provider()
+        assert isinstance(replan_prov, DeterministicStubReplanningExplanationProvider)

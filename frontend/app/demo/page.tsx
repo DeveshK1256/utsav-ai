@@ -1,21 +1,21 @@
-'use client';
+"use client";
 
-import React, { useState } from 'react';
-import Link from 'next/link';
-import { Navbar } from '@/components/ui/Navbar';
-import { ElderDisclaimerBanner } from '@/components/ui/ElderDisclaimerBanner';
+import React, { useState } from "react";
+import Link from "next/link";
+import { Navbar } from "@/components/ui/Navbar";
+import { ElderDisclaimerBanner } from "@/components/ui/ElderDisclaimerBanner";
 
 // Currency Formatter
 const formatINR = (val: number) => {
-  return new Intl.NumberFormat('en-IN', {
-    style: 'currency',
-    currency: 'INR',
-    maximumFractionDigits: 0
+  return new Intl.NumberFormat("en-IN", {
+    style: "currency",
+    currency: "INR",
+    maximumFractionDigits: 0,
   }).format(val);
 };
 
 export default function DemoShowcasePage() {
-  const [activeTab, setActiveTab] = useState<'overview' | 'itinerary' | 'budget'>('overview');
+  const [activeTab, setActiveTab] = useState<"overview" | "budget">("overview");
 
   const demoEvent = {
     name: "Ananya & Rohan's Celebration (Illustrative Demo)",
@@ -26,10 +26,30 @@ export default function DemoShowcasePage() {
     totalBudget: 3500000,
     tradition: "Maharashtrian Vedic Lagna 🕉️",
     subEvents: [
-      { name: "Sakharpuda (Ring Ceremony)", time: "10:00 AM - 01:00 PM", venue: "The Heritage Banquets", muhurat: true },
-      { name: "Haldi & Sangeet Evening", time: "05:00 PM - 10:00 PM", venue: "Emerald Lawns (Open Air)", muhurat: false },
-      { name: "Mandap Muhurat & Lagna Vivah", time: "09:30 AM - 02:30 PM", venue: "Vedic Wedding Hall", muhurat: true },
-      { name: "Grand Reception & Gala Dinner", time: "07:00 PM - 11:30 PM", venue: "Grand Ballroom, JW Marriott", muhurat: false }
+      {
+        name: "Sakharpuda (Ring Ceremony)",
+        time: "10:00 AM - 01:00 PM",
+        venue: "The Heritage Banquets",
+        muhurat: true,
+      },
+      {
+        name: "Haldi & Sangeet Evening",
+        time: "05:00 PM - 10:00 PM",
+        venue: "Emerald Lawns (Open Air)",
+        muhurat: false,
+      },
+      {
+        name: "Mandap Muhurat & Lagna Vivah",
+        time: "09:30 AM - 02:30 PM",
+        venue: "Vedic Wedding Hall",
+        muhurat: true,
+      },
+      {
+        name: "Grand Reception & Gala Dinner",
+        time: "07:00 PM - 11:30 PM",
+        venue: "Grand Ballroom, JW Marriott",
+        muhurat: false,
+      },
     ],
     budgetItems: [
       { name: "Catering & Food Service", pct: 28, amount: 980000 },
@@ -40,8 +60,8 @@ export default function DemoShowcasePage() {
       { name: "Bridal & Groom Attire", pct: 6, amount: 210000 },
       { name: "Panditji Dakshina & Samagri", pct: 4, amount: 140000 },
       { name: "Guest Shuttles & Valet", pct: 4, amount: 140000 },
-      { name: "Contingency & Fuel Buffer", pct: 4, amount: 140000 }
-    ]
+      { name: "Contingency & Fuel Buffer", pct: 4, amount: 140000 },
+    ],
   };
 
   return (
@@ -50,7 +70,8 @@ export default function DemoShowcasePage() {
       <div className="bg-gradient-to-r from-amber-600 to-amber-700 text-white px-4 py-2.5 text-xs text-center font-bold tracking-wide shadow-md flex items-center justify-center gap-2">
         <span>⚠️ DEMO PREVIEW:</span>
         <span className="font-medium">
-          This is an illustrative showcase using sample benchmark data. No live event database record is connected.
+          This is an illustrative showcase using sample benchmark data. No live
+          event database record is connected.
         </span>
         <Link
           href="/onboarding"
@@ -95,7 +116,10 @@ export default function DemoShowcasePage() {
               {demoEvent.name}
             </h1>
             <p className="text-sm text-stone-600 dark:text-stone-300">
-              Sample Host: <strong>{demoEvent.host}</strong> • Envelope: <strong className="text-stone-900 dark:text-stone-100">{formatINR(demoEvent.totalBudget)}</strong>
+              Sample Host: <strong>{demoEvent.host}</strong> • Envelope:{" "}
+              <strong className="text-stone-900 dark:text-stone-100">
+                {formatINR(demoEvent.totalBudget)}
+              </strong>
             </p>
           </div>
         </section>
@@ -103,16 +127,16 @@ export default function DemoShowcasePage() {
         {/* Tab Controls */}
         <section className="flex border-b border-stone-200 dark:border-stone-800 gap-2">
           {[
-            { key: 'overview', label: 'Overview & Schedule', icon: '⚡' },
-            { key: 'budget', label: 'Itemized Budget Preview', icon: '💰' }
+            { key: "overview", label: "Overview & Schedule", icon: "⚡" },
+            { key: "budget", label: "Itemized Budget Preview", icon: "💰" },
           ].map((tab) => (
             <button
               key={tab.key}
-              onClick={() => setActiveTab(tab.key as any)}
+              onClick={() => setActiveTab(tab.key as "overview" | "budget")}
               className={`flex items-center gap-2 px-5 py-3 text-xs sm:text-sm font-semibold transition-all border-b-2 ${
                 activeTab === tab.key
-                  ? 'border-amber-600 text-amber-700 dark:text-amber-400'
-                  : 'border-transparent text-stone-500 hover:text-stone-800'
+                  ? "border-amber-600 text-amber-700 dark:text-amber-400"
+                  : "border-transparent text-stone-500 hover:text-stone-800"
               }`}
             >
               <span>{tab.icon}</span>
@@ -122,38 +146,50 @@ export default function DemoShowcasePage() {
         </section>
 
         {/* Content */}
-        {activeTab === 'overview' && (
+        {activeTab === "overview" && (
           <div className="space-y-4">
             <h3 className="font-serif font-bold text-lg text-stone-900 dark:text-stone-100">
               Sample Run-of-Show Timetable
             </h3>
             <div className="grid sm:grid-cols-2 gap-4">
               {demoEvent.subEvents.map((se, i) => (
-                <div key={i} className="glass-card p-5 rounded-2xl border border-stone-200 dark:border-stone-800 space-y-2">
+                <div
+                  key={i}
+                  className="glass-card p-5 rounded-2xl border border-stone-200 dark:border-stone-800 space-y-2"
+                >
                   <div className="flex justify-between items-start">
-                    <h4 className="font-semibold text-sm text-stone-900 dark:text-stone-100">{se.name}</h4>
+                    <h4 className="font-semibold text-sm text-stone-900 dark:text-stone-100">
+                      {se.name}
+                    </h4>
                     {se.muhurat && (
                       <span className="text-[10px] font-bold font-mono px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300">
                         🕉️ Muhurat Locked
                       </span>
                     )}
                   </div>
-                  <div className="text-xs font-mono text-stone-500">{se.time}</div>
-                  <div className="text-xs text-stone-600 dark:text-stone-400">📍 {se.venue}</div>
+                  <div className="text-xs font-mono text-stone-500">
+                    {se.time}
+                  </div>
+                  <div className="text-xs text-stone-600 dark:text-stone-400">
+                    📍 {se.venue}
+                  </div>
                 </div>
               ))}
             </div>
           </div>
         )}
 
-        {activeTab === 'budget' && (
+        {activeTab === "budget" && (
           <div className="space-y-4">
             <h3 className="font-serif font-bold text-lg text-stone-900 dark:text-stone-100">
               Sample Deterministic Budget Breakdown
             </h3>
             <div className="grid sm:grid-cols-3 gap-3">
               {demoEvent.budgetItems.map((b, i) => (
-                <div key={i} className="glass-card p-4 rounded-xl border border-stone-200 dark:border-stone-800 space-y-1">
+                <div
+                  key={i}
+                  className="glass-card p-4 rounded-xl border border-stone-200 dark:border-stone-800 space-y-1"
+                >
                   <div className="flex justify-between text-xs text-stone-500 font-medium">
                     <span>{b.name}</span>
                     <span>{b.pct}%</span>

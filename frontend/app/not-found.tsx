@@ -1,8 +1,8 @@
-'use client';
+"use client";
 
-import React from 'react';
-import Link from 'next/link';
-import { Navbar } from '@/components/ui/Navbar';
+import React from "react";
+import Link from "next/link";
+import { Navbar } from "@/components/ui/Navbar";
 
 export default function NotFound() {
   return (
@@ -18,7 +18,8 @@ export default function NotFound() {
             Page Not Found
           </h1>
           <p className="text-stone-600 dark:text-stone-300 text-sm mb-8 leading-relaxed">
-            The celebration path you are looking for has either concluded or hasn’t been composed yet.
+            The celebration path you are looking for has either concluded or
+            hasn’t been composed yet.
           </p>
 
           <Link

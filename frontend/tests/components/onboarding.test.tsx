@@ -32,7 +32,7 @@ const mockBudgetResponse = {
 describe('OnboardingPage Component', () => {
   beforeEach(() => {
     localStorage.clear();
-    vi.stubGlobal('fetch', vi.fn((url: string, options?: any) => {
+    vi.stubGlobal('fetch', vi.fn((url: string, options?: RequestInit) => {
       const urlStr = String(url);
       if (urlStr.includes('/intake/calculate-budget')) {
         return Promise.resolve({

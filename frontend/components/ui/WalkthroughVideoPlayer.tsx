@@ -1,7 +1,7 @@
-'use client';
+"use client";
 
-import React, { useRef, useState, useEffect } from 'react';
-import { Play, Pause, Volume2, VolumeX, Subtitles } from 'lucide-react';
+import React, { useRef, useState, useEffect } from "react";
+import { Play, Pause, Volume2, VolumeX, Subtitles } from "lucide-react";
 
 export function WalkthroughVideoPlayer() {
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -13,9 +13,9 @@ export function WalkthroughVideoPlayer() {
 
   useEffect(() => {
     // Respect prefers-reduced-motion: if user prefers reduced motion, never autoplay
-    const motionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
-    const storedMotion = localStorage.getItem('utsav-reduced-motion');
-    const prefersReduced = storedMotion === 'reduced' || motionQuery.matches;
+    const motionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const storedMotion = localStorage.getItem("utsav-reduced-motion");
+    const prefersReduced = storedMotion === "reduced" || motionQuery.matches;
 
     const video = videoRef.current;
     if (!video) return;
@@ -41,8 +41,8 @@ export function WalkthroughVideoPlayer() {
     }
 
     // Set caption track mode to showing
-    if (video.textTracks && video.textTracks.length > 0) {
-      video.textTracks[0].mode = 'showing';
+    if (video.textTracks && video.textTracks[0]) {
+      video.textTracks[0].mode = "showing";
     }
   }, []);
 
@@ -70,11 +70,12 @@ export function WalkthroughVideoPlayer() {
   const toggleCaptions = (e: React.MouseEvent) => {
     e.stopPropagation();
     const video = videoRef.current;
-    if (!video || !video.textTracks || video.textTracks.length === 0) return;
+    if (!video || !video.textTracks) return;
     const track = video.textTracks[0];
-    const newMode = track.mode === 'showing' ? 'hidden' : 'showing';
+    if (!track) return;
+    const newMode = track.mode === "showing" ? "hidden" : "showing";
     track.mode = newMode;
-    setCaptionsEnabled(newMode === 'showing');
+    setCaptionsEnabled(newMode === "showing");
   };
 
   return (
@@ -90,16 +91,21 @@ export function WalkthroughVideoPlayer() {
           See Utsav in Action
         </h2>
         <p className="text-sm sm:text-base text-stone-600 dark:text-stone-300 max-w-2xl mx-auto mt-2">
-          A real walkthrough of our live celebration hub — from planning chaos to transparent budgets, nationwide venue discovery, and auspicious timings.
+          A real walkthrough of our live celebration hub — from planning chaos
+          to transparent budgets, nationwide venue discovery, and auspicious
+          timings.
         </p>
       </div>
 
       <div className="relative rounded-2xl overflow-hidden border border-stone-200/90 dark:border-stone-800 bg-stone-900 shadow-2xl group aspect-video">
         {hasError ? (
           <div className="w-full h-full flex flex-col items-center justify-center p-8 text-center bg-stone-950 text-stone-300">
-            <p className="text-base font-medium">Video could not be loaded directly.</p>
+            <p className="text-base font-medium">
+              Video could not be loaded directly.
+            </p>
             <p className="text-xs text-stone-500 mt-2 max-w-md">
-              You can experience the interactive walkthrough live on the platform by starting an event intake.
+              You can experience the interactive walkthrough live on the
+              platform by starting an event intake.
             </p>
             <a
               href="/onboarding"
@@ -120,7 +126,10 @@ export function WalkthroughVideoPlayer() {
               onError={() => setHasError(true)}
               className="w-full h-full object-cover cursor-pointer"
             >
-              <source src="/media/utsav_intro_walkthrough.mp4" type="video/mp4" />
+              <source
+                src="/media/utsav_intro_walkthrough.mp4"
+                type="video/mp4"
+              />
               <track
                 kind="captions"
                 src="/media/utsav_demo_captions.vtt"
@@ -156,19 +165,29 @@ export function WalkthroughVideoPlayer() {
                 <button
                   type="button"
                   onClick={togglePlay}
-                  aria-label={isPlaying ? 'Pause' : 'Play'}
+                  aria-label={isPlaying ? "Pause" : "Play"}
                   className="p-1.5 rounded-lg hover:bg-white/20 transition-colors"
                 >
-                  {isPlaying ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5" />}
+                  {isPlaying ? (
+                    <Pause className="w-5 h-5" />
+                  ) : (
+                    <Play className="w-5 h-5" />
+                  )}
                 </button>
                 <button
                   type="button"
                   onClick={toggleMute}
-                  aria-label={isMuted ? 'Unmute voiceover' : 'Mute voiceover'}
+                  aria-label={isMuted ? "Unmute voiceover" : "Mute voiceover"}
                   className="p-1.5 rounded-lg hover:bg-white/20 transition-colors flex items-center gap-1.5 text-xs"
                 >
-                  {isMuted ? <VolumeX className="w-5 h-5 text-amber-400" /> : <Volume2 className="w-5 h-5" />}
-                  <span className="hidden sm:inline font-mono">{isMuted ? 'Unmute' : 'Voice on'}</span>
+                  {isMuted ? (
+                    <VolumeX className="w-5 h-5 text-amber-400" />
+                  ) : (
+                    <Volume2 className="w-5 h-5" />
+                  )}
+                  <span className="hidden sm:inline font-mono">
+                    {isMuted ? "Unmute" : "Voice on"}
+                  </span>
                 </button>
               </div>
 
@@ -178,13 +197,17 @@ export function WalkthroughVideoPlayer() {
                   onClick={toggleCaptions}
                   aria-label="Toggle captions"
                   className={`p-1.5 rounded-lg transition-colors flex items-center gap-1 ${
-                    captionsEnabled ? 'bg-amber-500/30 text-amber-300' : 'hover:bg-white/20 text-stone-300'
+                    captionsEnabled
+                      ? "bg-amber-500/30 text-amber-300"
+                      : "hover:bg-white/20 text-stone-300"
                   }`}
                 >
                   <Subtitles className="w-5 h-5" />
                   <span className="hidden sm:inline font-mono">CC</span>
                 </button>
-                <span className="font-mono text-stone-300 text-[11px]">1:00</span>
+                <span className="font-mono text-stone-300 text-[11px]">
+                  1:00
+                </span>
               </div>
             </div>
           </>
@@ -193,7 +216,8 @@ export function WalkthroughVideoPlayer() {
 
       <div className="flex flex-wrap items-center justify-between gap-3 mt-4 text-xs text-stone-700 dark:text-stone-300 font-medium px-1">
         <p>
-          Recorded live against Utsav v1.0. Audio voiceover generated via local Piper TTS with verified phonetic timing.
+          Recorded live against Utsav v1.0. Audio voiceover generated via local
+          Piper TTS with verified phonetic timing.
         </p>
         <span className="font-mono text-amber-800 dark:text-amber-300 font-medium">
           Captions: WebVTT Synced

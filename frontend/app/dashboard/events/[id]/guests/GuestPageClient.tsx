@@ -1,35 +1,36 @@
-'use client';
+"use client";
 
-import React, { useState, useEffect } from 'react';
-import { useParams, useRouter } from 'next/navigation';
-import Link from 'next/link';
-import { Navbar } from '@/components/ui/Navbar';
-import { GuestCoordinationModule } from '@/components/ui/GuestCoordinationModule';
-import { ElderDisclaimerBanner } from '@/components/ui/ElderDisclaimerBanner';
-import { getAuthHeaders } from '@/lib/auth';
+import React, { useState, useEffect } from "react";
+import { useParams, useRouter } from "next/navigation";
+import Link from "next/link";
+import { Navbar } from "@/components/ui/Navbar";
+import { GuestCoordinationModule } from "@/components/ui/GuestCoordinationModule";
+import { ElderDisclaimerBanner } from "@/components/ui/ElderDisclaimerBanner";
+import { getAuthHeaders } from "@/lib/auth";
 
 export default function GuestPageClient() {
   const params = useParams();
   const router = useRouter();
-  const rawEventId = (params?.id as string) || '';
+  const rawEventId = (params?.id as string) || "";
 
-  const [eventName, setEventName] = useState<string>('Celebration');
+  const [eventName, setEventName] = useState<string>("Celebration");
   const [targetId, setTargetId] = useState<string>(rawEventId);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const getApiBase = () => {
-    return typeof window !== 'undefined' && window.location.hostname.includes('netlify.app')
-      ? '/api/v1'
-      : 'https://utsav-ai-ycg2.onrender.com/api/v1';
+    return typeof window !== "undefined" &&
+      window.location.hostname.includes("netlify.app")
+      ? "/api/v1"
+      : "https://utsav-ai-ycg2.onrender.com/api/v1";
   };
 
   useEffect(() => {
     let resolvedId = rawEventId;
-    if (!resolvedId || resolvedId === 'default') {
+    if (!resolvedId || resolvedId === "default") {
       try {
-        const saved = localStorage.getItem('utsav_last_event_id');
-        if (saved && saved !== 'default') {
+        const saved = localStorage.getItem("utsav_last_event_id");
+        if (saved && saved !== "default") {
           resolvedId = saved;
           router.replace(`/dashboard/events/${saved}/guests`);
           return;
@@ -38,7 +39,9 @@ export default function GuestPageClient() {
         // ignore
       }
       setIsLoading(false);
-      setErrorMessage('No celebration event selected. Please launch an event from the dashboard.');
+      setErrorMessage(
+        "No celebration event selected. Please launch an event from the dashboard.",
+      );
       return;
     }
 
@@ -48,16 +51,16 @@ export default function GuestPageClient() {
     const fetchMeta = async () => {
       try {
         const res = await fetch(`${getApiBase()}/events/${resolvedId}`, {
-          headers: getAuthHeaders(resolvedId)
+          headers: getAuthHeaders(resolvedId),
         });
         if (res.ok) {
           const data = await res.json();
-          setEventName(data.name || 'Celebration');
+          setEventName(data.name || "Celebration");
         } else if (res.status === 404) {
           setErrorMessage(`Event "${resolvedId}" not found in database.`);
         }
-      } catch (err: any) {
-        console.error('Failed to fetch event:', err);
+      } catch (err: unknown) {
+        console.error("Failed to fetch event:", err);
       } finally {
         setIsLoading(false);
       }
@@ -73,8 +76,12 @@ export default function GuestPageClient() {
         <main className="max-w-4xl mx-auto px-4 py-16 text-center space-y-4">
           <div className="p-8 rounded-3xl glass-card border border-rose-200 dark:border-rose-900/60 bg-rose-50/30 dark:bg-rose-950/20 space-y-3">
             <div className="text-3xl">⚠️</div>
-            <h2 className="font-serif font-bold text-xl text-stone-900 dark:text-stone-50">Event Not Found</h2>
-            <p className="text-xs text-stone-600 dark:text-stone-400 max-w-md mx-auto">{errorMessage}</p>
+            <h2 className="font-serif font-bold text-xl text-stone-900 dark:text-stone-50">
+              Event Not Found
+            </h2>
+            <p className="text-xs text-stone-600 dark:text-stone-400 max-w-md mx-auto">
+              {errorMessage}
+            </p>
             <Link
               href="/"
               className="inline-block mt-3 px-6 py-2.5 rounded-full bg-[#8B1E28] text-white text-xs font-semibold"
@@ -100,7 +107,9 @@ export default function GuestPageClient() {
           >
             ← Back to Unified Event Workspace ({eventName})
           </Link>
-          <span className="text-xs text-stone-400 font-mono">Event ID: {targetId}</span>
+          <span className="text-xs text-stone-400 font-mono">
+            Event ID: {targetId}
+          </span>
         </div>
 
         {/* Guest Coordination Module */}

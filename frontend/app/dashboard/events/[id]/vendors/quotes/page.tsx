@@ -1,9 +1,7 @@
-import ScopedQuotesDashboardClient from './ScopedQuotesDashboardClient';
+import ScopedQuotesDashboardClient from "./ScopedQuotesDashboardClient";
 
 export function generateStaticParams() {
-  return [
-    { id: 'default' }
-  ];
+  return [{ id: "default" }];
 }
 
 export default function ScopedQuotesPage() {

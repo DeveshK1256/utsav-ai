@@ -599,3 +599,340 @@ def test_birthday_replanning_guest_surge_scales_cake_and_desserts():
         assert diffs["decor"]["scaling_rule"] == "tiered"
     finally:
         client.delete(f"/api/v1/events/{event_id}", headers=auth_headers)
+
+import json
+import uuid
+from unittest.mock import MagicMock, patch
+from backend.app.models.models import AISuggestion, BudgetItem, ChangeEvent, SubEvent, Task
+from backend.app.schemas.replanning import ChangeRequestSchema
+from backend.app.services.replanning_service import ReplanningService
+
+
+def test_replanning_reject_and_error_branches():
+    """Covers lines 84-87, 101-105, 121-124 in api/v1/replanning.py."""
+    db = SessionLocal()
+    ev_id = f"rep_{uuid.uuid4().hex[:8]}"
+    token = f"tok_{uuid.uuid4().hex[:8]}"
+    headers = {"X-Event-Owner-Token": token}
+    try:
+        user = User(phone_number=f"+9193{uuid.uuid4().hex[:8]}", full_name="Replan Host")
+        db.add(user)
+        db.commit()
+
+        ev = Event(
+            id=ev_id,
+            owner_id=user.id,
+            name="Replan Branches Event",
+            event_type="wedding",
+            city="Pune",
+            pincode="411001",
+            owner_token=token,
+            start_date=date(2026, 12, 1),
+            end_date=date(2026, 12, 2),
+            total_budget=800000.0,
+            guest_count=150,
+            metadata_json={"owner_token": token}
+        )
+        db.add(ev)
+        db.commit()
+
+        # Submit change
+        c_res = client.post(
+            f"/api/v1/events/{ev_id}/changes",
+            json={"change_type": "guest_count_changed", "payload": {"to_guest_count": 220}},
+            headers=headers
+        )
+        assert c_res.status_code == 201
+        change_id = c_res.json()["change_id"]
+
+        # Reject change proposal
+        rej_res = client.post(f"/api/v1/events/{ev_id}/changes/{change_id}/reject", headers=headers)
+        assert rej_res.status_code == 200
+        assert rej_res.json()["status"] == "rejected"
+
+        # Reject non-existent change -> 400/404
+        rej_404 = client.post(f"/api/v1/events/{ev_id}/changes/fake_change_id_123/reject", headers=headers)
+        assert rej_404.status_code in (400, 404)
+
+        # Patch non-existent change -> 400/404
+        patch_404 = client.patch(
+            f"/api/v1/events/{ev_id}/changes/fake_change_id_123",
+            json={"manual_overrides": {"note": "Invalid"}},
+            headers=headers
+        )
+        assert patch_404.status_code in (400, 404)
+    finally:
+        db.query(ChangeEvent).filter(ChangeEvent.event_id == ev_id).delete()
+        db.query(Event).filter(Event.id == ev_id).delete()
+        db.commit()
+        db.close()
+
+
+def test_replanning_queue_and_task_mutations(db, test_data):
+    event, token = test_data
+
+    t1 = Task(
+        event_id=event.id,
+        title="Arrange Mandap Setup",
+        scheduled_start=datetime.combine(event.start_date, datetime.min.time(), tzinfo=timezone.utc),
+        scheduled_end=datetime.combine(event.start_date, datetime.min.time(), tzinfo=timezone.utc) + timedelta(hours=3),
+        status="pending",
+        duration_minutes=180
+    )
+    se1 = SubEvent(
+        event_id=event.id,
+        name="Main Wedding Pheras",
+        venue_name="Main Banquet",
+        is_outdoor=False,
+        is_muhurat_locked=True,
+        sort_order=1,
+        start_time=datetime.combine(event.start_date, datetime.min.time(), tzinfo=timezone.utc) + timedelta(hours=10),
+        end_time=datetime.combine(event.start_date, datetime.min.time(), tzinfo=timezone.utc) + timedelta(hours=14)
+    )
+    b1 = BudgetItem(
+        event_id=event.id,
+        category="decor",
+        name="Mandap Flowers",
+        scaling_rule="tiered",
+        planned_amount=150000.0,
+        actual_amount=0.0
+    )
+    db.add_all([t1, se1, b1])
+    db.commit()
+
+    # 1. Create first proposal (status: pending)
+    req1 = ChangeRequestSchema(
+        change_type="date_moved",
+        payload={
+            "from_date": event.start_date.isoformat(),
+            "to_date": (event.start_date + timedelta(days=7)).isoformat()
+        }
+    )
+    prop1 = ReplanningService.create_change_proposal(db, event.id, req1)
+    assert prop1.status == "pending"
+
+    # 2. Create second proposal (should be queued because prop1 is pending)
+    req2 = ChangeRequestSchema(
+        change_type="guest_count_changed",
+        payload={"from_guest_count": 150, "to_guest_count": 180}
+    )
+    prop2 = ReplanningService.create_change_proposal(db, event.id, req2)
+    assert prop2.status == "queued"
+
+    # 3. Accept prop1 -> mutates tasks, sub-events, event date, AND promotes prop2 from queued to pending!
+    accepted = ReplanningService.accept_change(db, event.id, prop1.change_id)
+    assert accepted.status == "applied"
+
+    db.refresh(t1)
+    assert t1.scheduled_start is not None
+
+    prop2_refreshed = ReplanningService.get_change_proposal(db, event.id, prop2.change_id)
+    assert prop2_refreshed.status == "pending"
+
+    # 4. Reject prop2
+    rejected = ReplanningService.reject_change(db, event.id, prop2.change_id)
+    assert rejected.status == "rejected"
+
+
+def test_replanning_budget_cut_and_shift_branches(db, test_data):
+    event, token = test_data
+
+    # Add budget items
+    b1 = BudgetItem(event_id=event.id, category="decor", name="Flowers", scaling_rule="tiered", planned_amount=200000.0, actual_amount=0.0)
+    b2 = BudgetItem(event_id=event.id, category="catering", name="Food", scaling_rule="per_guest", planned_amount=400000.0, actual_amount=0.0)
+    db.add_all([b1, b2])
+    db.commit()
+
+    # 1. Budget cut proposal
+    cut_req = ChangeRequestSchema(
+        change_type="budget_cut",
+        payload={"to_budget": 900000.0, "from_budget": 1200000.0}
+    )
+    cut_prop = ReplanningService.create_change_proposal(db, event.id, cut_req)
+    assert cut_prop.status == "pending"
+    assert len(cut_prop.budget_diff) > 0
+    assert cut_prop.budget_total_delta != 0
+
+    # Apply budget cut
+    applied_cut = ReplanningService.accept_change(db, event.id, cut_prop.change_id)
+    assert applied_cut.status == "applied"
+
+    # 2. Replan unknown proposal -> 404
+    with pytest.raises(Exception):
+        ReplanningService.get_change_proposal(db, event.id, "nonexistent_proposal_uuid")
+
+    with pytest.raises(Exception):
+        ReplanningService.accept_change(db, event.id, "nonexistent_proposal_uuid")
+
+    with pytest.raises(Exception):
+        ReplanningService.reject_change(db, event.id, "nonexistent_proposal_uuid")
+
+    # 3. Vendor cancelled proposal and acceptance
+    cancel_req = ChangeRequestSchema(
+        change_type="vendor_cancelled",
+        payload={"category": "catering", "vendor_name": "Royal Feast"}
+    )
+    cancel_prop = ReplanningService.create_change_proposal(db, event.id, cancel_req)
+    assert cancel_prop.status == "pending"
+    assert len(cancel_prop.task_diff.added_tasks) > 0
+
+    applied_cancel = ReplanningService.accept_change(db, event.id, cancel_prop.change_id)
+    assert applied_cancel.status == "applied"
+
+    # 4. Guest count changed proposal and acceptance (mutates event.guest_count)
+    gc_req = ChangeRequestSchema(
+        change_type="guest_count_changed",
+        payload={"from_guest_count": 150, "to_guest_count": 220}
+    )
+    gc_prop = ReplanningService.create_change_proposal(db, event.id, gc_req)
+    assert gc_prop.status == "pending"
+    applied_gc = ReplanningService.accept_change(db, event.id, gc_prop.change_id)
+    assert applied_gc.status == "applied"
+    db.refresh(event)
+    assert event.guest_count == 220
+
+
+def test_api_replanning_flow():
+    db = SessionLocal()
+    ev_id = f"ev_rep_{uuid.uuid4().hex[:8]}"
+    token = f"tok_rep_{uuid.uuid4().hex[:8]}"
+    headers = {"X-Event-Owner-Token": token}
+    try:
+        user = User(
+            phone_number=f"+9198{uuid.uuid4().hex[:8]}",
+            full_name="Replanning Test Host",
+            role="host"
+        )
+        db.add(user)
+        db.flush()
+
+        ev = Event(
+            id=ev_id,
+            owner_id=user.id,
+            name="Replanning Test Event",
+            event_type="wedding",
+            city="Mumbai",
+            pincode="400001",
+            owner_token=token,
+            start_date=date(2026, 12, 10),
+            end_date=date(2026, 12, 12),
+            total_budget=1000000,
+            guest_count=200
+        )
+        db.add(ev)
+        db.flush()
+
+        b_item = BudgetItem(
+            event_id=ev.id,
+            category="catering",
+            name="Grand Feast",
+            scaling_rule="per_guest",
+            planned_amount=300000.0
+        )
+        db.add(b_item)
+        db.commit()
+
+        # 1. Submit a guest count reduction change request
+        change_req = {
+            "change_type": "guest_count_changed",
+            "payload": {"from_guest_count": 200, "to_guest_count": 150}
+        }
+        res_submit = client.post(f"/api/v1/events/{ev_id}/changes", json=change_req, headers=headers)
+        assert res_submit.status_code == 201
+        data = res_submit.json()
+        change_id = data["change_id"]
+        assert change_id is not None
+        assert data["change_type"] == "guest_count_changed"
+
+        # 2. List change proposals
+        res_list = client.get(f"/api/v1/events/{ev_id}/changes")
+        assert res_list.status_code == 200
+        assert len(res_list.json()) >= 1
+
+        # 3. Retrieve change proposal
+        res_get = client.get(f"/api/v1/events/{ev_id}/changes/{change_id}")
+        assert res_get.status_code == 200
+        assert res_get.json()["change_id"] == change_id
+
+        # 4. Accept change proposal
+        res_accept = client.post(f"/api/v1/events/{ev_id}/changes/{change_id}/accept", headers=headers)
+        assert res_accept.status_code == 200
+        assert res_accept.json()["status"] == "applied"
+    finally:
+        db.query(BudgetItem).filter(BudgetItem.event_id == ev_id).delete()
+        db.query(ChangeEvent).filter(ChangeEvent.event_id == ev_id).delete()
+        db.query(Event).filter(Event.id == ev_id).delete()
+        db.commit()
+        db.close()
+
+
+def test_api_replanning_endpoints_deep():
+    db = SessionLocal()
+    try:
+        rand_suffix = str(uuid.uuid4())[:8]
+        user = User(phone_number=f"+9177{rand_suffix}", full_name="Replan User", email=f"replan_{rand_suffix}@example.com")
+        db.add(user)
+        db.commit()
+
+        token = "replan_api_secret_token_123"
+        event = Event(
+            id="replan_api_evt_1",
+            name="Replan API Event",
+            owner_id=user.id,
+            owner_token=token,
+            event_type="wedding",
+            guest_count=200,
+            total_budget=1000000.0,
+            city="Pune",
+            pincode="411001",
+            start_date=date(2026, 12, 1),
+            end_date=date(2026, 12, 3),
+            metadata_json={"owner_token": token}
+        )
+        db.add(event)
+        db.commit()
+
+        headers = {"X-Event-Owner-Token": token}
+
+        # 1. Submit a change event
+        payload = {
+            "change_type": "guest_count_changed",
+            "trigger_source": "user_manual",
+            "payload": {
+                "from_guest_count": 200,
+                "to_guest_count": 250
+            }
+        }
+        res_post = client.post(f"/api/v1/events/{event.id}/changes", json=payload, headers=headers)
+        assert res_post.status_code == 201
+        change_data = res_post.json()
+        change_id = change_data["change_id"]
+
+        # 2. List changes
+        res_list = client.get(f"/api/v1/events/{event.id}/changes")
+        assert res_list.status_code == 200
+        assert len(res_list.json()) >= 1
+
+        # 3. Get change proposal
+        res_get = client.get(f"/api/v1/events/{event.id}/changes/{change_id}")
+        assert res_get.status_code == 200
+        assert res_get.json()["change_id"] == change_id
+
+        # 4. Patch change proposal
+        patch_payload = {
+            "manual_overrides": {"note": "Adjusted manually"}
+        }
+        res_patch = client.patch(f"/api/v1/events/{event.id}/changes/{change_id}", json=patch_payload, headers=headers)
+        assert res_patch.status_code == 200
+
+        # 5. Accept change proposal
+        res_accept = client.post(f"/api/v1/events/{event.id}/changes/{change_id}/accept", headers=headers)
+        assert res_accept.status_code == 200
+        assert res_accept.json()["status"] == "applied"
+    finally:
+        from backend.app.models.models import ChangeEvent
+        db.query(ChangeEvent).filter(ChangeEvent.event_id == "replan_api_evt_1").delete()
+        db.query(Event).filter(Event.id == "replan_api_evt_1").delete()
+        db.query(User).filter(User.email == "replan_api@example.com").delete()
+        db.commit()
+        db.close()

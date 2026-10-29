@@ -1,14 +1,17 @@
-'use client';
+"use client";
 
-import React, { useEffect, useState } from 'react';
-import { useTheme } from './ThemeProvider';
+import React, { useEffect, useState } from "react";
+import { useTheme } from "./ThemeProvider";
 
 interface ThemeToggleProps {
   className?: string;
   showLabel?: boolean;
 }
 
-export function ThemeToggle({ className = '', showLabel = false }: ThemeToggleProps) {
+export function ThemeToggle({
+  className = "",
+  showLabel = false,
+}: ThemeToggleProps) {
   const { theme, toggleTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
 
@@ -19,26 +22,27 @@ export function ThemeToggle({ className = '', showLabel = false }: ThemeTogglePr
   if (!mounted) {
     // Render placeholder to avoid layout shift before mount
     return (
-      <div className={`w-9 h-9 rounded-xl border border-stone-200 dark:border-stone-800 bg-stone-100/50 dark:bg-stone-900/50 ${className}`} />
+      <div
+        className={`w-9 h-9 rounded-xl border border-stone-200 dark:border-stone-800 bg-stone-100/50 dark:bg-stone-900/50 ${className}`}
+      />
     );
   }
 
-  const isDark = theme === 'dark';
+  const isDark = theme === "dark";
 
   return (
     <button
       type="button"
       onClick={toggleTheme}
-      aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
-      title={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
+      aria-label={showLabel ? (isDark ? "Dark Mode" : "Light Mode") : (isDark ? "Switch to light mode" : "Switch to dark mode")}
+      title={isDark ? "Switch to light mode" : "Switch to dark mode"}
       className={`group relative inline-flex items-center justify-center p-2 rounded-xl border transition-all duration-200 active:scale-95 focus:outline-none focus:ring-2 focus:ring-amber-500/30 ${
         isDark
-          ? 'bg-stone-900/90 hover:bg-stone-800 border-stone-700/80 text-amber-400 shadow-sm'
-          : 'bg-white hover:bg-stone-100 border-stone-300/80 text-stone-700 hover:text-stone-900 shadow-sm'
+          ? "bg-stone-900/90 hover:bg-stone-800 border-stone-700/80 text-amber-400 shadow-sm"
+          : "bg-white hover:bg-stone-100 border-stone-300/80 text-stone-700 hover:text-stone-900 shadow-sm"
       } ${className}`}
     >
-      <span className="sr-only">Toggle theme</span>
-      
+
       {isDark ? (
         // Moon Icon with subtle star accent
         <svg
@@ -73,7 +77,7 @@ export function ThemeToggle({ className = '', showLabel = false }: ThemeTogglePr
 
       {showLabel && (
         <span className="ml-2 text-xs font-medium tracking-wide">
-          {isDark ? 'Dark Mode' : 'Light Mode'}
+          {isDark ? "Dark Mode" : "Light Mode"}
         </span>
       )}
     </button>
