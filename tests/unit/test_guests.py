@@ -43,20 +43,22 @@ def test_guests_api_all_branches(client, test_data, db):
     db.add_all([g1, g2])
     db.commit()
 
-    r_all = client.get(f"/api/v1/events/{event.id}/guests")
+    r_all = client.get(f"/api/v1/events/{event.id}/guests", headers=headers)
     assert r_all.status_code == 200
     assert len(r_all.json()) >= 2
 
-    r_att = client.get(f"/api/v1/events/{event.id}/guests?status=attending")
+    r_att = client.get(f"/api/v1/events/{event.id}/guests?status=attending", headers=headers)
     assert r_att.status_code == 200
     assert all(g["rsvp_status"] == "attending" for g in r_att.json())
 
     # 2. RSVP Summary 404
-    r_sum_404 = client.get("/api/v1/events/fake_event_id_000/guests/rsvp-summary")
+    r_sum_404 = client.get(
+        "/api/v1/events/fake_event_id_000/guests/rsvp-summary", headers=headers
+    )
     assert r_sum_404.status_code == 404
 
     # 3. Fact Sheet GET when missing
-    r_fs_missing = client.get(f"/api/v1/events/{event.id}/fact-sheet")
+    r_fs_missing = client.get(f"/api/v1/events/{event.id}/fact-sheet", headers=headers)
     assert r_fs_missing.status_code == 200
     assert r_fs_missing.json()["venue_address"] is None
 
@@ -93,7 +95,7 @@ def test_guests_api_all_branches(client, test_data, db):
     assert r_del_404.status_code == 404
 
     # 7. Reminders schedule 404
-    r_rem_404 = client.get("/api/v1/events/nonexistent_event/reminders")
+    r_rem_404 = client.get("/api/v1/events/nonexistent_event/reminders", headers=headers)
     assert r_rem_404.status_code == 404
 
 
@@ -195,12 +197,15 @@ def test_api_guests_crud_and_factsheet():
         assert res_import.json()["successful_count"] == 2
 
         # 2. List guests
-        res_list = client.get(f"/api/v1/events/{ev_id}/guests")
+        res_list = client.get(f"/api/v1/events/{ev_id}/guests", headers={"X-Event-Owner-Token": token})
         assert res_list.status_code == 200
         assert len(res_list.json()) == 2
 
         # 3. RSVP summary
-        res_sum = client.get(f"/api/v1/events/{ev_id}/guests/rsvp-summary")
+        res_sum = client.get(
+            f"/api/v1/events/{ev_id}/guests/rsvp-summary",
+            headers={"X-Event-Owner-Token": token},
+        )
         assert res_sum.status_code == 200
         assert res_sum.json()["total_guests"] == 2
 
@@ -214,7 +219,10 @@ def test_api_guests_crud_and_factsheet():
         assert res_fs_put.status_code == 200
         assert res_fs_put.json()["venue_address"] == "77 Palace Grounds, Delhi"
 
-        res_fs_get = client.get(f"/api/v1/events/{ev_id}/fact-sheet")
+        res_fs_get = client.get(
+            f"/api/v1/events/{ev_id}/fact-sheet",
+            headers={"X-Event-Owner-Token": token},
+        )
         assert res_fs_get.status_code == 200
         assert "Valet" in res_fs_get.json()["parking_info"]
     finally:
@@ -266,7 +274,10 @@ def test_api_guests_csv_and_actions():
         assert csv_data["successful_count"] == 2
 
         # 2. RSVP Summary
-        sum_resp = client.get(f"/api/v1/events/{event.id}/guests/rsvp-summary")
+        sum_resp = client.get(
+            f"/api/v1/events/{event.id}/guests/rsvp-summary",
+            headers={"X-Event-Owner-Token": token},
+        )
         assert sum_resp.status_code == 200
         sum_data = sum_resp.json()
         assert sum_data["total_guests"] == 2
@@ -284,7 +295,10 @@ def test_api_guests_csv_and_actions():
             assert send_resp.status_code == 200
 
         # 4. Reminders endpoint
-        rem_resp = client.get(f"/api/v1/events/{event.id}/reminders")
+        rem_resp = client.get(
+            f"/api/v1/events/{event.id}/reminders",
+            headers={"X-Event-Owner-Token": token},
+        )
         assert rem_resp.status_code == 200
 
         # 5. Delete guest

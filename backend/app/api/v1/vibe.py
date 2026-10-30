@@ -150,11 +150,16 @@ def generate_theme(
 
 
 @router.get("/events/{event_id}/vibe/{profile_id}/moodboard")
-def get_moodboard(event_id: str, profile_id: str, db: Session = Depends(get_db)) -> Response:
+def get_moodboard(
+    event_id: str,
+    profile_id: str,
+    event: Event = Depends(verify_event_owner_token),
+    db: Session = Depends(get_db),
+) -> Response:
     """
     Returns code-side generated Pillow mood board collage JPEG (DEC-022).
     """
-    _ = (event_id,)
+    _ = (event_id, event)
     jpeg_bytes = VibeService.get_moodboard(db=db, profile_id=profile_id)
     return Response(content=jpeg_bytes, media_type="image/jpeg")
 
@@ -201,11 +206,14 @@ def reject_decor_item(
 
 @router.get("/events/{event_id}/vibe/profiles", response_model=list[AggregatedStyleProfileSchema])
 def list_style_profiles(
-    event_id: str, db: Session = Depends(get_db)
+    event_id: str,
+    event: Event = Depends(verify_event_owner_token),
+    db: Session = Depends(get_db),
 ) -> list[AggregatedStyleProfileSchema]:
     """
     Lists all style profiles created for an event.
     """
+    _ = event
     profiles = (
         db.query(StyleProfile)
         .filter(StyleProfile.event_id == event_id)
@@ -219,12 +227,15 @@ def list_style_profiles(
     "/events/{event_id}/vibe/{profile_id}/themes", response_model=list[ThemeProposalResponseSchema]
 )
 def list_themes_for_profile(
-    event_id: str, profile_id: str, db: Session = Depends(get_db)
+    event_id: str,
+    profile_id: str,
+    event: Event = Depends(verify_event_owner_token),
+    db: Session = Depends(get_db),
 ) -> list[ThemeProposalResponseSchema]:
     """
     Lists theme proposals generated for a given style profile.
     """
-    _ = (event_id,)
+    _ = (event_id, event)
     themes = (
         db.query(ThemeProposal)
         .filter(ThemeProposal.style_profile_id == profile_id)

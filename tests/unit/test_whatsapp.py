@@ -68,9 +68,15 @@ def setup_m4_test_event():
     event_id = ev.id
     sub_id = sub.id
     user_id = u.id
+    client.headers.update({"X-Event-Owner-Token": ev.owner_token})
     db.close()
 
-    yield {"event_id": event_id, "sub_id": sub_id, "user_id": user_id}
+    yield {
+        "event_id": event_id,
+        "sub_id": sub_id,
+        "user_id": user_id,
+        "owner_token": ev.owner_token,
+    }
 
     # Cleanup
     db = SessionLocal()
@@ -523,6 +529,7 @@ def test_non_wedding_event_type_coordination():
     db.add(bday_event)
     db.commit()
     db.refresh(bday_event)
+    client.headers.update({"X-Event-Owner-Token": bday_event.owner_token})
 
     # 2. Import birthday guests
     g_res = client.post(
@@ -532,7 +539,8 @@ def test_non_wedding_event_type_coordination():
                 {"name": "Tanvi & Family", "phone": "+919822200111", "kids_count": 2, "diet": "veg"},
                 {"name": "Arjun Uncle", "phone": "+919822200222", "kids_count": 0, "diet": "jain"}
             ]
-        }
+        },
+        headers={"X-Event-Owner-Token": bday_event.owner_token},
     )
     assert g_res.status_code == 200
     assert g_res.json()["successful_count"] == 2
@@ -565,6 +573,7 @@ def test_guest_privacy_deletion_endpoint(setup_m4_test_event):
     permanently purges guest data from database.
     """
     event_id = setup_m4_test_event["event_id"]
+    client.headers.update({"X-Event-Owner-Token": setup_m4_test_event["owner_token"]})
     db = SessionLocal()
 
     # Create temporary guest
@@ -723,7 +732,7 @@ def test_whatsapp_webhook_signature_and_payload_branches(db, test_data, monkeypa
                 "value": {
                     "messages": [{
                         "from": "919123456789",
-                        "id": "wamid.inbound.stop.1",
+                        "id": f"wamid.inbound.stop.{uuid.uuid4().hex}",
                         "type": "text",
                         "text": {"body": "STOP"}
                     }]
@@ -738,7 +747,7 @@ def test_whatsapp_webhook_signature_and_payload_branches(db, test_data, monkeypa
 
     # Duplicate STOP request should not duplicate row
     res_stop2 = WhatsAppWebhookService.handle_inbound_payload(db, stop_payload)
-    assert res_stop2["opt_outs_recorded"] == 1
+    assert res_stop2["opt_outs_recorded"] == 0
 
     # 4. Inbound interactive quick-reply button RSVP
     guest_rsvp = Guest(
@@ -756,7 +765,7 @@ def test_whatsapp_webhook_signature_and_payload_branches(db, test_data, monkeypa
                 "value": {
                     "messages": [{
                         "from": "919988776655",
-                        "id": "wamid.inbound.btn.1",
+                        "id": f"wamid.inbound.btn.{uuid.uuid4().hex}",
                         "type": "interactive",
                         "interactive": {
                             "type": "button_reply",
@@ -783,7 +792,7 @@ def test_whatsapp_webhook_signature_and_payload_branches(db, test_data, monkeypa
                 "value": {
                     "messages": [{
                         "from": "919988776655",
-                        "id": "wamid.inbound.btn.legacy",
+                        "id": f"wamid.inbound.btn.legacy.{uuid.uuid4().hex}",
                         "type": "button",
                         "button": {
                             "payload": "rsvp_declined",
@@ -806,7 +815,7 @@ def test_whatsapp_webhook_signature_and_payload_branches(db, test_data, monkeypa
                 "value": {
                     "messages": [{
                         "from": "919988776655",
-                        "id": "wamid.inbound.freetext.1",
+                        "id": f"wamid.inbound.freetext.{uuid.uuid4().hex}",
                         "type": "text",
                         "text": {"body": "Yes we are attending, count 3, Jain meal please"}
                     }]
@@ -838,7 +847,7 @@ def test_whatsapp_webhook_signature_and_payload_branches(db, test_data, monkeypa
                 "value": {
                     "messages": [{
                         "from": "919988776655",
-                        "id": "wamid.inbound.faq.1",
+                        "id": f"wamid.inbound.faq.{uuid.uuid4().hex}",
                         "type": "text",
                         "text": {"body": "Is there parking available at the venue?"}
                     }]
@@ -854,7 +863,7 @@ def test_whatsapp_webhook_signature_and_payload_branches(db, test_data, monkeypa
         "entry": [{
             "changes": [{
                 "value": {
-                    "messages": [{"id": "wamid.empty.1", "type": "text"}]
+                    "messages": [{"id": f"wamid.empty.{uuid.uuid4().hex}", "type": "text"}]
                 }
             }]
         }]
@@ -1021,7 +1030,7 @@ def test_webhook_handle_stop_opt_out():
 
 def test_api_webhooks_whatsapp_hub_challenge():
     # Meta webhook verification challenge
-    token = "utsav_webhook_verify_token_secure"
+    token = settings.WHATSAPP_WEBHOOK_VERIFY_TOKEN
     challenge = "1158201444"
 
     resp = client.get(f"/api/v1/webhooks/whatsapp?hub.mode=subscribe&hub.challenge={challenge}&hub.verify_token={token}")

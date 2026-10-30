@@ -218,13 +218,14 @@ def get_muhurat_candidates(
 
 
 @router.get("/events/{event_id}/pandit-guide")
-def generate_pandit_guide(event_id: str, db: Session = Depends(get_db)) -> dict[str, Any]:
+def generate_pandit_guide(
+    event_id: str,
+    event: Event = Depends(verify_event_owner_token),
+    db: Session = Depends(get_db),
+) -> dict[str, Any]:
     """
     Generates a print-ready, priest-tailored ceremonial guide for an event.
     Includes date, local panchang & muhurat calculations, ritual sequence, and itemized samagri.
     """
-    event = db.query(Event).filter(Event.id == event_id).first()
-    if not event:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Event not found")
-
+    _ = event_id
     return build_pandit_guide_payload(event, db)

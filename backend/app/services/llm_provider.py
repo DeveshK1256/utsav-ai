@@ -486,7 +486,10 @@ class DeterministicStubReplanningExplanationProvider(BaseReplanningExplanationPr
             "explanation": explanation,
             "mitigation_suggestions": mitigations,
             "provider_used": "deterministic_stub",
-            "fallback_warning": None,
+            "fallback_warning": (
+                "Deterministic fallback data is being used because no live explanation "
+                "provider is configured."
+            ),
             "reasoning": {
                 "source": "deterministic_rules_engine",
                 "change_type": change_type,

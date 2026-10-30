@@ -227,6 +227,8 @@ def test_generate_ritual_tasks_in_dag(client):
         )
         db.add(event)
         db.commit()
+        db.refresh(event)
+        client.headers.update({"X-Event-Owner-Token": event.owner_token})
 
         resp = client.post(f"/api/v1/rituals/events/{event.id}/generate-tasks")
         assert resp.status_code == 200
@@ -341,7 +343,8 @@ def test_api_rituals_pandit_guide_and_merge(client):
         db.commit()
 
         # Call pandit guide endpoint
-        resp = client.get(f"/api/v1/rituals/events/{ev_id}/pandit-guide")
+        headers = {"X-Event-Owner-Token": ev.owner_token}
+        resp = client.get(f"/api/v1/rituals/events/{ev_id}/pandit-guide", headers=headers)
         assert resp.status_code == 200
         data = resp.json()
         assert "panchang_and_muhurat" in data
@@ -349,7 +352,10 @@ def test_api_rituals_pandit_guide_and_merge(client):
         assert "tradition" in data
 
         # Pandit guide 404 test
-        resp_404 = client.get(f"/api/v1/rituals/events/nonexistent_ev/pandit-guide")
+        resp_404 = client.get(
+            f"/api/v1/rituals/events/nonexistent_ev/pandit-guide",
+            headers=headers,
+        )
         assert resp_404.status_code == 404
 
         # Samagri 404 test

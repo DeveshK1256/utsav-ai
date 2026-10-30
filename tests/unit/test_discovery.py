@@ -251,7 +251,10 @@ def test_discovery_osm_venues_overpass_mock():
         mock_resp.read.return_value = json.dumps(mock_data).encode("utf-8")
         mock_resp.__enter__.return_value = mock_resp
 
-        with patch("urllib.request.urlopen", return_value=mock_resp):
+        with (
+            patch("urllib.request.urlopen", return_value=mock_resp),
+            patch("backend.app.services.discovery.osm_client._validate_safe_outbound_url"),
+        ):
             VendorDiscoveryService._fetch_and_persist_osm_venues(db, 18.5204, 73.8567, 10.0, city_hint="Pune")
 
         v = db.query(VendorProfile).filter(VendorProfile.business_name == "Maharaja Grand Hall").first()

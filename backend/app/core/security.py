@@ -1,5 +1,4 @@
 import hmac
-import os
 import secrets
 
 from fastapi import Depends, Header, HTTPException, Request, status
@@ -38,12 +37,9 @@ def _extract_provided_token(
 
 
 def _resolve_expected_token(event: Event, db: Session) -> str | None:
-    expected = getattr(event, "owner_token", None) or (event.metadata_json or {}).get("owner_token")
+    expected = (event.metadata_json or {}).get("owner_token") or getattr(event, "owner_token", None)
     if expected:
         return str(expected)
-
-    if bool(os.getenv("PYTEST_CURRENT_TEST")):
-        return None
 
     new_token = generate_owner_token()
     event.owner_token = new_token
@@ -79,9 +75,6 @@ def verify_event_owner_token(
         )
 
     expected = _resolve_expected_token(event, db)
-    if expected is None and bool(os.getenv("PYTEST_CURRENT_TEST")):
-        return event
-
     provided = _extract_provided_token(x_event_owner_token, authorization)
 
     if not provided or not expected or not hmac.compare_digest(provided, expected):

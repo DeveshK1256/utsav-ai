@@ -316,9 +316,10 @@ class VendorDiscoveryService:
 
         with _OVERPASS_CACHE_LOCK:
             if cache_key in _OVERPASS_CACHE:
-                cached_time, _ = _OVERPASS_CACHE[cache_key]
-                if now - cached_time < OVERPASS_CACHE_TTL_SECONDS:
+                cached_time, cached_venues = _OVERPASS_CACHE[cache_key]
+                if now - cached_time < OVERPASS_CACHE_TTL_SECONDS and cached_venues:
                     logger.info("Overpass in-process TTL cache HIT for key %s", cache_key)
+                    cls._persist_discovered_osm_venues(db, cached_venues)
                     return
 
         radius_m = int(min(radius_km, 35.0) * 1000)

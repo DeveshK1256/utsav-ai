@@ -222,9 +222,10 @@ SEED_VENUES = [
 ]
 
 
-def seed_vendor_profiles(target_db_url: str | None = None) -> int:
-    print("Ensuring tables exist...")
-    Base.metadata.create_all(bind=engine)
+def seed_vendor_profiles(target_db_url: str | None = None, ensure_schema: bool = True) -> int:
+    if ensure_schema:
+        print("Ensuring tables exist...")
+        Base.metadata.create_all(bind=engine)
 
     db = SessionLocal()
     try:

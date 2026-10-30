@@ -5,7 +5,7 @@ import os
 import time
 from typing import Any
 
-from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from backend.app.core.config import settings
@@ -150,6 +150,40 @@ class WhatsAppWebhookService:
             return 1
 
     @classmethod
+    def _is_duplicate_inbound_message(cls, db: Session, message_id: str | None) -> bool:
+        if not message_id:
+            return False
+        return (
+            db.query(MessageLog)
+            .filter(
+                MessageLog.whatsapp_message_id == message_id,
+                MessageLog.direction == "inbound",
+            )
+            .first()
+            is not None
+        )
+
+    @classmethod
+    def _persist_inbound_log(
+        cls, db: Session, inbound_log: MessageLog, message_id: str | None
+    ) -> bool:
+        db.add(inbound_log)
+        try:
+            db.commit()
+        except IntegrityError:
+            db.rollback()
+            if (
+                message_id
+                and db.query(MessageLog)
+                .filter(MessageLog.whatsapp_message_id == message_id)
+                .first()
+            ):
+                logger.info("Skipping concurrently delivered WhatsApp message %s", message_id)
+                return False
+            raise
+        return True
+
+    @classmethod
     def _handle_inbound_message_action(
         cls,
         db: Session,
@@ -192,6 +226,10 @@ class WhatsAppWebhookService:
         from_raw = msg.get("from")
         if not from_raw:
             return 0, 0, 0
+        message_id = msg.get("id")
+        if cls._is_duplicate_inbound_message(db, message_id):
+            logger.info("Skipping duplicate inbound WhatsApp message %s", message_id)
+            return 0, 0, 0
 
         try:
             from_phone = normalize_e164_phone(from_raw)
@@ -214,11 +252,11 @@ class WhatsAppWebhookService:
             direction="inbound",
             message_type="freeform" if not button_id else "quick_reply",
             content_snapshot=text_content or f"[Type: {msg.get('type')}]",
-            whatsapp_message_id=msg.get("id"),
+            whatsapp_message_id=message_id,
             delivery_status="received",
         )
-        db.add(inbound_log)
-        db.commit()
+        if not cls._persist_inbound_log(db, inbound_log, message_id):
+            return 0, 0, 0
 
         return cls._handle_inbound_message_action(
             db, text_content, button_id, from_phone, guest, event, provider

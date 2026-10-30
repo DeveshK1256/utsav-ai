@@ -86,9 +86,11 @@ def setup_invitation_event():
         "user_id": user.id,
         "event_id": ev.id,
         "theme_id": theme.id,
-        "guest_ids": [g1.id, g2.id, g3.id]
+        "guest_ids": [g1.id, g2.id, g3.id],
+        "owner_token": ev.owner_token,
     }
     db.close()
+    client.headers.update({"X-Event-Owner-Token": ev.owner_token})
     yield data
 
 
@@ -265,6 +267,7 @@ def test_generic_card_fallback_when_no_guests():
     db.add(ev)
     db.commit()
     db.refresh(ev)
+    client.headers.update({"X-Event-Owner-Token": ev.owner_token})
     db.close()
 
     res = client.post(f"/api/v1/events/{ev.id}/invitations/generate", json={"layout_variant": "floral_festive"})
@@ -308,6 +311,7 @@ def test_muhurat_resolution_from_locked_subevent():
     db.add(ev)
     db.commit()
     db.refresh(ev)
+    client.headers.update({"X-Event-Owner-Token": ev.owner_token})
 
     # Add an unlocked sub-event and a locked muhurat sub-event
     s1 = SubEvent(
@@ -381,6 +385,7 @@ def test_muhurat_placeholder_when_no_locked_subevent():
     db.add(ev)
     db.commit()
     db.refresh(ev)
+    client.headers.update({"X-Event-Owner-Token": ev.owner_token})
 
     # Sub-event without muhurat lock
     s1 = SubEvent(
@@ -507,7 +512,10 @@ def test_venue_skipped_card_generation_returns_valid_card_id():
     assert f"/api/v1/events/{ev.id}/invitations/{card_id}/download?format=pdf" == card["pdf_download_url"]
 
     # Verify download succeeds with the returned card_id
-    res_png = client.get(f"/api/v1/events/{ev.id}/invitations/{card_id}/download?format=png")
+    res_png = client.get(
+        f"/api/v1/events/{ev.id}/invitations/{card_id}/download?format=png",
+        headers=headers,
+    )
     assert res_png.status_code == 200
     assert res_png.headers["content-type"] == "image/png"
 
@@ -522,7 +530,7 @@ def test_invitations_api_branches(client, test_data, db):
     headers = {"X-Event-Owner-Token": token}
 
     # 1. Options 404 for unknown event
-    r_opt_404 = client.get("/api/v1/events/unknown_event_id/invitations/options")
+    r_opt_404 = client.get("/api/v1/events/unknown_event_id/invitations/options", headers=headers)
     assert r_opt_404.status_code == 404
 
     # 2. Options with specific theme_proposal_id
@@ -541,7 +549,10 @@ def test_invitations_api_branches(client, test_data, db):
     db.add(tp)
     db.commit()
 
-    r_opt = client.get(f"/api/v1/events/{event.id}/invitations/options?theme_proposal_id={tp.id}")
+    r_opt = client.get(
+        f"/api/v1/events/{event.id}/invitations/options?theme_proposal_id={tp.id}",
+        headers=headers,
+    )
     assert r_opt.status_code == 200
     assert r_opt.json()["theme_name"] == "Rajputana Royalty"
 
@@ -668,28 +679,38 @@ def test_api_invitations_download_and_list():
         )
         db.add(card)
         db.commit()
+        headers = {"X-Event-Owner-Token": token}
 
         # 1. List invitation cards
-        res_list = client.get(f"/api/v1/events/{event.id}/invitations")
+        res_list = client.get(f"/api/v1/events/{event.id}/invitations", headers=headers)
         assert res_list.status_code == 200
         data_list = res_list.json()
         assert len(data_list) >= 1
         assert any(c["id"] == "inv_test_card_1" for c in data_list)
 
         # 2. Download PNG
-        res_png = client.get(f"/api/v1/events/{event.id}/invitations/{card.id}/download?format=png")
+        res_png = client.get(
+            f"/api/v1/events/{event.id}/invitations/{card.id}/download?format=png",
+            headers=headers,
+        )
         assert res_png.status_code == 200
         assert res_png.headers["content-type"] == "image/png"
         assert res_png.content == png_dummy
 
         # 3. Download PDF
-        res_pdf = client.get(f"/api/v1/events/{event.id}/invitations/{card.id}/download?format=pdf")
+        res_pdf = client.get(
+            f"/api/v1/events/{event.id}/invitations/{card.id}/download?format=pdf",
+            headers=headers,
+        )
         assert res_pdf.status_code == 200
         assert res_pdf.headers["content-type"] == "application/pdf"
         assert res_pdf.content == pdf_dummy
 
         # 4. Download non-existent card -> 404
-        res_404 = client.get(f"/api/v1/events/{event.id}/invitations/fake_card_id/download")
+        res_404 = client.get(
+            f"/api/v1/events/{event.id}/invitations/fake_card_id/download",
+            headers=headers,
+        )
         assert res_404.status_code == 404
     finally:
         db.query(InvitationCard).filter(InvitationCard.event_id == "inv_test_evt_1").delete()

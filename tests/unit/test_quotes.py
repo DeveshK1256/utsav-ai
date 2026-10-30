@@ -174,7 +174,7 @@ def test_quotes_api_endpoints_flow():
     quote2_id = quote2_data["id"]
 
     # 4. List quotes for event
-    list_res = client.get(f"/api/v1/quotes/event/{event_id}")
+    list_res = client.get(f"/api/v1/quotes/event/{event_id}", headers=auth_headers)
     assert list_res.status_code == 200
     quotes_list = list_res.json()
     assert len(quotes_list) >= 2
@@ -182,7 +182,8 @@ def test_quotes_api_endpoints_flow():
     # 5. Side-by-side compare quotes
     compare_res = client.post(
         "/api/v1/quotes/compare",
-        json={"quote_ids": [quote1_id, quote2_id]}
+        json={"quote_ids": [quote1_id, quote2_id]},
+        headers=auth_headers,
     )
     assert compare_res.status_code == 200
     compare_data = compare_res.json()
@@ -202,7 +203,8 @@ def test_quotes_api_endpoints_flow():
 
     mismatched_compare = client.post(
         "/api/v1/quotes/compare",
-        json={"quote_ids": [quote1_id, dec_quote_id]}
+        json={"quote_ids": [quote1_id, dec_quote_id]},
+        headers=auth_headers,
     )
     assert mismatched_compare.status_code == 400
     assert "same category" in mismatched_compare.json()["detail"]
@@ -210,7 +212,12 @@ def test_quotes_api_endpoints_flow():
     # 7. Generate negotiation draft
     negotiate_res = client.post(
         f"/api/v1/quotes/{quote1_id}/negotiate-draft",
-        json={"quote_id": quote1_id, "target_discount_percentage": 12.0, "competing_quote_id": quote2_id}
+        json={
+            "quote_id": quote1_id,
+            "target_discount_percentage": 12.0,
+            "competing_quote_id": quote2_id,
+        },
+        headers=auth_headers,
     )
     assert negotiate_res.status_code == 200
     draft_data = negotiate_res.json()
@@ -682,7 +689,8 @@ def test_api_quotes_negotiation_draft():
 
         res_neg = client.post(
             f"/api/v1/quotes/{quote.id}/negotiate-draft",
-            json={"quote_id": quote.id, "target_discount_percentage": 12.0}
+            json={"quote_id": quote.id, "target_discount_percentage": 12.0},
+            headers={"X-Event-Owner-Token": event.owner_token},
         )
         assert res_neg.status_code == 200
         neg_data = res_neg.json()

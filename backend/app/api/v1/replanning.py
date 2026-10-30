@@ -22,11 +22,14 @@ router = APIRouter(prefix="/events/{id}/changes", tags=["Replanning (Plan B)"])
 
 @router.get("", response_model=list[ChangeProposalResponseSchema])
 def list_change_proposals(
-    id: str, db: Session = Depends(get_db)
+    id: str,
+    event: Event = Depends(verify_event_owner_token),
+    db: Session = Depends(get_db),
 ) -> list[ChangeProposalResponseSchema]:
     """
     Lists all change proposals for the specified event.
     """
+    _ = event
     changes = (
         db.query(ChangeEvent)
         .filter(ChangeEvent.event_id == id)
@@ -66,11 +69,15 @@ def submit_change_event(
 
 @router.get("/{change_id}", response_model=ChangeProposalResponseSchema)
 def get_change_proposal(
-    id: str, change_id: str, db: Session = Depends(get_db)
+    id: str,
+    change_id: str,
+    event: Event = Depends(verify_event_owner_token),
+    db: Session = Depends(get_db),
 ) -> ChangeProposalResponseSchema:
     """
     Retrieves an existing change proposal diff and explanation.
     """
+    _ = event
     try:
         return ReplanningService.get_change_proposal(db, event_id=id, change_id=change_id)
     except ValueError as e:

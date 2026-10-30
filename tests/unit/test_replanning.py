@@ -41,6 +41,7 @@ def replanning_event():
     )
     db.add(event)
     db.flush()
+    client.headers.update({"X-Event-Owner-Token": event.owner_token})
 
     # Create budget items with scaling rules per DEC-018
     items = [
@@ -845,12 +846,12 @@ def test_api_replanning_flow():
         assert data["change_type"] == "guest_count_changed"
 
         # 2. List change proposals
-        res_list = client.get(f"/api/v1/events/{ev_id}/changes")
+        res_list = client.get(f"/api/v1/events/{ev_id}/changes", headers=headers)
         assert res_list.status_code == 200
         assert len(res_list.json()) >= 1
 
         # 3. Retrieve change proposal
-        res_get = client.get(f"/api/v1/events/{ev_id}/changes/{change_id}")
+        res_get = client.get(f"/api/v1/events/{ev_id}/changes/{change_id}", headers=headers)
         assert res_get.status_code == 200
         assert res_get.json()["change_id"] == change_id
 
@@ -909,12 +910,15 @@ def test_api_replanning_endpoints_deep():
         change_id = change_data["change_id"]
 
         # 2. List changes
-        res_list = client.get(f"/api/v1/events/{event.id}/changes")
+        res_list = client.get(f"/api/v1/events/{event.id}/changes", headers=headers)
         assert res_list.status_code == 200
         assert len(res_list.json()) >= 1
 
         # 3. Get change proposal
-        res_get = client.get(f"/api/v1/events/{event.id}/changes/{change_id}")
+        res_get = client.get(
+            f"/api/v1/events/{event.id}/changes/{change_id}",
+            headers=headers,
+        )
         assert res_get.status_code == 200
         assert res_get.json()["change_id"] == change_id
 
