@@ -123,6 +123,50 @@ class MetaCloudWhatsAppProvider(WhatsAppProvider):
     Communicates with graph.facebook.com/v21.0 using bearer authentication.
     """
 
+    def _post_message(self, payload: dict[str, Any]) -> WhatsAppSendResult:
+        try:
+            response = httpx.post(
+                self.base_url,
+                json=payload,
+                headers=self._headers(),
+                timeout=10.0,
+            )
+            data = response.json()
+            messages = data.get("messages")
+            if response.status_code == 200 and isinstance(messages, list) and messages:
+                message_id = messages[0].get("id")
+                if isinstance(message_id, str) and message_id:
+                    return WhatsAppSendResult(
+                        success=True,
+                        message_id=message_id,
+                        status="sent",
+                        provider_used="meta_cloud_api",
+                    )
+            error = data.get("error", {}).get("message", response.text)
+            return WhatsAppSendResult(
+                success=False,
+                message_id="",
+                status="failed",
+                provider_used="meta_cloud_api",
+                error=str(error),
+            )
+        except (
+            httpx.HTTPError,
+            RuntimeError,
+            OSError,
+            json.JSONDecodeError,
+            ValueError,
+            TypeError,
+        ) as err:
+            logger.warning("Meta WhatsApp request failed: %s", err)
+            return WhatsAppSendResult(
+                success=False,
+                message_id="",
+                status="failed",
+                provider_used="meta_cloud_api",
+                error=str(err),
+            )
+
     def __init__(self, phone_number_id: str, api_token: str) -> None:
         self.phone_number_id = phone_number_id
         self.api_token = api_token
@@ -157,39 +201,7 @@ class MetaCloudWhatsAppProvider(WhatsAppProvider):
             },
         }
 
-        try:
-            res = httpx.post(self.base_url, json=payload, headers=self._headers(), timeout=10.0)
-            data = res.json()
-            if res.status_code == 200 and "messages" in data and len(data["messages"]) > 0:
-                msg_id = data["messages"][0]["id"]
-                return WhatsAppSendResult(
-                    success=True, message_id=msg_id, status="sent", provider_used="meta_cloud_api"
-                )
-            err_msg = data.get("error", {}).get("message", res.text)
-            return WhatsAppSendResult(
-                success=False,
-                message_id="",
-                status="failed",
-                provider_used="meta_cloud_api",
-                error=err_msg,
-            )
-        except (
-            httpx.HTTPError,
-            RuntimeError,
-            OSError,
-            json.JSONDecodeError,
-            KeyError,
-            IndexError,
-            ValueError,
-            TypeError,
-        ) as e:
-            return WhatsAppSendResult(
-                success=False,
-                message_id="",
-                status="failed",
-                provider_used="meta_cloud_api",
-                error=str(e),
-            )
+        return self._post_message(payload)
 
     def send_freeform_text(self, to_phone: str, body: str) -> WhatsAppSendResult:
         clean_to = to_phone.lstrip("+")
@@ -200,41 +212,7 @@ class MetaCloudWhatsAppProvider(WhatsAppProvider):
             "type": "text",
             "text": {"preview_url": False, "body": body},
         }
-        try:
-            res = httpx.post(self.base_url, json=payload, headers=self._headers(), timeout=10.0)
-            data = res.json()
-            if res.status_code == 200 and "messages" in data and len(data["messages"]) > 0:
-                return WhatsAppSendResult(
-                    success=True,
-                    message_id=data["messages"][0]["id"],
-                    status="sent",
-                    provider_used="meta_cloud_api",
-                )
-            err_msg = data.get("error", {}).get("message", res.text)
-            return WhatsAppSendResult(
-                success=False,
-                message_id="",
-                status="failed",
-                provider_used="meta_cloud_api",
-                error=err_msg,
-            )
-        except (
-            httpx.HTTPError,
-            RuntimeError,
-            OSError,
-            json.JSONDecodeError,
-            KeyError,
-            IndexError,
-            ValueError,
-            TypeError,
-        ) as e:
-            return WhatsAppSendResult(
-                success=False,
-                message_id="",
-                status="failed",
-                provider_used="meta_cloud_api",
-                error=str(e),
-            )
+        return self._post_message(payload)
 
     def send_interactive_buttons(
         self, to_phone: str, body: str, buttons: list[dict[str, str]]
@@ -263,41 +241,7 @@ class MetaCloudWhatsAppProvider(WhatsAppProvider):
                 "action": {"buttons": formatted_buttons},
             },
         }
-        try:
-            res = httpx.post(self.base_url, json=payload, headers=self._headers(), timeout=10.0)
-            data = res.json()
-            if res.status_code == 200 and "messages" in data and len(data["messages"]) > 0:
-                return WhatsAppSendResult(
-                    success=True,
-                    message_id=data["messages"][0]["id"],
-                    status="sent",
-                    provider_used="meta_cloud_api",
-                )
-            err_msg = data.get("error", {}).get("message", res.text)
-            return WhatsAppSendResult(
-                success=False,
-                message_id="",
-                status="failed",
-                provider_used="meta_cloud_api",
-                error=err_msg,
-            )
-        except (
-            httpx.HTTPError,
-            RuntimeError,
-            OSError,
-            json.JSONDecodeError,
-            KeyError,
-            IndexError,
-            ValueError,
-            TypeError,
-        ) as e:
-            return WhatsAppSendResult(
-                success=False,
-                message_id="",
-                status="failed",
-                provider_used="meta_cloud_api",
-                error=str(e),
-            )
+        return self._post_message(payload)
 
 
 # Global default mock provider instance for tests/local

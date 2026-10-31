@@ -16,6 +16,7 @@ jobs:
       DATABASE_URL: sqlite:///./ci_test.db
       WHATSAPP_PROVIDER: mock
       ENABLE_M4_WHATSAPP: "true"
+      WHATSAPP_WEBHOOK_VERIFY_TOKEN: "ci-test-webhook-token"
       TESTING: "true"
 
     steps:
@@ -46,6 +47,10 @@ jobs:
         run: |
           bandit -r backend/app -q
 
+      - name: Python Dependency Vulnerability Audit
+        run: |
+          pip-audit --skip-editable
+
       - name: Complexity Check (Radon CC <= 10)
         run: |
           python -m radon cc -s -n C backend/app
@@ -59,11 +64,20 @@ jobs:
 
       - name: Install Frontend Dependencies
         working-directory: frontend
-        run: npm ci || npm install
+        run: npm ci
+
+      - name: Verify Alembic Migration Chain
+        run: |
+          rm -f ci_migration.db
+          DATABASE_URL=sqlite:///./ci_migration.db alembic -c backend/alembic.ini upgrade head
 
       - name: Frontend Strict Lint Gate (ESLint)
         working-directory: frontend
         run: npm run lint
+
+      - name: Frontend Dependency Vulnerability Audit
+        working-directory: frontend
+        run: npm audit --audit-level=high --omit=dev
 
       - name: Frontend Type Check (tsc --noEmit)
         working-directory: frontend
@@ -79,11 +93,30 @@ jobs:
 
       - name: Backend Full Test Suite & Branch Coverage (fail-under=90)
         run: |
-          pytest tests -v -m "not live" --cov=backend/app --cov-branch --cov-fail-under=90 --cov-report=json:cov.json
+          set -o pipefail
+          pytest tests -v -m "not live" --cov=backend/app --cov-branch --cov-fail-under=90 --cov-report=json:cov.json 2>&1 | tee pytest-results.txt
 
       - name: Verify Branch (>=85%) and Line (>=90%) Coverage Gates
         run: |
           python -c "import json; data=json.load(open('cov.json'))['totals']; b=data['covered_branches']/data['num_branches']*100; l=data['covered_lines']/data['num_statements']*100; print(f'Branch Coverage: {b:.2f}%, Line Coverage: {l:.2f}%'); assert b >= 85.0, f'Branch coverage {b:.2f}% < 85%'; assert l >= 90.0, f'Line coverage {l:.2f}% < 90%'"
+
+      - name: Generate Quality Metrics Artifact
+        run: |
+          rm -rf reports/jscpd
+          npx --yes jscpd@4.0.5 backend/app frontend/app frontend/components \
+            --ignore '**/node_modules/**,**/.next/**' --min-lines 5 --threshold 2.0 \
+            --reporters json --output reports/jscpd
+          python scripts/quality_report.py
+          test -s reports/quality_metrics.json
+          test -s reports/quality_metrics.md
+          lizard backend/app --CCN 10 --warnings_only
+      - name: Upload Quality Metrics
+        uses: actions/upload-artifact@v4
+        with:
+          name: quality-metrics
+          path: |
+            reports/quality_metrics.*
+            reports/jscpd/jscpd-report.json
 
       - name: Verification Summary
         run: echo "Utsav CI Quality Gate Passed All Gates!"

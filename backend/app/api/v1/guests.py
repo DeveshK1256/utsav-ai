@@ -67,9 +67,13 @@ async def import_guests_csv(
 
 @router.get("/{event_id}/guests", response_model=list[GuestItemResponse])
 def list_guests(
-    event_id: str, status: str | None = Query(None), db: Session = Depends(get_db)
+    event_id: str,
+    status: str | None = Query(None),
+    event: Event = Depends(verify_event_owner_token),
+    db: Session = Depends(get_db),
 ) -> list[GuestItemResponse]:
     """Lists all guests for an event with optional RSVP status filter."""
+    _ = event
     query = db.query(Guest).filter(Guest.event_id == event_id)
     if status:
         query = query.filter(Guest.rsvp_status == status)
@@ -97,12 +101,13 @@ def list_guests(
 
 
 @router.get("/{event_id}/guests/rsvp-summary", response_model=RSVPSummary)
-def get_rsvp_summary(event_id: str, db: Session = Depends(get_db)) -> RSVPSummary:
+def get_rsvp_summary(
+    event_id: str,
+    event: Event = Depends(verify_event_owner_token),
+    db: Session = Depends(get_db),
+) -> RSVPSummary:
     """Deterministic live RSVP metrics for the event dashboard."""
-    event = db.query(Event).filter(Event.id == event_id).first()
-    if not event:
-        raise HTTPException(status_code=404, detail="Event not found")
-
+    _ = event
     return GuestService.get_rsvp_summary(db, event_id)
 
 
@@ -137,8 +142,13 @@ def delete_guest(
 
 
 @router.get("/{event_id}/fact-sheet", response_model=FactSheetResponseSchema)
-def get_fact_sheet(event_id: str, db: Session = Depends(get_db)) -> FactSheetResponseSchema:
+def get_fact_sheet(
+    event_id: str,
+    event: Event = Depends(verify_event_owner_token),
+    db: Session = Depends(get_db),
+) -> FactSheetResponseSchema:
     """Retrieves the verified event fact sheet (only source for guest FAQ bot)."""
+    _ = event
     fs = db.query(EventFactSheet).filter(EventFactSheet.event_id == event_id).first()
     if not fs:
         return FactSheetResponseSchema(
@@ -210,11 +220,9 @@ def update_fact_sheet(
 
 @router.get("/{event_id}/reminders", response_model=list[ScheduledReminderPlan])
 def get_reminder_schedule(
-    event_id: str, db: Session = Depends(get_db)
+    event_id: str,
+    event: Event = Depends(verify_event_owner_token),
 ) -> list[ScheduledReminderPlan]:
     """Returns deterministic scheduled reminders for all sub-events in an event."""
-    event = db.query(Event).filter(Event.id == event_id).first()
-    if not event:
-        raise HTTPException(status_code=404, detail="Event not found")
-
+    _ = event_id
     return ReminderScheduler.generate_event_reminder_plans(event, event.sub_events)

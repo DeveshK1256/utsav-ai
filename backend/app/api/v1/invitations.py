@@ -31,16 +31,15 @@ router = APIRouter(prefix="/events/{event_id}/invitations", tags=["Invitation Ca
 
 @router.get("/options", response_model=InvitationStudioOptionsResponse)
 def get_invitation_studio_options(
-    event_id: str, theme_proposal_id: str | None = Query(None), db: Session = Depends(get_db)
+    event_id: str,
+    theme_proposal_id: str | None = Query(None),
+    event: Event = Depends(verify_event_owner_token),
+    db: Session = Depends(get_db),
 ) -> InvitationStudioOptionsResponse:
     """
     Returns layout options, theme palette, event logistics, and AI/stub wording variants
     ready for user preview and selection in the Invitation Card Studio.
     """
-    event = db.query(Event).filter(Event.id == event_id).first()
-    if not event:
-        raise HTTPException(status_code=404, detail="Event not found")
-
     host_name, date_str, venue_str, muhurat_time, ceremonies = resolve_event_logistics(event, db)
     resolved_theme_id, palette, design_brief, theme_name = resolve_theme_and_palette(
         theme_proposal_id, db
@@ -154,9 +153,12 @@ def generate_invitation_cards(
 
 @router.get("", response_model=list[InvitationCardSummary])
 def list_invitation_cards(
-    event_id: str, db: Session = Depends(get_db)
+    event_id: str,
+    event: Event = Depends(verify_event_owner_token),
+    db: Session = Depends(get_db),
 ) -> list[InvitationCardSummary]:
     """Lists all previously generated invitation cards for this event."""
+    _ = event
     cards = (
         db.query(InvitationCard)
         .filter(InvitationCard.event_id == event_id)
@@ -194,11 +196,13 @@ def download_invitation_card(
     event_id: str,
     card_id: str,
     format: str = Query("png", description="png or pdf"),
+    event: Event = Depends(verify_event_owner_token),
     db: Session = Depends(get_db),
 ) -> Response:
     """
     Streams the binary rendered card file in requested format (PNG or PDF).
     """
+    _ = event
     card = (
         db.query(InvitationCard)
         .filter(InvitationCard.id == card_id, InvitationCard.event_id == event_id)

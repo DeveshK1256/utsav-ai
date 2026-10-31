@@ -24,10 +24,8 @@ def verify_whatsapp_webhook(
     Meta WhatsApp Cloud API Webhook Challenge Verification.
     Responds with hub.challenge if hub.verify_token matches configured secret.
     """
-    configured_token = getattr(
-        settings, "WHATSAPP_WEBHOOK_VERIFY_TOKEN", "utsav_webhook_verify_token_secure"
-    )
-    if hub_mode == "subscribe" and hub_verify_token == configured_token:
+    configured_token = settings.WHATSAPP_WEBHOOK_VERIFY_TOKEN
+    if configured_token and hub_mode == "subscribe" and hub_verify_token == configured_token:
         logger.info("Meta WhatsApp webhook challenge successfully verified.")
         return Response(content=hub_challenge or "", media_type="text/plain")
 

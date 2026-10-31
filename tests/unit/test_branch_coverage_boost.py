@@ -50,6 +50,9 @@ from backend.app.schemas.replanning import (
 from backend.app.services.discovery import VendorDiscoveryService
 from backend.app.services.vibe_service import VibeService
 from backend.app.services.whatsapp.webhook_service import WhatsAppWebhookService
+from backend.app.services.whatsapp.phone_utils import normalize_e164_phone
+from backend.app.services import budget_engine, hidden_cost_engine
+from backend.app.schemas.intake import IntakeRequestSchema
 
 
 @pytest.fixture
@@ -102,6 +105,45 @@ def test_normalize_hex_all_branches():
     assert normalize_hex("#ZZZZZZ") is None
     assert normalize_hex("1234") is None
     assert normalize_hex("#12345") is None
+
+
+def test_configured_engine_fallbacks(monkeypatch, tmp_path):
+    monkeypatch.setattr(budget_engine, "CONFIG_PATH", tmp_path / "missing-city-tiers.json")
+    tiers = budget_engine.load_city_tiers_config()
+    assert tiers["city_to_tier"]["default"] == "tier_2"
+
+    hidden_cost_engine.HiddenCostDetector._checklist_cache = {}
+    monkeypatch.setattr(
+        hidden_cost_engine,
+        "CONFIG_PATH",
+        tmp_path / "missing-hidden-costs.json",
+    )
+    assert hidden_cost_engine.HiddenCostDetector.load_checklist() == {}
+    assert hidden_cost_engine.HiddenCostDetector.load_checklist() == {}
+    hidden_cost_engine.HiddenCostDetector._checklist_cache = {"cached": []}
+    assert hidden_cost_engine.HiddenCostDetector.load_checklist() == {"cached": []}
+    hidden_cost_engine.HiddenCostDetector._checklist_cache = {}
+
+
+def test_international_phone_normalization():
+    assert normalize_e164_phone("+14155552671") == "+14155552671"
+
+
+def test_intake_rejects_reversed_dates():
+    with pytest.raises(ValueError, match="end_date cannot be earlier"):
+        IntakeRequestSchema(
+            name="Date Validation",
+            host_name="Host",
+            phone_number="+919876543210",
+            event_type="wedding",
+            tradition_code="maharashtrian_vedic",
+            guest_count=10,
+            total_budget=100000,
+            city="Pune",
+            pincode="411001",
+            start_date=date(2027, 11, 14),
+            end_date=date(2027, 11, 12),
+        )
 
 
 def test_vibe_aggregation_empty_and_fallbacks():
@@ -491,7 +533,7 @@ def test_whatsapp_webhook_branches(db_session, test_event):
                 "value": {
                     "messages": [{
                         "from": "919876543210",
-                        "id": "wamid_in_1",
+                        "id": f"wamid_in_{uuid.uuid4().hex}",
                         "type": "interactive",
                         "interactive": {
                             "type": "button_reply",
@@ -511,13 +553,14 @@ def test_whatsapp_webhook_branches(db_session, test_event):
     assert g.rsvp_status == "attending"
     assert g.headcount == 1
 
+    stop_phone = f"919123{uuid.uuid4().int % 10**6:06d}"
     payload_stop = {
         "entry": [{
             "changes": [{
                 "value": {
                     "messages": [{
-                        "from": "919876543210",
-                        "id": "wamid_in_2",
+                        "from": stop_phone,
+                        "id": f"wamid_in_{uuid.uuid4().hex}",
                         "type": "text",
                         "text": {"body": "STOP"}
                     }]
@@ -527,11 +570,11 @@ def test_whatsapp_webhook_branches(db_session, test_event):
     }
     res_stop = WhatsAppWebhookService.handle_inbound_payload(db_session, payload_stop)
     assert res_stop["opt_outs_recorded"] == 1
-    opt = db_session.query(OptOut).filter(OptOut.phone == "+919876543210").first()
+    opt = db_session.query(OptOut).filter(OptOut.phone == f"+{stop_phone}").first()
     assert opt is not None
 
     res_stop2 = WhatsAppWebhookService.handle_inbound_payload(db_session, payload_stop)
-    assert res_stop2["opt_outs_recorded"] == 1
+    assert res_stop2["opt_outs_recorded"] == 0
 
 
 def test_whatsapp_webhook_signature_verification():
@@ -561,9 +604,7 @@ def test_whatsapp_webhook_signature_verification():
         assert WhatsAppWebhookService.verify_meta_signature(raw_body, "sha256=invalidhash000") is False
 
     # 6. Unconfigured secret in non-test mode (fails closed)
-    with patch.object(settings, "WHATSAPP_APP_SECRET", None), \
-         patch.dict(os.environ, {"PYTEST_CURRENT_TEST": ""}), \
-         patch.object(settings, "ENVIRONMENT", "production"):
+    with patch.object(settings, "WHATSAPP_APP_SECRET", None):
         assert WhatsAppWebhookService.verify_meta_signature(raw_body, "sha256=somehash") is False
 
 

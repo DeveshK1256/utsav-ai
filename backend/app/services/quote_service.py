@@ -1,6 +1,5 @@
 import hmac
 import logging
-import os
 from collections.abc import Sequence
 from datetime import UTC, datetime
 from typing import Any
@@ -48,8 +47,6 @@ def _verify_quote_ownership(
 
     provided = owner_token or _extract_provided_token(x_event_owner_token, authorization)
     expected = _resolve_expected_token(event, db)
-    if expected is None and bool(os.getenv("PYTEST_CURRENT_TEST")):
-        return
 
     if not provided or not expected or not hmac.compare_digest(provided, expected):
         raise HTTPException(
@@ -260,6 +257,41 @@ def _build_quote_document_response(
     )
 
 
+def build_quote_analysis_response(
+    quote: QuoteDocument, event: Event, db: Session
+) -> QuoteDocumentResponseSchema:
+    items = _extract_line_item_schemas(quote.line_items)
+    raw_terms = (quote.raw_extracted_json or {}).get("terms_and_conditions", [])
+    alerts = HiddenCostDetector.analyze_quote(
+        category=quote.category, line_items=items, terms_and_conditions=raw_terms
+    )
+    benchmark = _compute_benchmark_for_quote(quote.category, quote.total_quoted_amount, event, db)
+    return _build_quote_document_response(quote, items, alerts, benchmark)
+
+
+def build_comparison_quote_data(
+    quotes: Sequence[QuoteDocument], event: Event
+) -> list[dict[str, Any]]:
+    data: list[dict[str, Any]] = []
+    for quote in quotes:
+        items = _extract_line_item_schemas(quote.line_items)
+        raw_terms = (quote.raw_extracted_json or {}).get("terms_and_conditions", [])
+        alerts = HiddenCostDetector.analyze_quote(
+            category=quote.category, line_items=items, terms_and_conditions=raw_terms
+        )
+        data.append(
+            {
+                "id": quote.id,
+                "vendor_name": quote.vendor_name,
+                "total_amount": float(quote.total_quoted_amount or 0.0),
+                "quoted_guest_count": event.guest_count,
+                "line_items": items,
+                "hidden_cost_alerts": alerts,
+            }
+        )
+    return data
+
+
 def _validate_comparison_category(quotes: Sequence[QuoteDocument], requested_ids: list[str]) -> str:
     if len(quotes) != len(requested_ids):
         found_ids = {q.id for q in quotes}
@@ -281,12 +313,15 @@ def _validate_comparison_category(quotes: Sequence[QuoteDocument], requested_ids
 
 
 def _extract_competitor_leverage(
-    payload: NegotiationDraftRequestSchema | None, db: Session
+    payload: NegotiationDraftRequestSchema | None, event_id: str, db: Session
 ) -> tuple[str | None, str | None, float | None]:
     if not (payload and payload.competing_quote_id):
         return None, None, None
     comp_quote = db.scalar(
-        select(QuoteDocument).where(QuoteDocument.id == payload.competing_quote_id)
+        select(QuoteDocument).where(
+            QuoteDocument.id == payload.competing_quote_id,
+            QuoteDocument.event_id == event_id,
+        )
     )
     if not comp_quote:
         return None, None, None
@@ -315,7 +350,7 @@ def _gather_leverage_points(
         )
 
     # 2. Competitor proposal if provided
-    comp_point, comp_name, comp_total = _extract_competitor_leverage(payload, db)
+    comp_point, comp_name, comp_total = _extract_competitor_leverage(payload, quote.event_id, db)
     if comp_point:
         leverage_points.append(comp_point)
 

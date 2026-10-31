@@ -269,7 +269,8 @@ def test_vibe_to_plan_stub_workflow_and_granular_acceptance():
 
     # 4. Get Mood Board Image
     moodboard_res = client.get(
-        f"/api/v1/events/{event_id}/vibe/{profile_id}/moodboard"
+        f"/api/v1/events/{event_id}/vibe/{profile_id}/moodboard",
+        headers=auth_headers,
     )
     assert moodboard_res.status_code == 200
     assert moodboard_res.headers["content-type"] == "image/jpeg"

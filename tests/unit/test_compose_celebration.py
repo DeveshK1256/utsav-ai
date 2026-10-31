@@ -41,6 +41,7 @@ def test_compose_celebration_happy_path():
     db.add(ev)
     db.commit()
     db.refresh(ev)
+    client.headers.update({"X-Event-Owner-Token": ev.owner_token})
 
     s1 = SubEvent(
         event_id=ev.id,
@@ -73,7 +74,7 @@ def test_compose_celebration_happy_path():
     res_a = client.post(f"/api/v1/events/{ev.id}/compose", json={
         "step": "venue",
         "vendor_profile_id": vendor.id
-    })
+    }, headers={"X-Event-Owner-Token": ev.owner_token})
     assert res_a.status_code == 200
     data_a = res_a.json()
     assert data_a["metadata_json"]["venue"] == "Mahalaxmi Lawns, Karve Nagar"
@@ -139,12 +140,13 @@ def test_compose_celebration_all_skips_path():
     db.add(ev)
     db.commit()
     db.refresh(ev)
+    client.headers.update({"X-Event-Owner-Token": ev.owner_token})
 
     # Skip Step A
     res_a = client.post(f"/api/v1/events/{ev.id}/compose", json={
         "step": "venue",
         "skip_venue": True
-    })
+    }, headers={"X-Event-Owner-Token": ev.owner_token})
     assert res_a.status_code == 200
     assert res_a.json()["metadata_json"]["compose_celebration"]["venue_skipped"] is True
 
@@ -200,6 +202,7 @@ def test_compose_celebration_partial_path_venue_selected_timing_skipped():
     db.add(ev)
     db.commit()
     db.refresh(ev)
+    client.headers.update({"X-Event-Owner-Token": ev.owner_token})
 
     # Ensure Fairmont Jaipur exists in VendorProfile
     vendor = db.query(VendorProfile).filter(VendorProfile.business_name == "Fairmont Jaipur").first()
@@ -221,7 +224,7 @@ def test_compose_celebration_partial_path_venue_selected_timing_skipped():
     res_v = client.post(f"/api/v1/events/{ev.id}/compose", json={
         "step": "venue",
         "vendor_profile_id": vendor.id
-    })
+    }, headers={"X-Event-Owner-Token": ev.owner_token})
     assert res_v.status_code == 200
 
     # 2. Skip Timing
@@ -273,13 +276,14 @@ def test_compose_celebration_venue_requires_real_vendor_profile_id():
     db.add(ev)
     db.commit()
     db.refresh(ev)
+    client.headers.update({"X-Event-Owner-Token": ev.owner_token})
 
     # 1. Non-existent vendor_profile_id must return 404
     fake_id = "00000000-0000-0000-0000-000000000000"
     res_fake = client.post(f"/api/v1/events/{ev.id}/compose", json={
         "step": "venue",
         "vendor_profile_id": fake_id
-    })
+    }, headers={"X-Event-Owner-Token": ev.owner_token})
     assert res_fake.status_code == 404
     assert "not found in discovery directory" in res_fake.json()["detail"]
 
@@ -294,6 +298,7 @@ def test_compose_celebration_venue_requires_real_vendor_profile_id():
     db.close()
 
 
+@pytest.mark.live
 def test_compose_celebration_with_discovered_osm_venue():
     """
     Test 5: Nationwide Free OSM Venue Integration
@@ -326,6 +331,7 @@ def test_compose_celebration_with_discovered_osm_venue():
     db.add(ev)
     db.commit()
     db.refresh(ev)
+    client.headers.update({"X-Event-Owner-Token": ev.owner_token})
 
     # 1. Discover venues in Bengaluru via nationwide OSM service
     discovery_res = VendorDiscoveryService.search_vendors(
@@ -361,4 +367,3 @@ def test_compose_celebration_with_discovered_osm_venue():
     assert compose_meta["venue_skipped"] is False
 
     db.close()
-

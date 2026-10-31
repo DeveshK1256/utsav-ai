@@ -40,13 +40,14 @@ from backend.app.services.quote_service import (
     MAX_FILE_SIZE_BYTES,
     _build_quote_document_response,
     _compute_benchmark_for_quote,
-    _extract_line_item_schemas,
     _extract_quote_payload,
     _gather_leverage_points,
     _handle_extraction_fallback,
     _save_vendor_and_quote,
     _validate_comparison_category,
     _verify_quote_ownership,
+    build_comparison_quote_data,
+    build_quote_analysis_response,
 )
 
 logger = logging.getLogger(__name__)
@@ -127,7 +128,10 @@ async def upload_quote(
 
 @router.get("/event/{event_id}", response_model=list[QuoteDocumentResponseSchema])
 def list_event_quotes(
-    event_id: str, db: Session = Depends(get_db)
+    event_id: str,
+    x_event_owner_token: str | None = Header(None, alias="X-Event-Owner-Token"),
+    authorization: str | None = Header(None),
+    db: Session = Depends(get_db),
 ) -> list[QuoteDocumentResponseSchema]:
     """
     List all uploaded quotes for an event with parsed line items and analysis.
@@ -137,6 +141,7 @@ def list_event_quotes(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail=f"Event with id '{event_id}' not found."
         )
+    _verify_quote_ownership(event, None, x_event_owner_token, authorization, db)
 
     quotes = db.scalars(
         select(QuoteDocument)
@@ -146,40 +151,17 @@ def list_event_quotes(
 
     results = []
     for q in quotes:
-        items = _extract_line_item_schemas(q.line_items)
-        raw_terms = (q.raw_extracted_json or {}).get("terms_and_conditions", [])
-        alerts = HiddenCostDetector.analyze_quote(
-            category=q.category, line_items=items, terms_and_conditions=raw_terms
-        )
-        b_comp = _compute_benchmark_for_quote(q.category, q.total_quoted_amount, event, db)
-
-        results.append(
-            QuoteDocumentResponseSchema(
-                id=q.id,
-                event_id=q.event_id,
-                vendor_id=q.vendor_id,
-                vendor_name=q.vendor_name,
-                category=q.category,
-                file_name=q.file_name,
-                file_type=q.file_type,
-                extraction_status=q.extraction_status,
-                total_quoted_amount=float(q.total_quoted_amount)
-                if q.total_quoted_amount is not None
-                else None,
-                tax_amount=float(q.tax_amount) if q.tax_amount is not None else None,
-                line_items=items,
-                hidden_cost_alerts=alerts,
-                benchmark_comparison=b_comp,
-                uploaded_at=q.uploaded_at,
-            )
-        )
+        results.append(build_quote_analysis_response(q, event, db))
 
     return results
 
 
 @router.post("/compare", response_model=QuoteComparisonResponseSchema)
 def compare_quotes(
-    payload: QuoteComparisonRequestSchema, db: Session = Depends(get_db)
+    payload: QuoteComparisonRequestSchema,
+    x_event_owner_token: str | None = Header(None, alias="X-Event-Owner-Token"),
+    authorization: str | None = Header(None),
+    db: Session = Depends(get_db),
 ) -> QuoteComparisonResponseSchema:
     """
     Compares two or more quotes side-by-side.
@@ -202,6 +184,12 @@ def compare_quotes(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Associated event not found."
         )
+    _verify_quote_ownership(event, None, x_event_owner_token, authorization, db)
+    if any(quote.event_id != first_event_id for quote in quotes):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="All quotes in a comparison must belong to the same event.",
+        )
 
     city_tier = BudgetScalingEngine.get_city_tier(event.city)
     benchmarks = db.scalars(
@@ -212,29 +200,11 @@ def compare_quotes(
     ).all()
     samples = [float(b) for b in benchmarks]
 
-    quotes_data = []
-    for q in quotes:
-        items = _extract_line_item_schemas(q.line_items)
-        raw_terms = (q.raw_extracted_json or {}).get("terms_and_conditions", [])
-        alerts = HiddenCostDetector.analyze_quote(
-            category=q.category, line_items=items, terms_and_conditions=raw_terms
-        )
-        quotes_data.append(
-            {
-                "id": q.id,
-                "vendor_name": q.vendor_name,
-                "total_amount": float(q.total_quoted_amount or 0.0),
-                "quoted_guest_count": event.guest_count,
-                "line_items": items,
-                "hidden_cost_alerts": alerts,
-            }
-        )
-
     return QuoteComparisonEngine.compare_quotes(
         event_id=event.id,
         category=assigned_category,
         target_guest_count=event.guest_count,
-        quotes_data=quotes_data,
+        quotes_data=build_comparison_quote_data(quotes, event),
         benchmark_samples=samples,
     )
 
@@ -243,6 +213,8 @@ def compare_quotes(
 def generate_negotiation_draft(
     quote_id: str,
     payload: NegotiationDraftRequestSchema | None = None,
+    x_event_owner_token: str | None = Header(None, alias="X-Event-Owner-Token"),
+    authorization: str | None = Header(None),
     db: Session = Depends(get_db),
 ) -> NegotiationDraftResponseSchema:
     """
@@ -258,6 +230,11 @@ def generate_negotiation_draft(
         )
 
     event = db.scalar(select(Event).where(Event.id == quote.event_id))
+    if not event:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Associated event not found."
+        )
+    _verify_quote_ownership(event, None, x_event_owner_token, authorization, db)
     discount_pct = payload.target_discount_percentage if payload else 10.0
 
     leverage_points, comp_name, comp_total = _gather_leverage_points(quote, payload, event, db)

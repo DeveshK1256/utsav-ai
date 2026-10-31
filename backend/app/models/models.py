@@ -1,3 +1,4 @@
+import secrets
 import uuid
 from datetime import UTC, datetime
 
@@ -100,7 +101,9 @@ class Event(Base):
     start_date = mapped_column(Date, nullable=False)
     end_date = mapped_column(Date, nullable=False)
     status = mapped_column(String(50), default="planning", nullable=False, index=True)
-    owner_token = mapped_column(String(64), nullable=True, index=True)
+    owner_token = mapped_column(
+        String(64), default=lambda: secrets.token_hex(32), nullable=True, index=True
+    )
     venue_capacity = mapped_column(
         Integer, nullable=True
     )  # Manually-entered placeholder per DEC-016
