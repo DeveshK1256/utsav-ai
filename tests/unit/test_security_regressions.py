@@ -9,9 +9,10 @@ from sqlalchemy.exc import OperationalError
 from backend.app.core.config import Settings
 from backend.app.core.security import _resolve_expected_token
 from backend.app.main import MAX_REQUEST_BODY_BYTES, RequestSizeLimitMiddleware, app
-from backend.app.models.models import Event, Guest, MessageLog, User
+from backend.app.models.models import Event, Guest, MessageLog, OptOut, User
 from backend.app.services.whatsapp.webhook_service import WhatsAppWebhookService
 from backend.app.services.whatsapp.provider import MockWhatsAppProvider
+from backend.app.services.whatsapp.rsvp_parser import ParsedRSVP
 
 
 def test_database_readiness_is_reported_after_startup():
@@ -28,6 +29,37 @@ def test_database_initialization_failure_is_not_reported_ready(monkeypatch):
     with TestClient(app) as client:
         assert client.get("/health").json()["status"] == "degraded"
         assert client.get("/readyz").status_code == 503
+
+
+def test_webhook_failure_paths_remain_retryable(db):
+    assert WhatsAppWebhookService._is_duplicate_inbound_message(db, None) is False
+    opt_out_phone = f"+141555{uuid.uuid4().int % 10**6:06d}"
+    db.add(OptOut(phone=opt_out_phone, reason="existing"))
+    db.commit()
+    assert WhatsAppWebhookService._handle_inbound_message_action(
+        db, "STOP", None, opt_out_phone, None, None, None
+    ) == (0, 0, 0)
+    assert WhatsAppWebhookService._send_faq_response(
+        db, "question", "+14155552671", None, None, MockWhatsAppProvider()
+    ) == 0
+    assert WhatsAppWebhookService._update_guest_rsvp(
+        db,
+        None,
+        ParsedRSVP(
+            rsvp_status="invalid",
+            headcount=0,
+            confidence=0.0,
+            needs_host_review=False,
+            parsing_method="test",
+        ),
+    ) == 0
+    phone, guest, event, text, button = WhatsAppWebhookService._load_inbound_context(
+        db, {"from": "not-a-phone", "type": "image"}
+    )
+    assert phone == "+not-a-phone"
+    assert guest is None
+    assert event is not None
+    assert (text, button) == ("", None)
 
 
 def test_owner_token_is_persisted_and_required_for_recovery(db):
@@ -327,7 +359,7 @@ def test_webhook_ignores_malformed_status_and_message_entries(db, monkeypatch):
     assert WhatsAppWebhookService._extract_message_content({"type": "image"}) == ("", None)
     _, _, faq_sent = WhatsAppWebhookService._process_inbound_message_item(
         db,
-        {"from": "+14155552671", "type": "image"},
+        {"from": f"+141555{uuid.uuid4().int % 10**6:06d}", "type": "image"},
         MockWhatsAppProvider(),
     )
     assert faq_sent == 1
