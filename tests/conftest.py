@@ -5,12 +5,15 @@ from fastapi.testclient import TestClient
 from sqlalchemy import text
 
 from backend.app.db.session import SessionLocal, engine
+from backend.app.core.config import settings
 from backend.app.main import _background_db_backfill, app
 from backend.app.models.models import Base, Event, User
 
 
 @pytest.fixture(autouse=True, scope="session")
 def setup_test_db():
+    original_app_secret = settings.WHATSAPP_APP_SECRET
+    settings.WHATSAPP_APP_SECRET = "fixture-test-whatsapp-secret"
     Base.metadata.create_all(bind=engine)
     with engine.begin() as conn:
         try:
@@ -19,6 +22,7 @@ def setup_test_db():
             pass
     _background_db_backfill()
     yield
+    settings.WHATSAPP_APP_SECRET = original_app_secret
 
 
 @pytest.fixture

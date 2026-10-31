@@ -553,12 +553,13 @@ def test_whatsapp_webhook_branches(db_session, test_event):
     assert g.rsvp_status == "attending"
     assert g.headcount == 1
 
+    stop_phone = f"919123{uuid.uuid4().int % 10**6:06d}"
     payload_stop = {
         "entry": [{
             "changes": [{
                 "value": {
                     "messages": [{
-                        "from": "919876543210",
+                        "from": stop_phone,
                         "id": f"wamid_in_{uuid.uuid4().hex}",
                         "type": "text",
                         "text": {"body": "STOP"}
@@ -569,7 +570,7 @@ def test_whatsapp_webhook_branches(db_session, test_event):
     }
     res_stop = WhatsAppWebhookService.handle_inbound_payload(db_session, payload_stop)
     assert res_stop["opt_outs_recorded"] == 1
-    opt = db_session.query(OptOut).filter(OptOut.phone == "+919876543210").first()
+    opt = db_session.query(OptOut).filter(OptOut.phone == f"+{stop_phone}").first()
     assert opt is not None
 
     res_stop2 = WhatsAppWebhookService.handle_inbound_payload(db_session, payload_stop)
@@ -603,9 +604,7 @@ def test_whatsapp_webhook_signature_verification():
         assert WhatsAppWebhookService.verify_meta_signature(raw_body, "sha256=invalidhash000") is False
 
     # 6. Unconfigured secret in non-test mode (fails closed)
-    with patch.object(settings, "WHATSAPP_APP_SECRET", None), \
-         patch.dict(os.environ, {"PYTEST_CURRENT_TEST": ""}), \
-         patch.object(settings, "ENVIRONMENT", "production"):
+    with patch.object(settings, "WHATSAPP_APP_SECRET", None):
         assert WhatsAppWebhookService.verify_meta_signature(raw_body, "sha256=somehash") is False
 
 

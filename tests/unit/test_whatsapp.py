@@ -2,6 +2,7 @@ from backend.app.core.config import settings
 import pytest
 import hmac
 import hashlib
+import json
 from datetime import datetime, date, timedelta, timezone
 from fastapi.testclient import TestClient
 
@@ -334,6 +335,17 @@ def test_webhook_inbound_flow_stop_opt_out_and_rsvp():
     """
     import random
     db = SessionLocal()
+    webhook_secret = "fixture-test-whatsapp-secret"
+
+    def post_signed(payload):
+        raw = json.dumps(payload, separators=(",", ":")).encode()
+        signature = "sha256=" + hmac.new(webhook_secret.encode(), raw, hashlib.sha256).hexdigest()
+        return client.post(
+            "/api/v1/webhooks/whatsapp",
+            content=raw,
+            headers={"Content-Type": "application/json", "X-Hub-Signature-256": signature},
+        )
+
     phone = f"+9198{random.randint(10000000, 99999999)}"
 
     # Create dummy guest
@@ -367,7 +379,7 @@ def test_webhook_inbound_flow_stop_opt_out_and_rsvp():
         }]
     }
 
-    res_stop = client.post("/api/v1/webhooks/whatsapp", json=stop_payload)
+    res_stop = post_signed(stop_payload)
     assert res_stop.status_code == 200
     assert res_stop.json()["results"]["opt_outs_recorded"] == 1
 
@@ -401,7 +413,7 @@ def test_webhook_inbound_flow_stop_opt_out_and_rsvp():
         }]
     }
 
-    res_rsvp = client.post("/api/v1/webhooks/whatsapp", json=rsvp_payload)
+    res_rsvp = post_signed(rsvp_payload)
     assert res_rsvp.status_code == 200
     assert res_rsvp.json()["results"]["rsvps_updated"] == 1
 
@@ -483,17 +495,12 @@ def test_webhook_hmac_signature_security():
         settings.WHATSAPP_APP_SECRET = orig_secret
 
     # When secret is unset in non-test mode, must fail-closed (return False)
-    import os
-    saved_test_env = os.environ.pop("PYTEST_CURRENT_TEST", None)
     saved_env_setting = settings.ENVIRONMENT
-    settings.ENVIRONMENT = "production"
     settings.WHATSAPP_APP_SECRET = None
     try:
         assert WhatsAppWebhookService.verify_meta_signature(raw_payload, "sha256=forged") is False
         assert WhatsAppWebhookService.verify_meta_signature(raw_payload, None) is False
     finally:
-        if saved_test_env:
-            os.environ["PYTEST_CURRENT_TEST"] = saved_test_env
         settings.ENVIRONMENT = saved_env_setting
         settings.WHATSAPP_APP_SECRET = orig_secret
 
@@ -622,11 +629,15 @@ def test_webhooks_signature_and_json_error_branches():
         )
         assert res_sig.status_code == 403
 
-    # 2. Invalid non-JSON payload -> 400
+    # 2. Invalid non-JSON payload with a valid signature -> 400
+    bad_body = b"Not a valid json string at all"
+    bad_signature = "sha256=" + hmac.new(
+        b"fixture-test-whatsapp-secret", bad_body, hashlib.sha256
+    ).hexdigest()
     res_bad_json = client.post(
         "/api/v1/webhooks/whatsapp",
-        content=b"Not a valid json string at all",
-        headers={"Content-Type": "application/json"}
+        content=bad_body,
+        headers={"Content-Type": "application/json", "X-Hub-Signature-256": bad_signature},
     )
     assert res_bad_json.status_code == 400
 
@@ -725,13 +736,13 @@ def test_whatsapp_webhook_signature_and_payload_branches(db, test_data, monkeypa
     assert msg_log.delivery_status == "delivered"
 
     # 3. Inbound Messages: STOP keyword opt-out (first time & duplicate)
-    stop_phone = "+919123456789"
+    stop_phone = f"+919123{uuid.uuid4().int % 10**6:06d}"
     stop_payload = {
         "entry": [{
             "changes": [{
                 "value": {
                     "messages": [{
-                        "from": "919123456789",
+                        "from": stop_phone.removeprefix("+"),
                         "id": f"wamid.inbound.stop.{uuid.uuid4().hex}",
                         "type": "text",
                         "text": {"body": "STOP"}
@@ -910,8 +921,7 @@ def test_webhook_signature_verification():
     payload = b'{"object":"whatsapp_business_account"}'
     valid_sig = "sha256=" + hmac.new(secret.encode("utf-8"), payload, hashlib.sha256).hexdigest()
 
-    with patch("backend.app.services.whatsapp.webhook_service.settings") as mock_settings, \
-         patch.dict("os.environ", {"PYTEST_CURRENT_TEST": ""}):
+    with patch("backend.app.services.whatsapp.webhook_service.settings") as mock_settings:
         mock_settings.WHATSAPP_APP_SECRET = secret
         mock_settings.ENVIRONMENT = "production"
 

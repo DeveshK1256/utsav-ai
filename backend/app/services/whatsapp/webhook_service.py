@@ -1,7 +1,6 @@
 import hashlib
 import hmac
 import logging
-import os
 import time
 from typing import Any
 
@@ -49,14 +48,8 @@ class WhatsAppWebhookService:
                 )
                 return False
 
-        is_test_env = bool(os.getenv("PYTEST_CURRENT_TEST")) or getattr(
-            settings, "ENVIRONMENT", ""
-        ).lower() in ("test", "testing")
         app_secret = getattr(settings, "WHATSAPP_APP_SECRET", None)
         if not app_secret:
-            if is_test_env:
-                # Allowed only during automated test suite execution without secret
-                return True
             logger.error("WHATSAPP_APP_SECRET is not configured; rejecting webhook (fail-closed)")
             return False
 
@@ -116,7 +109,7 @@ class WhatsAppWebhookService:
         if getattr(parsed, "diet", None):
             guest.diet = parsed.diet
         guest.needs_host_review = getattr(parsed, "needs_host_review", False)
-        db.commit()
+        db.flush()
         return 1
 
     @classmethod
@@ -164,26 +157,6 @@ class WhatsAppWebhookService:
         )
 
     @classmethod
-    def _persist_inbound_log(
-        cls, db: Session, inbound_log: MessageLog, message_id: str | None
-    ) -> bool:
-        db.add(inbound_log)
-        try:
-            db.commit()
-        except IntegrityError:
-            db.rollback()
-            if (
-                message_id
-                and db.query(MessageLog)
-                .filter(MessageLog.whatsapp_message_id == message_id)
-                .first()
-            ):
-                logger.info("Skipping concurrently delivered WhatsApp message %s", message_id)
-                return False
-            raise
-        return True
-
-    @classmethod
     def _handle_inbound_message_action(
         cls,
         db: Session,
@@ -201,8 +174,9 @@ class WhatsAppWebhookService:
         if clean_lower in STOP_KEYWORDS:
             if not db.query(OptOut).filter(OptOut.phone == from_phone).first():
                 db.add(OptOut(phone=from_phone, reason="Inbound STOP request"))
-                db.commit()
-            return 1, 0, 0
+                db.flush()
+                return 1, 0, 0
+            return 0, 0, 0
 
         # 2. Button Quick-Reply RSVP
         if button_id:
@@ -220,6 +194,68 @@ class WhatsAppWebhookService:
         return 0, 0, faq_sent
 
     @classmethod
+    def _load_inbound_context(
+        cls, db: Session, msg: dict[str, Any]
+    ) -> tuple[str, Guest | None, Event | None, str, str | None]:
+        from_raw = msg["from"]
+        try:
+            from_phone = normalize_e164_phone(from_raw)
+        except ValueError:
+            from_phone = f"+{from_raw}"
+        guest = (
+            db.query(Guest)
+            .filter(Guest.phone == from_phone)
+            .order_by(Guest.created_at.desc())
+            .first()
+        )
+        event = guest.event if guest else db.query(Event).order_by(Event.created_at.desc()).first()
+        text_content, button_id = cls._extract_message_content(msg)
+        return from_phone, guest, event, text_content, button_id
+
+    @staticmethod
+    def _build_inbound_log(
+        msg: dict[str, Any],
+        message_id: str | None,
+        from_phone: str,
+        guest: Guest | None,
+        event: Event | None,
+        text_content: str,
+        button_id: str | None,
+    ) -> MessageLog:
+        return MessageLog(
+            guest_id=guest.id if guest else None,
+            event_id=event.id if event else "global",
+            phone_number=from_phone,
+            direction="inbound",
+            message_type="freeform" if not button_id else "quick_reply",
+            content_snapshot=text_content or f"[Type: {msg.get('type')}]",
+            whatsapp_message_id=message_id,
+            delivery_status="received",
+        )
+
+    @classmethod
+    def _commit_inbound_transaction(
+        cls,
+        db: Session,
+        inbound_log: MessageLog,
+        result: tuple[int, int, int],
+        message_id: str | None,
+    ) -> tuple[int, int, int]:
+        try:
+            db.add(inbound_log)
+            db.commit()
+        except IntegrityError:
+            db.rollback()
+            if message_id and cls._is_duplicate_inbound_message(db, message_id):
+                logger.info("Skipping concurrently delivered WhatsApp message %s", message_id)
+                return 0, 0, 0
+            raise
+        except SQLAlchemyError:
+            db.rollback()
+            raise
+        return result
+
+    @classmethod
     def _process_inbound_message_item(
         cls, db: Session, msg: dict[str, Any], provider: WhatsAppProvider | None
     ) -> tuple[int, int, int]:
@@ -231,36 +267,14 @@ class WhatsAppWebhookService:
             logger.info("Skipping duplicate inbound WhatsApp message %s", message_id)
             return 0, 0, 0
 
-        try:
-            from_phone = normalize_e164_phone(from_raw)
-        except ValueError:
-            from_phone = f"+{from_raw}"
-
-        guest = (
-            db.query(Guest)
-            .filter(Guest.phone == from_phone)
-            .order_by(Guest.created_at.desc())
-            .first()
-        )
-        event = guest.event if guest else db.query(Event).order_by(Event.created_at.desc()).first()
-        text_content, button_id = cls._extract_message_content(msg)
-
-        inbound_log = MessageLog(
-            guest_id=guest.id if guest else None,
-            event_id=event.id if event else "global",
-            phone_number=from_phone,
-            direction="inbound",
-            message_type="freeform" if not button_id else "quick_reply",
-            content_snapshot=text_content or f"[Type: {msg.get('type')}]",
-            whatsapp_message_id=message_id,
-            delivery_status="received",
-        )
-        if not cls._persist_inbound_log(db, inbound_log, message_id):
-            return 0, 0, 0
-
-        return cls._handle_inbound_message_action(
+        from_phone, guest, event, text_content, button_id = cls._load_inbound_context(db, msg)
+        result = cls._handle_inbound_message_action(
             db, text_content, button_id, from_phone, guest, event, provider
         )
+        inbound_log = cls._build_inbound_log(
+            msg, message_id, from_phone, guest, event, text_content, button_id
+        )
+        return cls._commit_inbound_transaction(db, inbound_log, result, message_id)
 
     @classmethod
     def handle_inbound_payload(

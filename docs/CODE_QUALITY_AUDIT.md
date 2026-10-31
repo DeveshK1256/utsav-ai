@@ -285,8 +285,9 @@ The reproducible machine-readable and Markdown inventories are generated with:
 python scripts/quality_report.py
 ```
 
-The resulting `reports/quality_metrics.json` and `reports/quality_metrics.md` are also
-uploaded by CI as the `quality-metrics` artifact. Cross-language duplication is measured
+The resulting `reports/quality_metrics.json` and `reports/quality_metrics.md` are generated
+in CI from the checked-out commit and uploaded as the `quality-metrics` artifact; generated
+snapshots are intentionally not committed so their SHA cannot become stale. Cross-language duplication is measured
 separately with `npx --yes jscpd@4.0.5 ... --threshold 2.0`; this is a ratchet ceiling,
 not a claim that the requested `<0.5%` target has been met.
 
@@ -348,3 +349,18 @@ Current local measurements after these changes:
 | pip-audit | No known vulnerabilities; editable local package skipped |
 | Readiness regressions | 2 passed: healthy/ready and initialization failure/degraded |
 | WhatsApp/security regressions | 32 passed |
+
+## Fifth audit decisions
+
+The checked-in Advanced CodeQL workflow was removed because GitHub repository default setup is
+enabled and GitHub rejects uploads from both configurations. The repository therefore uses one
+active configuration: GitHub default CodeQL setup for Python, JavaScript/TypeScript, and Actions.
+If Advanced setup is required later, an administrator must first disable default setup in
+**Settings → Security → Code security and analysis → Code scanning → CodeQL analysis**, then
+restore an Advanced workflow with equivalent language coverage.
+
+Webhook HMAC verification no longer consults pytest or test-environment variables. Missing,
+malformed, stale, future, or invalid signatures fail closed. Inbound RSVP/STOP database changes
+and receipt logging now share one transaction; concurrent duplicate IDs roll back safely. FAQ
+outbound delivery remains at-least-once because the provider call is external and is not claimed
+as exactly-once delivery.

@@ -254,7 +254,8 @@ def test_duplicate_whatsapp_message_id_is_processed_once(db):
     )
     db.add(event)
     db.flush()
-    guest = Guest(event_id=event.id, name="Webhook Guest", phone="+919876543210")
+    guest_phone = f"+919876{uuid.uuid4().int % 10**6:06d}"
+    guest = Guest(event_id=event.id, name="Webhook Guest", phone=guest_phone)
     db.add(guest)
     db.commit()
     payload = {
@@ -266,7 +267,7 @@ def test_duplicate_whatsapp_message_id_is_processed_once(db):
                             "messages": [
                                 {
                                     "id": f"wamid-regression-{uuid.uuid4().hex}",
-                                    "from": "919876543210",
+                                    "from": guest_phone.removeprefix("+"),
                                     "type": "text",
                                     "text": {"body": "STOP"},
                                 }
